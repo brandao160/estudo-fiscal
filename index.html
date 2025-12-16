@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estudo Fiscal Denilson</title>
+    <title>Estudo Fiscal Denilson Brandão</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -308,10 +308,12 @@
             background-color: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             padding: 20px;
+            padding-bottom: 40px; /* Extra padding for bottom scroll */
             display: flex;
             flex-direction: column;
             gap: 20px;
             flex-shrink: 0;
+            overflow-y: auto; /* Allow scrolling if content is too tall */
         }
 
         .brand {
@@ -873,6 +875,24 @@
                 <div class="mini-stat-label">Sequência Atual 🔥</div>
                 <div class="mini-stat-value" id="streak-stat">0 dias</div>
             </div>
+
+            <!-- Backup & Config -->
+            <div style="margin-top: 20px; padding: 0 15px;">
+                <button onclick="downloadBackup()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fas fa-download"></i> Backup (Salvar)
+                </button>
+                <button onclick="triggerRestore()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fas fa-upload"></i> Restaurar Dados
+                </button>
+                <input type="file" id="restore-input" style="display: none;" onchange="restoreBackup(this)">
+                
+                <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                     <button onclick="resetSchedule()" style="width: 100%; padding: 6px; background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                        <i class="fas fa-sync-alt"></i> Regerar Cronograma
+                    </button>
+                    <p style="font-size: 0.7rem; color: #666; margin-top: 5px; text-align: center;">Cuidado: Apaga progresso do calendário.</p>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -1071,6 +1091,27 @@
         let fullSchedule = []; // Array of objects: { date, tasks: [] }
         
         function generateSchedule() {
+            // Check if we have a saved schedule structure
+            const savedScheduleJson = localStorage.getItem('estudoFiscalScheduleStructure');
+            
+            if (savedScheduleJson) {
+                // Parse saved dates strings back to Date objects
+                const rawSchedule = JSON.parse(savedScheduleJson);
+                fullSchedule = rawSchedule.map(day => ({
+                    ...day,
+                    date: new Date(day.date),
+                    tasks: day.tasks.map(t => ({...t})) // clone tasks
+                }));
+                
+                // If saved schedule ends before current endDate, we might need to extend it?
+                // For now, let's assume the user wants to keep the saved structure.
+                // If they change config, they might need to clear storage or we implement a 'Regenerate' button.
+                console.log("Loaded saved schedule structure.");
+                return;
+            }
+
+            console.log("Generating new schedule structure...");
+
             // Strategy: Ensure all subjects appear in the weekly cycle by distributing tickets in passes.
             // Pass 1: Take 1 ticket from every subject (ensures variety and covers all subjects early).
             // Pass 2+: Take remaining tickets from heavier subjects.
@@ -1170,6 +1211,9 @@
 
                 currentDate.setDate(currentDate.getDate() + 1);
             }
+            
+            // Save the generated structure
+            localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
         }
 
         generateSchedule();
@@ -2491,6 +2535,70 @@
             container.appendChild(list);
         }
 
+        // --- BACKUP & RESTORE ---
+        function downloadBackup() {
+            const data = {
+                estudoFiscalData: JSON.parse(localStorage.getItem('estudoFiscalData') || '{}'),
+                estudoFiscalSyllabus: JSON.parse(localStorage.getItem('estudoFiscalSyllabus') || '{}'),
+                sefazStudyHistory: JSON.parse(localStorage.getItem('sefazStudyHistory') || '[]'),
+                estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem('estudoFiscalScheduleStructure') || 'null'),
+                backupDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup_estudo_fiscal_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function triggerRestore() {
+            document.getElementById('restore-input').click();
+        }
+
+        function restoreBackup(input) {
+            const file = input.files[0];
+            if(!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if(confirm(`Restaurar backup de ${new Date(data.backupDate).toLocaleDateString('pt-BR')}? Isso substituirá os dados atuais.`)) {
+                        if(data.estudoFiscalData) localStorage.setItem('estudoFiscalData', JSON.stringify(data.estudoFiscalData));
+                        if(data.estudoFiscalSyllabus) localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(data.estudoFiscalSyllabus));
+                        if(data.sefazStudyHistory) localStorage.setItem('sefazStudyHistory', JSON.stringify(data.sefazStudyHistory));
+                        if(data.estudoFiscalScheduleStructure) localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(data.estudoFiscalScheduleStructure));
+                        
+                        alert('Backup restaurado com sucesso! A página será recarregada.');
+                        location.reload();
+                    }
+                } catch(err) {
+                    alert('Erro ao ler arquivo de backup: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function resetSchedule() {
+            if(confirm("Tem certeza? Isso irá gerar um NOVO cronograma aleatório e apagar o progresso visual do calendário (histórico e syllabus serão mantidos).")) {
+                localStorage.removeItem('estudoFiscalScheduleStructure');
+                // We should also clear status related to old schedule tasks IDs since IDs will change
+                // But maybe user wants to keep completed count? 
+                // Actually, if IDs change, the old status map becomes useless garbage.
+                // Let's clear status map too to be clean.
+                if(confirm("Deseja limpar também o status de 'FEITO' das tarefas do calendário antigo? (Recomendado)")) {
+                    localStorage.removeItem('estudoFiscalData');
+                }
+                location.reload();
+            }
+        }
+
         // Start
         function init() {
             renderCalendar();
@@ -2506,5 +2614,4 @@
 
     </script>
 </body>
-
 </html>

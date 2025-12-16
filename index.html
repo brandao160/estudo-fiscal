@@ -1,0 +1,2509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudo Fiscal Denilson Brandão</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --sidebar-bg: #1e1e1e;
+            --card-bg: #252525;
+            --hover-bg: #333333;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #3f3f3f;
+            --accent-color: #3b82f6; /* Azul moderno */
+            --accent-hover: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --tag-spec-bg: rgba(59, 130, 246, 0.2);
+            --tag-spec-text: #93c5fd;
+            --tag-basic-bg: rgba(245, 158, 11, 0.2);
+            --tag-basic-text: #fcd34d;
+        }
+
+        /* --- STICKY TIMER BAR --- */
+        #active-study-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-top: 1px solid #444;
+            display: none; /* Flex when active */
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 2000;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        #active-study-bar.visible {
+            display: flex;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .bar-subject-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .bar-subject-name {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-family: 'Arial Black', sans-serif;
+        }
+
+        .bar-timer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-left: 20px;
+        }
+
+        .bar-timer i {
+            font-size: 1.2rem;
+            color: #aaa;
+        }
+
+        .bar-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .bar-btn {
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .btn-continue {
+            background: #2980b9;
+            color: white;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .btn-continue:hover { background: #3498db; }
+
+        .btn-save {
+            background: #27ae60;
+            color: white;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .btn-save:hover { background: #2ecc71; }
+
+        .btn-cancel {
+            background: #eee;
+            color: #333;
+        }
+        .btn-cancel:hover { background: #fff; }
+
+        /* --- NOTE MODAL --- */
+        #note-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        #note-modal.open {
+            display: flex;
+        }
+
+        .note-modal-content {
+            background: #fff;
+            color: #333;
+            width: 600px;
+            border-radius: 6px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            overflow: hidden;
+            animation: zoomIn 0.2s ease-out;
+        }
+
+        .note-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .note-body {
+            padding: 25px;
+        }
+        
+        .note-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .note-textarea {
+            width: 100%;
+            height: 150px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: inherit;
+            resize: vertical;
+            font-size: 1.1rem;
+            color: #333;
+            background: #fafafa;
+        }
+        
+        .note-textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .note-footer {
+            padding: 15px 25px;
+            background: #f9f9f9;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* --- HISTORY VIEW --- */
+        .history-day-group {
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .history-day-header {
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-date {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .history-total-time {
+            background: #76b900;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .history-item {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-item:hover { background: rgba(255,255,255,0.02); }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-subject {
+            font-weight: 700;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+
+        .history-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .history-times {
+            display: flex;
+            gap: 15px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .history-note {
+            font-style: italic;
+            color: #aaa;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            padding-left: 22px; /* align with text */
+            margin-top: 5px;
+        }
+
+        * {
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) var(--bg-color);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .brand i { color: var(--accent-color); }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background-color: var(--hover-bg);
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background-color: var(--accent-color);
+            color: #fff;
+        }
+
+        .stats-container {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .mini-stat {
+            background-color: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .mini-stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+        .mini-stat-value { font-size: 1.2rem; font-weight: 700; color: #fff; }
+
+        .progress-circle {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--success-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--bg-color);
+        }
+
+        .top-bar {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-color);
+        }
+
+        .page-title h1 { margin: 0; font-size: 1.5rem; }
+        .page-title p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+        .content-area {
+            flex: 1;
+            overflow: auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        /* Views (Tabs) */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Calendar View */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-controls button {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .calendar-controls button:hover { background: var(--hover-bg); }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .week-day {
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 10px;
+        }
+
+        .day-cell {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-height: 100px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .day-cell:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .day-cell.empty { background: transparent; border: none; cursor: default; }
+        .day-cell.today { border: 2px solid var(--accent-color); }
+
+        .day-number {
+            font-weight: 700;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .day-dots {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--border-color);
+        }
+        .dot.done { background-color: var(--success-color); }
+        .dot.todo { background-color: var(--accent-color); }
+
+        /* Subjects View */
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .subject-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .subject-title { font-weight: 700; font-size: 1.1rem; }
+        .subject-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-spec { background: var(--tag-spec-bg); color: var(--tag-spec-text); }
+        .badge-basic { background: var(--tag-basic-bg); color: var(--tag-basic-text); }
+
+        .subject-stat {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* List View */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-muted); font-weight: 500; }
+        tr:hover { background-color: var(--hover-bg); }
+        
+        .status-select {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            width: 800px;
+            max-width: 95%;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+        }
+
+        .modal-header {
+            padding: 25px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title { font-size: 1.5rem; font-weight: 700; }
+        .close-modal { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem; }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            background-color: var(--sidebar-bg);
+            border-radius: 0 0 12px 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: #fff;
+        }
+        .btn-primary:hover { background-color: var(--accent-hover); }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        .btn-secondary:hover { background-color: var(--hover-bg); }
+
+        .task-item {
+            background: var(--bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .task-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .task-info { flex: 1; }
+        .task-name { font-weight: 700; font-size: 1.2rem; margin-bottom: 8px; }
+        .task-meta { font-size: 0.95rem; color: var(--text-muted); }
+
+        .task-status-select {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            min-width: 180px;
+            font-weight: 500;
+        }
+        
+        /* ... existing focus styles ... */
+
+        .task-observation {
+            width: 100%;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* Syllabus Tab Styles */
+        .syllabus-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .syllabus-category {
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .syllabus-header {
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .syllabus-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .syllabus-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .syllabus-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .syllabus-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .syllabus-content {
+            display: none;
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .syllabus-content.open {
+            display: block;
+        }
+
+        .topic-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .topic-item:last-child {
+            border-bottom: none;
+        }
+
+        .topic-checkbox {
+            margin-top: 4px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-color);
+        }
+
+        .topic-text {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .topic-checkbox:checked + .topic-text {
+            color: var(--success-color);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        .progress-mini {
+            width: 100px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-mini-fill {
+            height: 100%;
+            background: var(--success-color);
+            transition: width 0.3s ease;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="brand">
+            <i class="fas fa-book-reader"></i>
+            <span>Estudo Fiscal</span>
+        </div>
+
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="switchTab('calendar')">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Calendário</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('subjects')">
+                <i class="fas fa-chart-pie"></i>
+                <span>Matérias & Progresso</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('list')">
+                <i class="fas fa-list"></i>
+                <span>Lista Completa</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('syllabus')">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Conteúdo Programático</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('time-stats')">
+                <i class="fas fa-chart-pie"></i>
+                <span>Tempo de Estudo</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('history')">
+                <i class="fas fa-history"></i>
+                <span>Histórico</span>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="mini-stat">
+                <div class="mini-stat-label">Dias até a Prova</div>
+                <div class="mini-stat-value" id="days-left-stat">0</div>
+            </div>
+            
+            <div class="mini-stat">
+                <div class="mini-stat-label">Progresso Geral</div>
+                <div class="mini-stat-value" id="total-progress-stat">0%</div>
+                <div class="progress-circle">
+                    <div class="progress-fill" id="total-progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="mini-stat">
+                <div class="mini-stat-label">Sequência Atual 🔥</div>
+                <div class="mini-stat-value" id="streak-stat">0 dias</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Calendário de Estudos</h1>
+                <p>Foco na meta: Estudo Fiscal - Denilson Brandão</p>
+            </div>
+            <div>
+                <!-- User profile or settings could go here -->
+            </div>
+        </div>
+
+        <div class="content-area">
+            
+            <!-- Tab: Calendar -->
+            <div id="view-calendar" class="view-section active">
+                <div class="calendar-header">
+                    <h2 id="current-month-label" style="margin:0;">Dezembro 2025</h2>
+                    <div class="calendar-controls">
+                        <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+                        <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                
+                <div class="calendar-grid">
+                    <div class="week-day">Dom</div>
+                    <div class="week-day">Seg</div>
+                    <div class="week-day">Ter</div>
+                    <div class="week-day">Qua</div>
+                    <div class="week-day">Qui</div>
+                    <div class="week-day">Sex</div>
+                    <div class="week-day">Sáb</div>
+                </div>
+                <div id="calendar-days" class="calendar-grid" style="margin-top: 10px;">
+                    <!-- JS generated -->
+                </div>
+            </div>
+
+            <!-- Tab: Subjects -->
+            <div id="view-subjects" class="view-section">
+                <div class="subjects-grid" id="subjects-container">
+                    <!-- JS generated -->
+                </div>
+            </div>
+
+            <!-- Tab: List -->
+            <div id="view-list" class="view-section">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Dia</th>
+                            <th>Matéria</th>
+                            <th>Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-tbody">
+                        <!-- JS generated -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab: Syllabus -->
+            <div id="view-syllabus" class="view-section">
+                <div class="subject-card" style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0;">Conteúdo Programático - Estudo Fiscal</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+                        Baseado no planejamento pessoal (2025/2026). Marque os tópicos conforme concluir o estudo.
+                    </p>
+                </div>
+                <div id="syllabus-container" class="syllabus-container">
+                    <!-- JS generated -->
+                </div>
+            </div>
+
+            <!-- Tab: History -->
+            <div id="view-history" class="view-section">
+                <div id="history-container">
+                    <!-- JS generated -->
+                </div>
+            </div>
+
+            <!-- Tab: Time Stats -->
+            <div id="view-time-stats" class="view-section">
+                <div style="display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap;">
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0; text-align: center;">Distribuição do Tempo</h3>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="studyTimeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0;">Tempo Total por Matéria</h3>
+                        <div id="time-stats-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- JS Generated -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal for Daily Tasks -->
+    <div class="modal-overlay" id="day-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-date-title">Tarefas do Dia</div>
+                <button class="close-modal" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="modal-task-list">
+                <!-- Tasks go here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveModalChanges()">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTE MODAL -->
+    <div id="note-modal">
+        <div class="note-modal-content">
+            <div class="note-header">
+                <span>Como foi, Denilson?</span>
+                <button onclick="cancelNote()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:1.2rem;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="note-body">
+                <label class="note-label">Anotações</label>
+                <textarea id="note-textarea" class="note-textarea" placeholder="Faça suas anotações aqui!"></textarea>
+            </div>
+            <div class="note-footer">
+                <button class="bar-btn btn-cancel" onclick="cancelNote()"><i class="fas fa-times"></i> Cancelar</button>
+                <button class="bar-btn btn-save" onclick="saveNote()"><i class="fas fa-check"></i> Atualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKY TIMER BAR -->
+    <div id="active-study-bar">
+        <div class="bar-subject-info">
+            <div id="bar-subject-name" class="bar-subject-name">Subject Name</div>
+            <div class="bar-timer">
+                <i class="fas fa-stopwatch"></i>
+                <span id="bar-timer-display">0h 0m 0s</span>
+            </div>
+        </div>
+        <div class="bar-controls">
+            <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
+                <i class="fas fa-pause"></i> Pausar
+            </button>
+            <button class="bar-btn btn-save" onclick="finishSession()">
+                <i class="fas fa-check"></i> Salvar
+            </button>
+            <button class="bar-btn btn-cancel" onclick="cancelSession()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA & CONFIG ---
+        const startDate = new Date('2025-12-16');
+        const endDate = new Date('2026-12-31');
+        
+        const subjectsConfig = [
+            // Conhecimentos Básicos (Peso 1)
+            { name: "Língua Portuguesa", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Exatas", type: "Básico", weight: 1, tickets: 1 }, // Substitui RLM, Mat. Fin, Estatística
+            { name: "Direito Constitucional", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Direito Administrativo", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Direito Financeiro", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Direito Civil", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Empresarial", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Penal", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Economia", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Contabilidade Geral", type: "Básico", weight: 1, tickets: 1 },
+            { name: "Realidade do Estado", type: "Básico", weight: 1, tickets: 1 },
+            
+            // Conhecimentos Específicos
+            { name: "Tecnologia da Informação", type: "Específico", weight: 2, tickets: 2 },
+            { name: "Auditoria", type: "Específico", weight: 3, tickets: 3 },
+            { name: "Contabilidade Geral e Avançada", type: "Específico", weight: 3, tickets: 3 },
+            { name: "Contabilidade Pública", type: "Específico", weight: 1, tickets: 1 },
+            { name: "Contabilidade de Custos", type: "Específico", weight: 3, tickets: 3 },
+            { name: "Direito Tributário I", type: "Específico", weight: 3, tickets: 3 },
+            { name: "Direito Tributário II – Reforma Tributária", type: "Específico", weight: 3, tickets: 3 },
+            { name: "Legislação Tributária Estadual", type: "Específico", weight: 3, tickets: 3 }
+        ];
+
+        // --- GENERATE CYCLE ---
+        let fullSchedule = []; // Array of objects: { date, tasks: [] }
+        
+        function generateSchedule() {
+            // Strategy: Ensure all subjects appear in the weekly cycle by distributing tickets in passes.
+            // Pass 1: Take 1 ticket from every subject (ensures variety and covers all subjects early).
+            // Pass 2+: Take remaining tickets from heavier subjects.
+            
+            let pool = [];
+            subjectsConfig.forEach(sub => {
+                pool.push({ ...sub, remaining: sub.tickets });
+            });
+            
+            let baseSequence = [];
+            
+            // Iterate until all tickets are used
+            while(pool.some(p => p.remaining > 0)) {
+                // Get candidates with remaining tickets
+                let candidates = pool.filter(p => p.remaining > 0);
+                
+                // Shuffle candidates to avoid rigid order (e.g., alphabetic) every cycle
+                // This ensures "Exatas" doesn't always strictly follow "Português" if they are adjacent in config.
+                candidates.sort(() => Math.random() - 0.5);
+                
+                candidates.forEach(cand => {
+                    if(cand.remaining > 0) {
+                        baseSequence.push(cand);
+                        cand.remaining--;
+                    }
+                });
+            }
+
+            // Queue for consumption
+            // We'll repeat this base sequence indefinitely
+            let queue = [...baseSequence]; 
+            
+            let currentDate = new Date(startDate);
+
+            while(currentDate <= endDate) {
+                const dayOfWeek = currentDate.getDay();
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const hours = isWeekend ? 8 : 5;
+                
+                let dayTasks = [];
+                let attempts = 0; // fail-safe
+                
+                while(dayTasks.length < hours && attempts < 100) {
+                    if(queue.length === 0) queue = [...baseSequence]; // Replenish
+                    
+                    // Peek the next candidate
+                    let candidateIndex = 0;
+                    let candidate = queue[candidateIndex];
+                    
+                    // Check if candidate is already in today's tasks
+                    // Search forward in queue for a non-duplicate subject
+                    while(dayTasks.some(t => t.subject === candidate.name) && candidateIndex < queue.length - 1) {
+                        candidateIndex++;
+                        candidate = queue[candidateIndex];
+                    }
+                    
+                    // If we found a valid candidate (even if deep in queue)
+                    if(!dayTasks.some(t => t.subject === candidate.name)) {
+                        // Remove from queue at that index
+                        queue.splice(candidateIndex, 1);
+                        
+                        // Add to day
+                        const taskId = `task-${currentDate.getTime()}-${dayTasks.length}`;
+                        dayTasks.push({
+                            id: taskId,
+                            subject: candidate.name,
+                            type: candidate.type,
+                            weight: candidate.weight,
+                            completed: false
+                        });
+                    } else {
+                        // If we exhausted queue and still overlap (rare given diversity), just take head
+                        // But let's try to replenish first if queue is small
+                        if(queue.length < 5) {
+                             queue = [...queue, ...baseSequence];
+                             continue; // try again with fresh stock
+                        }
+                        
+                        // Force take head
+                        candidate = queue.shift();
+                        const taskId = `task-${currentDate.getTime()}-${dayTasks.length}`;
+                        dayTasks.push({
+                            id: taskId,
+                            subject: candidate.name,
+                            type: candidate.type,
+                            weight: candidate.weight,
+                            completed: false
+                        });
+                    }
+                    attempts++;
+                }
+
+                fullSchedule.push({
+                    date: new Date(currentDate),
+                    tasks: dayTasks
+                });
+
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        }
+
+        generateSchedule();
+
+        // --- STATE MANAGEMENT ---
+        // Load status from localStorage
+        // Keys: 'estudoFiscalData' (status), 'estudoFiscalSyllabus' (syllabus)
+        
+        // Migration: Check for old 'sefazGoData' and migrate if 'estudoFiscalData' is missing
+        let savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+        const oldSefazData = JSON.parse(localStorage.getItem('sefazGoData'));
+        
+        if(oldSefazData && Object.keys(savedData).length === 0) {
+            console.log("Migrating SEFAZ-GO status data to Estudo Fiscal...");
+            savedData = oldSefazData;
+            localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+        }
+        
+        // Apply saved status to schedule
+        fullSchedule.forEach(day => {
+            day.tasks.forEach(task => {
+                const data = savedData[task.id];
+                if(data) {
+                    task.status = data.status || 'todo';
+                    task.note = data.note || '';
+                    task.completed = (task.status === 'done'); 
+                } else {
+                    task.status = 'todo';
+                    task.note = '';
+                    task.completed = false;
+                }
+            });
+        });
+
+        // Current Calendar View State
+        let viewDate = new Date();
+        if (viewDate < startDate) viewDate = new Date(startDate);
+
+        // --- RENDER FUNCTIONS ---
+
+
+        function switchTab(tabName) {
+            // Update UI Tabs
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            // Find the nav item that calls this function with the same tabName
+            // Note: In inline onclick, 'this' might not be the element if not passed, 
+            // but event.currentTarget is reliable if we use it.
+            // However, since we might call this programmatically, let's look it up.
+            const navItem = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(`'${tabName}'`));
+            if(navItem) navItem.classList.add('active');
+
+            // Update Views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            const view = document.getElementById(`view-${tabName}`);
+            if(view) view.classList.add('active');
+
+            // Update Title
+            const titles = {
+                'calendar': 'Calendário de Estudos',
+                'subjects': 'Progresso por Matéria',
+                'list': 'Cronograma Completo',
+                'syllabus': 'Conteúdo Programático',
+                'time-stats': 'Tempo de Estudo',
+                'history': 'Histórico de Estudos'
+            };
+            const titleEl = document.getElementById('page-title-text');
+            if(titleEl) titleEl.textContent = titles[tabName] || 'Painel de Estudos';
+        }
+
+        // --- CALENDAR LOGIC ---
+        function changeMonth(offset) {
+            viewDate.setMonth(viewDate.getMonth() + offset);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            
+            document.getElementById('current-month-label').textContent = 
+                viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase());
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            
+            const startDayIndex = firstDay.getDay(); // 0-6
+            const totalDays = lastDay.getDate();
+
+            const container = document.getElementById('calendar-days');
+            container.innerHTML = '';
+
+            // Empty cells for previous month
+            for(let i=0; i<startDayIndex; i++) {
+                const div = document.createElement('div');
+                div.className = 'day-cell empty';
+                container.appendChild(div);
+            }
+
+            // Days
+            for(let d=1; d<=totalDays; d++) {
+                const currentDayDate = new Date(year, month, d);
+                const daySchedule = fullSchedule.find(s => 
+                    s.date.getDate() === d && 
+                    s.date.getMonth() === month && 
+                    s.date.getFullYear() === year
+                );
+
+                const div = document.createElement('div');
+                div.className = 'day-cell';
+                
+                // Highlight today
+                const today = new Date();
+                if(currentDayDate.getDate() === today.getDate() && 
+                   currentDayDate.getMonth() === today.getMonth() && 
+                   currentDayDate.getFullYear() === today.getFullYear()) {
+                    div.classList.add('today');
+                }
+
+                if(daySchedule) {
+                    div.onclick = () => openDayModal(daySchedule);
+                    
+                    // Dots for tasks
+                    const dotsHtml = daySchedule.tasks.map(t => 
+                        `<div class="dot ${t.completed ? 'done' : 'todo'}" title="${t.subject}"></div>`
+                    ).join('');
+
+                    div.innerHTML = `
+                        <div class="day-number">
+                            ${d}
+                            <span style="font-size: 0.7rem; color: #666;">${daySchedule.tasks.length}h</span>
+                        </div>
+                        <div class="day-dots">${dotsHtml}</div>
+                    `;
+                } else {
+                    div.innerHTML = `<div class="day-number">${d}</div>`;
+                    div.classList.add('empty'); // No study scheduled
+                }
+
+                container.appendChild(div);
+            }
+        }
+
+        // --- MODAL LOGIC ---
+        let currentModalDate = null;
+        let currentDayTasksDraft = []; // Temporary storage for edits
+
+        function openDayModal(daySchedule) {
+            const modal = document.getElementById('day-modal');
+            const list = document.getElementById('modal-task-list');
+            const title = document.getElementById('modal-date-title');
+
+            currentModalDate = daySchedule.date;
+            title.textContent = daySchedule.date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            list.innerHTML = '';
+
+            // Clone tasks for draft
+            currentDayTasksDraft = JSON.parse(JSON.stringify(daySchedule.tasks));
+
+            renderModalTasks();
+            modal.classList.add('open');
+        }
+
+        function renderModalTasks() {
+            const list = document.getElementById('modal-task-list');
+            list.innerHTML = '';
+
+            currentDayTasksDraft.forEach((task, index) => {
+                const item = document.createElement('div');
+                item.className = 'task-item';
+                
+                // Determine select class
+                let selectClass = '';
+                if(task.status === 'done') selectClass = 'status-done';
+                else if(task.status === 'todo') selectClass = 'status-todo';
+                else if(task.status === 'studying') selectClass = 'status-studying';
+
+                const timeSpent = task.timeSpent || 0;
+                const formattedTime = formatTime(timeSpent);
+
+                item.innerHTML = `
+                    <div class="task-header-row">
+                        <div class="task-info">
+                            <div class="task-name">${task.subject}</div>
+                            <div class="task-meta">
+                                <span class="tag ${task.weight === 2 ? 'badge-spec' : 'badge-basic'}" 
+                                      style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                    ${task.type}
+                                </span>
+                                • Peso ${task.weight}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div id="timer-container-${index}" style="display: ${task.status === 'studying' ? 'block' : 'none'}; font-family: monospace; font-size: 1.1rem; color: var(--accent-color);">
+                                <i class="fas fa-stopwatch"></i> <span id="timer-${index}">${formattedTime}</span>
+                            </div>
+                            <select class="task-status-select ${selectClass}" onchange="updateDraftStatus(${index}, this)">
+                                <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>A FAZER</option>
+                                <option value="studying" ${task.status === 'studying' ? 'selected' : ''}>ESTUDANDO</option>
+                                <option value="done" ${task.status === 'done' ? 'selected' : ''}>ESTUDADO</option>
+                                <option value="skipped" ${task.status === 'skipped' ? 'selected' : ''}>NÃO CONCLUÍDO</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Manual Time Edit (Done) -->
+                    <div id="manual-time-container-${index}" style="display: ${task.status === 'done' ? 'flex' : 'none'}; align-items: center; gap: 8px; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 4px; width: fit-content;">
+                        <i class="fas fa-clock" style="color: var(--text-muted);"></i>
+                        <span style="font-size: 0.9rem; color: var(--text-muted);">Tempo:</span>
+                        <input type="number" min="0" max="23" 
+                            value="${Math.floor((task.timeSpent || 0) / 3600)}" 
+                            onchange="updateDraftTime(${index}, 'hours', this.value)"
+                            style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
+                        > <span style="font-size: 0.8rem; color: #888;">h</span>
+                        <input type="number" min="0" max="59" 
+                            value="${Math.floor(((task.timeSpent || 0) % 3600) / 60)}" 
+                            onchange="updateDraftTime(${index}, 'minutes', this.value)"
+                            style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
+                        > <span style="font-size: 0.8rem; color: #888;">m</span>
+                    </div>
+
+                    <div>
+                        <span class="obs-label" style="font-size: 0.85rem; margin-bottom: 5px;">Observações</span>
+                        <textarea class="task-observation" placeholder="Anote o que estudou..." onchange="updateDraftNote(${index}, this.value)">${task.note || ''}</textarea>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('day-modal').classList.remove('open');
+            currentDayTasksDraft = []; // Clear draft
+        }
+
+        // Draft Updates (only updates temporary array)
+        let activeTimerInterval = null;
+        let activeTimerTaskId = null;
+
+        function startTimer(index) {
+            if(activeTimerInterval) clearInterval(activeTimerInterval);
+            
+            // Only one timer active at a time for simplicity in this version
+            // Find any other task that might be 'studying' in the draft and reset it?
+            // Or just allow local timer.
+            
+            // We need to track the start time. 
+            // In a real app we'd save this to DB. Here we use a temp variable or localStorage if needed.
+            // But since this is a draft modal, we just run the timer visually.
+            // Wait, user said "quando eu colocar ESTUDANDO, vai abrir um cronometro".
+            
+            // Let's assume the timer starts from 0 or previous accumulated time.
+            const task = currentDayTasksDraft[index];
+            const startTime = Date.now();
+            
+            // Store start timestamp in task draft to calculate diff later
+            task._timerStart = startTime; 
+            
+            // Update UI every second
+            activeTimerInterval = setInterval(() => {
+                const now = Date.now();
+                const diff = now - task._timerStart;
+                
+                // Add diff to existing time (if any)
+                // Note: timeSpent is in seconds. 
+                const totalSeconds = (task.timeSpent || 0) + Math.floor(diff / 1000);
+                
+                const timerEl = document.getElementById(`timer-${index}`);
+                if(timerEl) timerEl.textContent = formatTime(totalSeconds);
+            }, 1000);
+            
+            activeTimerTaskId = index;
+        }
+
+        function stopTimer(index) {
+            if(activeTimerInterval && activeTimerTaskId === index) {
+                clearInterval(activeTimerInterval);
+                activeTimerInterval = null;
+                
+                // Calculate final time and save to draft
+                const task = currentDayTasksDraft[index];
+                if(task._timerStart) {
+                    const diff = Date.now() - task._timerStart;
+                    task.timeSpent = (task.timeSpent || 0) + Math.floor(diff / 1000);
+                    delete task._timerStart;
+                }
+            }
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        }
+
+        // --- SESSION & HISTORY LOGIC ---
+        let studyHistory = JSON.parse(localStorage.getItem('sefazStudyHistory')) || [];
+        let activeSession = null; // { taskIndex, startTime, subject, timerInterval }
+
+        // Triggered when "ESTUDANDO" is selected in modal
+        function startActiveSession(index) {
+            // Close modal first
+            closeModal();
+
+            const task = currentDayTasksDraft[index]; // Note: this is draft, but we need the real task or at least ID
+            // Since we close modal, we should use the real data. 
+            // But wait, user might have modified other things in modal.
+            // Let's assume selecting "ESTUDANDO" saves the state and starts session.
+            
+            // To be safe, we need to know WHICH real task this is.
+            // currentDayTasksDraft[index] corresponds to fullSchedule's day tasks.
+            const dayObj = fullSchedule.find(d => d.date.getTime() === currentModalDate.getTime());
+            const realTask = dayObj.tasks[index];
+
+            // If there's already a session, pause it? Or stop?
+            if(activeSession) {
+                alert("Já existe uma sessão ativa. Finalize-a primeiro.");
+                return;
+            }
+
+            activeSession = {
+                dayDate: currentModalDate,
+                taskIndex: index,
+                subject: realTask.subject,
+                startTime: Date.now(),
+                elapsedAtStart: realTask.timeSpent || 0, // seconds
+                elapsedSession: 0,
+                paused: false,
+                interval: null
+            };
+
+            // Show Bar
+            const bar = document.getElementById('active-study-bar');
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            
+            // Request Notification Permission
+            if("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
+            updateBarTimer();
+            resumeTimer();
+        }
+
+        function togglePauseResume() {
+            if(!activeSession) return;
+            if(activeSession.paused) {
+                resumeTimer();
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-pause"></i> Pausar';
+            } else {
+                pauseTimer();
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-play"></i> Continuar';
+            }
+        }
+
+        function resumeTimer() {
+            if(!activeSession) return;
+            activeSession.paused = false;
+            activeSession.lastResumeTime = Date.now();
+            
+            activeSession.interval = setInterval(() => {
+                const now = Date.now();
+                // We don't add diff to elapsedSession directly every tick to avoid drift, just for display
+                // Actually simpler: 
+                activeSession.elapsedSession += 1;
+                activeSession.lastResumeTime = now; // reset for next tick
+                
+                // Check Alarm (1h = 3600s)
+                const total = activeSession.elapsedAtStart + activeSession.elapsedSession;
+                if(total === 3600) { 
+                    playAlarm();
+                    // Visual cue
+                    const timerEl = document.getElementById('bar-timer-display');
+                    if(timerEl) {
+                        timerEl.style.color = '#ff6b6b';
+                        timerEl.style.textShadow = '0 0 10px #ff6b6b';
+                        setTimeout(() => {
+                             timerEl.style.color = '#fff';
+                             timerEl.style.textShadow = 'none';
+                        }, 5000);
+                    }
+                    // Notification if supported
+                    if("Notification" in window && Notification.permission === "granted") {
+                        new Notification("Meta Batida!", { body: "Você completou 1 hora de estudo!" });
+                    }
+                }
+                
+                updateBarTimer();
+            }, 1000);
+        }
+
+        function playAlarm() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                
+                const ctx = new AudioContext();
+                const now = ctx.currentTime;
+                
+                // 3 beeps
+                [0, 0.8, 1.6].forEach(offset => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    // Sound config
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, now + offset); // A5
+                    osc.frequency.exponentialRampToValueAtTime(440, now + offset + 0.4);
+                    
+                    gain.gain.setValueAtTime(0.1, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.4);
+                    
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.5);
+                });
+            } catch(e) {
+                console.error("Erro ao tocar alarme:", e);
+            }
+        }
+
+        function pauseTimer() {
+            if(!activeSession) return;
+            activeSession.paused = true;
+            clearInterval(activeSession.interval);
+        }
+
+        function updateBarTimer() {
+            if(!activeSession) return;
+            const total = activeSession.elapsedAtStart + activeSession.elapsedSession;
+            document.getElementById('bar-timer-display').textContent = formatTime(total);
+        }
+
+        function finishSession() {
+            if(!activeSession) return;
+            pauseTimer();
+            // Open Note Modal
+            document.getElementById('note-modal').classList.add('open');
+            // Clear textarea
+            document.getElementById('note-textarea').value = '';
+        }
+
+        function cancelSession() {
+            if(confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) {
+                pauseTimer();
+                document.getElementById('active-study-bar').classList.remove('visible');
+                activeSession = null;
+            }
+        }
+
+        function cancelNote() {
+            document.getElementById('note-modal').classList.remove('open');
+            // Resume timer if cancelled?
+            // User might want to go back to timer.
+            // Let's keep timer paused.
+        }
+
+        function saveNote() {
+            if(!activeSession) return;
+            
+            const note = document.getElementById('note-textarea').value;
+            const now = new Date();
+            
+            // 1. Add to History
+            const historyItem = {
+                id: Date.now().toString(),
+                date: now.toISOString(), // ISO string for sorting
+                subject: activeSession.subject,
+                duration: activeSession.elapsedSession, // Only what was studied NOW
+                startTime: activeSession.startTime,
+                note: note
+            };
+            
+            studyHistory.unshift(historyItem); // Add to top
+            localStorage.setItem('sefazStudyHistory', JSON.stringify(studyHistory));
+
+            // 2. Update Cycle Task (Total Time)
+            const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+            if(dayObj) {
+                const task = dayObj.tasks[activeSession.taskIndex];
+                task.timeSpent = (task.timeSpent || 0) + activeSession.elapsedSession;
+                task.status = 'done'; // Mark as done? Or keep studying? User clicked "Check" so likely done.
+                // If they want to study more later, they can start again.
+                // Append note?
+                if(note) {
+                    const timeString = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    task.note = (task.note ? task.note + '\n' : '') + `[${timeString}] ${note}`;
+                }
+                
+                // Save to Global Data
+                const savedData = JSON.parse(localStorage.getItem('sefazGoData')) || {};
+                if(!savedData[task.id]) savedData[task.id] = {};
+                savedData[task.id].status = task.status;
+                savedData[task.id].note = task.note;
+                savedData[task.id].timeSpent = task.timeSpent;
+                localStorage.setItem('sefazGoData', JSON.stringify(savedData));
+            }
+
+            // 3. Cleanup
+            document.getElementById('note-modal').classList.remove('open');
+            document.getElementById('active-study-bar').classList.remove('visible');
+            activeSession = null;
+
+            // 4. Refresh
+            renderHistory();
+            renderCalendar();
+            renderTimeStats();
+            updateStats();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            if(!container) return;
+            container.innerHTML = '';
+
+            if(studyHistory.length === 0) {
+                container.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-muted)">Nenhum histórico registrado ainda.</div>';
+                return;
+            }
+
+            // Group by Date (Day)
+            const groups = {};
+            studyHistory.forEach(item => {
+                const d = new Date(item.date);
+                const dateKey = d.toLocaleDateString('pt-BR');
+                if(!groups[dateKey]) {
+                    groups[dateKey] = {
+                        dateObj: d,
+                        totalTime: 0,
+                        items: []
+                    };
+                }
+                groups[dateKey].items.push(item);
+                groups[dateKey].totalTime += item.duration;
+            });
+
+            // Sort groups by date desc
+            const sortedDates = Object.keys(groups).sort((a,b) => {
+                // simple parser dd/mm/yyyy
+                const [da, ma, ya] = a.split('/');
+                const [db, mb, yb] = b.split('/');
+                return new Date(yb, mb-1, db) - new Date(ya, ma-1, da);
+            }); // Ascending? No we want descending.
+            // Wait, default sort is weird.
+            // Better to use the dateObj we stored.
+            const sortedGroups = Object.values(groups).sort((a,b) => b.dateObj - a.dateObj);
+
+            sortedGroups.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'history-day-group';
+                
+                const dateStr = group.dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                
+                let itemsHtml = '';
+                group.items.forEach(item => {
+                    const startT = new Date(item.startTime).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    
+                    // Subject color (random or consistent?)
+                    // Let's use accent color for now
+                    
+                    itemsHtml += `
+                        <div class="history-item">
+                            <div class="history-item-header">
+                                <div class="history-subject">
+                                    <span class="history-dot" style="background-color: var(--accent-color)"></span>
+                                    ${item.subject}
+                                </div>
+                                <div class="history-times">
+                                    <span><i class="far fa-clock"></i> ${startT}</span>
+                                    <span><i class="fas fa-stopwatch"></i> ${formatTime(item.duration)}</span>
+                                </div>
+                            </div>
+                            ${item.note ? `<div class="history-note">${item.note}</div>` : ''}
+                        </div>
+                    `;
+                });
+
+                groupDiv.innerHTML = `
+                    <div class="history-day-header">
+                        <div class="history-date">${dateStr}</div>
+                        <div class="history-total-time">${formatTime(group.totalTime)}</div>
+                    </div>
+                    ${itemsHtml}
+                `;
+                container.appendChild(groupDiv);
+            });
+        }
+
+        window.updateDraftStatus = function(index, selectElement) {
+            const newStatus = selectElement.value;
+            const task = currentDayTasksDraft[index];
+            
+            if(newStatus === 'studying') {
+                // New Flow: Start Session immediately
+                startActiveSession(index);
+                // Reset select to 'todo' or keep it? 
+                // If we close modal, it doesn't matter visually inside modal.
+                // But we shouldn't save 'studying' status to draft if we are leaving modal logic.
+                // Actually, startActiveSession uses the draft index to find real task.
+                return; 
+            }
+
+            // Old Logic for other statuses
+            if(newStatus === 'done') {
+                // Show manual time
+                const manual = document.getElementById(`manual-time-container-${index}`);
+                if(manual) {
+                    manual.style.display = 'flex';
+                    // Sync timer value if it was running locally (legacy)
+                    const h = Math.floor((task.timeSpent || 0) / 3600);
+                    const m = Math.floor(((task.timeSpent || 0) % 3600) / 60);
+                    const inputs = manual.querySelectorAll('input');
+                    if(inputs.length >= 2) {
+                        inputs[0].value = h;
+                        inputs[1].value = m;
+                    }
+                }
+            } else {
+                 const manual = document.getElementById(`manual-time-container-${index}`);
+                 if(manual) manual.style.display = 'none';
+            }
+            
+            task.status = newStatus;
+            
+            // Visual update
+            selectElement.className = 'task-status-select';
+            if(newStatus === 'done') selectElement.classList.add('status-done');
+            else if(newStatus === 'todo') selectElement.classList.add('status-todo');
+            else if(newStatus === 'studying') selectElement.classList.add('status-studying');
+        }
+
+        window.updateDraftTime = function(index, type, value) {
+            const task = currentDayTasksDraft[index];
+            let currentSeconds = task.timeSpent || 0;
+            let h = Math.floor(currentSeconds / 3600);
+            let m = Math.floor((currentSeconds % 3600) / 60);
+            let s = currentSeconds % 60; // preserve seconds if any
+
+            const val = parseInt(value) || 0;
+
+            if(type === 'hours') {
+                h = val;
+            } else if(type === 'minutes') {
+                m = val;
+            }
+
+            task.timeSpent = (h * 3600) + (m * 60) + s;
+        }
+
+        window.updateDraftNote = function(index, noteText) {
+            currentDayTasksDraft[index].note = noteText;
+        }
+
+        // Commit Changes
+        window.saveModalChanges = function() {
+            // Find the original day object in fullSchedule
+            const dayObj = fullSchedule.find(d => d.date.getTime() === currentModalDate.getTime());
+            
+            if(dayObj) {
+                // Apply drafts to real object
+                dayObj.tasks = JSON.parse(JSON.stringify(currentDayTasksDraft));
+                
+                // Recalculate completed flags for compatibility
+                dayObj.tasks.forEach(t => t.completed = (t.status === 'done'));
+
+                // Save to Storage
+                const savedData = JSON.parse(localStorage.getItem('sefazGoData')) || {};
+                
+                dayObj.tasks.forEach(t => {
+                    if(!savedData[t.id]) savedData[t.id] = {};
+                    savedData[t.id].status = t.status;
+                    savedData[t.id].note = t.note;
+                    savedData[t.id].timeSpent = t.timeSpent || 0;
+                });
+
+                localStorage.setItem('sefazGoData', JSON.stringify(savedData));
+                
+                // Refresh Views
+                renderCalendar();
+                renderSubjects();
+                renderList();
+                updateStats();
+                renderTimeStats();
+                
+                // Close
+                closeModal();
+            }
+        }
+
+        // --- SUBJECTS VIEW ---
+        function renderSubjects() {
+            const container = document.getElementById('subjects-container');
+            container.innerHTML = '';
+
+            subjectsConfig.forEach(sub => {
+                // Calculate stats
+                let total = 0;
+                let done = 0;
+                
+                fullSchedule.forEach(day => {
+                    day.tasks.forEach(t => {
+                        if(t.subject === sub.name) {
+                            total++;
+                            if(t.completed) done++;
+                        }
+                    });
+                });
+
+                const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+
+                const card = document.createElement('div');
+                card.className = 'subject-card';
+                card.innerHTML = `
+                    <div class="subject-header">
+                        <div class="subject-title">${sub.name}</div>
+                        <div class="subject-badge ${sub.weight === 2 ? 'badge-spec' : 'badge-basic'}">Peso ${sub.weight}</div>
+                    </div>
+                    <div class="subject-stat">
+                        <span>Horas planejadas</span>
+                        <span>${total}h</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>Concluído</span>
+                        <span>${done}h (${percent}%)</span>
+                    </div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" style="width: ${percent}%"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- LIST VIEW ---
+        function renderList() {
+            // Render only first 100 or create pagination if needed. For now render all but careful with DOM.
+            // Let's render only the upcoming days + past uncompleted? No, user asked for full cycle.
+            // To avoid lag, let's render a limited set or just simple table.
+            // For now, let's stick to the first 200 rows to prevent freezing, or implement simple load more.
+            // Actually, let's just render all, browser can handle ~2000 simple rows usually.
+            
+            const tbody = document.getElementById('list-tbody');
+            // Check if already rendered to avoid re-rendering heavy DOM constantly
+            if(tbody.children.length > 0 && !document.getElementById('view-list').classList.contains('active')) return;
+
+            tbody.innerHTML = '';
+            
+            // Limit to first 100 for performance initially, or maybe logic to show current week?
+            // Let's show current month tasks.
+            const currentMonthTasks = fullSchedule.filter(d => 
+                d.date.getMonth() === viewDate.getMonth() && 
+                d.date.getFullYear() === viewDate.getFullYear()
+            );
+
+            // Flatten
+            let rows = [];
+            fullSchedule.forEach(d => {
+                d.tasks.forEach(t => {
+                    rows.push({ date: d.date, task: t });
+                });
+            });
+
+            // Let's just render the first 100 and maybe a "Load more" button if needed, 
+            // but for now let's render today +/- 15 days?
+            // Or just render all. It's about 150 days * 5-8 tasks = ~1000 rows. It's fine.
+            
+            // Optimization: Render string HTML first then inject
+            let html = '';
+            rows.forEach(row => {
+                html += `
+                    <tr>
+                        <td>
+                            <span style="color: ${row.task.completed ? 'var(--success-color)' : 'var(--text-muted)'}">
+                                ${row.task.completed ? '<i class="fas fa-check-circle"></i> Feito' : '<i class="far fa-circle"></i> Pendente'}
+                            </span>
+                        </td>
+                        <td>${row.date.toLocaleDateString('pt-BR')}</td>
+                        <td>${row.date.toLocaleDateString('pt-BR', {weekday: 'short'})}</td>
+                        <td>${row.task.subject}</td>
+                        <td>${row.task.type}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // --- GLOBAL STATS ---
+        function updateStats() {
+            const today = new Date();
+            const diffTime = endDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            document.getElementById('days-left-stat').textContent = diffDays > 0 ? diffDays : 0;
+
+            let totalTasks = 0;
+            let completedTasks = 0;
+            fullSchedule.forEach(d => {
+                totalTasks += d.tasks.length;
+                completedTasks += d.tasks.filter(t => t.completed).length;
+            });
+
+            const percent = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+            document.getElementById('total-progress-stat').textContent = percent + '%';
+            document.getElementById('total-progress-bar').style.width = percent + '%';
+
+            // Calculate Streak
+            let streak = 0;
+            const todayDate = new Date();
+            todayDate.setHours(0,0,0,0);
+            
+            // Check past days
+            // We need to check if ANY task was done or history exists for the day
+            // Let's iterate backwards
+            for(let i = 0; i < 365; i++) { // Check up to a year back
+                const d = new Date(todayDate);
+                d.setDate(d.getDate() - i);
+                
+                // Check tasks
+                const dayTasks = fullSchedule.find(day => 
+                    day.date.getDate() === d.getDate() &&
+                    day.date.getMonth() === d.getMonth() &&
+                    day.date.getFullYear() === d.getFullYear()
+                );
+                
+                let hasActivity = false;
+                if(dayTasks) {
+                    if(dayTasks.tasks.some(t => t.completed || t.timeSpent > 0)) hasActivity = true;
+                }
+                
+                // Check history
+                if(!hasActivity) {
+                    // Check raw history array
+                    const dayStart = d.getTime();
+                    const dayEnd = dayStart + 86400000;
+                    
+                    const hasHistory = studyHistory.some(h => {
+                        const hTime = new Date(h.date).getTime();
+                        return hTime >= dayStart && hTime < dayEnd;
+                    });
+                    if(hasHistory) hasActivity = true;
+                }
+
+                if(hasActivity) {
+                    streak++;
+                } else {
+                    // If it's today and we haven't done anything yet, don't break streak if yesterday was active
+                    if (i === 0) continue; 
+                    else break;
+                }
+            }
+            document.getElementById('streak-stat').textContent = `${streak} dias`;
+        }
+
+        // --- TIME STATS LOGIC ---
+        let studyTimeChart = null;
+
+        function renderTimeStats() {
+            // Calculate total time per subject
+            const subjectTimes = {};
+            let totalSeconds = 0;
+
+            // Initialize with config
+            subjectsConfig.forEach(sub => {
+                subjectTimes[sub.name] = 0;
+            });
+
+            // Sum up from fullSchedule
+            fullSchedule.forEach(day => {
+                day.tasks.forEach(t => {
+                    if(t.timeSpent) {
+                        subjectTimes[t.subject] = (subjectTimes[t.subject] || 0) + t.timeSpent;
+                        totalSeconds += t.timeSpent;
+                    }
+                });
+            });
+
+            // Convert to array for sorting
+            const sortedSubjects = Object.entries(subjectTimes)
+                .map(([name, seconds]) => ({ name, seconds }))
+                .sort((a, b) => b.seconds - a.seconds);
+
+            // Render List
+            const listContainer = document.getElementById('time-stats-list');
+            if(listContainer) {
+                listContainer.innerHTML = '';
+                if(totalSeconds === 0) {
+                    listContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum tempo registrado ainda.</div>';
+                } else {
+                    sortedSubjects.forEach(item => {
+                        if(item.seconds > 0) {
+                            const percent = ((item.seconds / totalSeconds) * 100).toFixed(1);
+                            
+                            // Filter history for this subject
+                            const subjectHistory = studyHistory
+                                .filter(h => h.subject === item.name)
+                                .sort((a, b) => new Date(b.date) - new Date(a.date));
+                                
+                            const row = document.createElement('div');
+                            row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                            row.style.padding = '8px 0';
+                            
+                            let historyHtml = '';
+                            if (subjectHistory.length > 0) {
+                                historyHtml = '<div style="margin-top:5px; padding-left:10px; border-left: 2px solid var(--border-color);">';
+                                subjectHistory.forEach(h => {
+                                    const d = new Date(h.date);
+                                    historyHtml += `
+                                        <div style="margin-bottom: 8px; font-size: 0.85rem;">
+                                            <div style="color: var(--text-muted); display:flex; justify-content:space-between;">
+                                                <span><i class="far fa-calendar-alt"></i> ${d.toLocaleDateString('pt-BR')} <i class="far fa-clock" style="margin-left:5px;"></i> ${d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
+                                                <span style="color: var(--text-color); font-weight:600;">${formatTime(h.duration)}</span>
+                                            </div>
+                                            ${h.note ? `<div style="color: #bbb; font-style: italic; font-size: 0.85rem; margin-top:2px;">"${h.note}"</div>` : ''}
+                                        </div>
+                                    `;
+                                });
+                                historyHtml += '</div>';
+                            }
+
+                            row.innerHTML = `
+                                <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                    <div>
+                                        <div style="font-weight: 500;">${item.name}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                                            ${formatTime(item.seconds)}
+                                        </div>
+                                    </div>
+                                    <div style="font-weight: 600; color: var(--accent-color);">${percent}% <i class="fas fa-chevron-down" style="font-size:0.7rem; margin-left:5px;"></i></div>
+                                </div>
+                                <div style="display:none; margin-top:8px;">
+                                    ${historyHtml || '<div style="font-size:0.8rem; color:var(--text-muted);">Sem histórico detalhado.</div>'}
+                                </div>
+                            `;
+                            listContainer.appendChild(row);
+                        }
+                    });
+                }
+            }
+
+            // Render Chart
+            const ctx = document.getElementById('studyTimeChart');
+            if(ctx) {
+                if(studyTimeChart) studyTimeChart.destroy();
+                
+                // Colors
+                const colors = [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                    '#E7E9ED', '#76D7C4', '#F1948A', '#85C1E9', '#F7DC6F', '#D2B4DE'
+                ];
+
+                const labels = sortedSubjects.filter(i => i.seconds > 0).map(i => i.name);
+                const data = sortedSubjects.filter(i => i.seconds > 0).map(i => i.seconds / 3600); // in hours
+
+                if(labels.length > 0) {
+                    studyTimeChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: data,
+                                backgroundColor: colors.slice(0, labels.length),
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { color: '#e0e0e0', boxWidth: 10, font: { size: 10 } }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const val = context.raw;
+                                            const total = context.chart._metasets[context.datasetIndex].total;
+                                            const percentage = ((val / total) * 100).toFixed(1) + '%';
+                                            return `${context.label}: ${val.toFixed(2)}h (${percentage})`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    // Empty state for chart?
+                    // ctx.getContext('2d').fillText("Sem dados", 10, 10);
+                }
+            }
+        }
+
+        // --- SYLLABUS LOGIC ---
+        const syllabusData = [
+            {
+                category: "Conhecimentos Básicos",
+                subjects: [
+                    {
+                        name: "Língua Portuguesa",
+                        topics: [
+                            "Interpretação de textos", "Ortografia oficial", "Acentuação gráfica", "Classes de palavras", "Sintaxe da oração e do período", "Pontuação", "Concordância nominal e verbal", "Regência nominal e verbal", "Crase", "Significação das palavras"
+                        ]
+                    },
+                    {
+                        name: "Exatas",
+                        topics: [
+                            "Lógica proposicional", "Argumentação lógica", "Juros simples e compostos", "Descontos", "Sistemas de amortização", "Estatística descritiva (média, moda, mediana)", "Probabilidade", "Distribuições de probabilidade", "Amostragem", "Inferência estatística"
+                        ]
+                    },
+                    {
+                        name: "Direito Constitucional",
+                        topics: [
+                            "Direitos e garantias fundamentais", "Organização do Estado", "Administração Pública", "Organização dos Poderes", "Sistema Tributário Nacional", "Finanças Públicas", "Ordem Econômica e Financeira"
+                        ]
+                    },
+                    {
+                        name: "Direito Administrativo",
+                        topics: [
+                            "Princípios da Adm. Pública", "Organização administrativa", "Atos administrativos", "Poderes administrativos", "Licitações e Contratos (Lei 14.133/2021)", "Serviços públicos", "Responsabilidade civil do Estado", "Improbidade Administrativa", "Processo Administrativo"
+                        ]
+                    },
+                    {
+                        name: "Direito Financeiro",
+                        topics: [
+                            "Atividade financeira do Estado", "Lei 4.320/1964", "Lei de Responsabilidade Fiscal", "Orçamento Público (PPA, LDO, LOA)", "Receita Pública", "Despesa Pública", "Dívida Pública"
+                        ]
+                    },
+                    {
+                        name: "Direito Civil",
+                        topics: [
+                            "LINDB", "Pessoas naturais e jurídicas", "Bens", "Fatos jurídicos", "Negócio jurídico", "Prescrição e decadência", "Obrigações", "Contratos"
+                        ]
+                    },
+                    {
+                        name: "Empresarial",
+                        topics: [
+                            "Direito de Empresa", "Empresário", "Estabelecimento empresarial", "Nome empresarial", "Sociedades", "Títulos de crédito", "Falência e recuperação de empresas"
+                        ]
+                    },
+                    {
+                        name: "Penal",
+                        topics: [
+                            "Aplicação da lei penal", "Teoria do crime", "Crimes contra a pessoa", "Crimes contra o patrimônio", "Crimes contra a fé pública", "Crimes contra a Administração Pública", "Crimes contra a ordem tributária"
+                        ]
+                    },
+                    {
+                        name: "Economia",
+                        topics: ["Microeconomia (Demanda, Oferta, Mercado)", "Macroeconomia (Contas Nacionais, Moeda, Inflação)"]
+                    },
+                    {
+                        name: "Contabilidade Geral",
+                        topics: [
+                            "Estrutura Conceitual (CPC 00)", "Patrimônio", "Escrituração", "Demonstrações Contábeis (Balanço, DRE, DMPL, DFC)", "Ativo Circulante e Não Circulante", "Passivo e PL"
+                        ]
+                    },
+                    {
+                        name: "Realidade do Estado",
+                        topics: ["Aspectos históricos, geográficos, econômicos, sociais e culturais do Estado"]
+                    }
+                ]
+            },
+            {
+                category: "Conhecimentos Específicos",
+                subjects: [
+                    {
+                        name: "Tecnologia da Informação",
+                        topics: [
+                            "Banco de Dados (Conceitos, SQL)", "Segurança da Informação", "Governança de TI (COBIT, ITIL)", "Análise de Dados (Big Data, BI)", "Lei Geral de Proteção de Dados (LGPD)"
+                        ]
+                    },
+                    {
+                        name: "Auditoria",
+                        topics: [
+                            "Normas Brasileiras de Contabilidade (NBC TA)", "Planejamento da auditoria", "Evidência de auditoria", "Procedimentos de auditoria", "Amostragem", "Relatórios de auditoria", "Auditoria interna x externa"
+                        ]
+                    },
+                    {
+                        name: "Contabilidade Geral e Avançada",
+                        topics: [
+                            "Consolidação de Demonstrações", "Investimentos (MEP)", "Combinação de Negócios", "CPC 01 (Redução ao Valor Recuperável)", "CPC 06 (Arrendamentos)", "CPC 27 (Imobilizado)"
+                        ]
+                    },
+                    {
+                        name: "Contabilidade Pública",
+                        topics: [
+                            "PCASP", "Demonstrações Contábeis Aplicadas ao Setor Público", "Receitas e Despesas sob o enfoque patrimonial", "MCASP"
+                        ]
+                    },
+                    {
+                        name: "Contabilidade de Custos",
+                        topics: [
+                            "Terminologia de Custos", "Custeio por Absorção e Variável", "Custeio Baseado em Atividades (ABC)", "Análise Custo-Volume-Lucro", "Margem de Contribuição"
+                        ]
+                    },
+                    {
+                        name: "Direito Tributário I",
+                        topics: [
+                            "Sistema Tributário Nacional (CF/88)", "Código Tributário Nacional (CTN)", "Obrigação tributária", "Crédito tributário", "Suspensão, Extinção e Exclusão do Crédito"
+                        ]
+                    },
+                    {
+                        name: "Direito Tributário II – Reforma Tributária",
+                        topics: [
+                            "Reforma Tributária (EC 132/2023)", "IBS e CBS", "Imposto Seletivo", "Regras de Transição", "Impactos na legislação vigente"
+                        ]
+                    },
+                    {
+                        name: "Legislação Tributária Estadual",
+                        topics: [
+                            "Código Tributário Estadual", "ICMS (Regras Estaduais)", "IPVA", "ITCD", "Processo Administrativo Tributário"
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        let syllabusProgress = JSON.parse(localStorage.getItem('estudoFiscalSyllabus')) || {};
+        
+        // Migrate Syllabus
+        const oldSefazSyllabus = JSON.parse(localStorage.getItem('sefazCycle_syllabus'));
+        if(oldSefazSyllabus && Object.keys(syllabusProgress).length === 0) {
+            console.log("Migrating Syllabus data...");
+            const mapping = {
+                "Raciocínio Lógico, Mat. Financeira e Estatística": "Exatas",
+                "Direito Empresarial": "Empresarial",
+                "Direito Penal": "Penal",
+                "Realidade de Goiás": "Realidade do Estado"
+            };
+            
+            Object.keys(oldSefazSyllabus).forEach(oldKey => {
+                const newKey = mapping[oldKey] || oldKey;
+                syllabusProgress[newKey] = oldSefazSyllabus[oldKey];
+            });
+            
+            localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(syllabusProgress));
+        }
+
+        function toggleSyllabusItem(subjectName, topicIndex, checked) {
+            if (!syllabusProgress[subjectName]) {
+                syllabusProgress[subjectName] = [];
+            }
+            if (syllabusProgress[subjectName].length <= topicIndex) {
+                // Fill gaps
+                for(let i=0; i<=topicIndex; i++) {
+                    if(typeof syllabusProgress[subjectName][i] === 'undefined') syllabusProgress[subjectName][i] = false;
+                }
+            }
+            syllabusProgress[subjectName][topicIndex] = checked;
+            localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(syllabusProgress));
+            
+            // Update UI partially to prevent closing accordion
+            updateSyllabusUI(subjectName);
+        }
+
+        function updateSyllabusUI(subjectName) {
+            const savedTopics = syllabusProgress[subjectName] || [];
+            
+            // Find syllabus data
+            let syllabusSubject = null;
+            for(const section of syllabusData) {
+                const found = section.subjects.find(s => s.name === subjectName);
+                if(found) {
+                    syllabusSubject = found;
+                    break;
+                }
+            }
+            if(!syllabusSubject) return;
+
+            // Find config for weight
+            const config = subjectsConfig.find(s => s.name === subjectName);
+            const weight = config ? config.weight : 1;
+
+            let completedCount = 0;
+            syllabusSubject.topics.forEach((_, idx) => {
+                if (savedTopics[idx]) completedCount++;
+            });
+            const percent = Math.round((completedCount / syllabusSubject.topics.length) * 100);
+            
+            const sanitizedName = subjectName.replace(/\s+/g, '_').replace(/[^\w]/g, '');
+            
+            // Update Meta Text
+            const metaEl = document.getElementById(`meta-${sanitizedName}`);
+            if(metaEl) {
+                metaEl.innerHTML = `
+                    <span class="tag ${weight > 1 ? 'badge-spec' : 'badge-basic'}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                        Peso ${weight}
+                    </span>
+                    • ${completedCount}/${syllabusSubject.topics.length} tópicos (${percent}%)
+                `;
+            }
+            
+            // Update Progress Bar
+            const progEl = document.getElementById(`prog-${sanitizedName}`);
+            if(progEl) {
+                progEl.style.width = `${percent}%`;
+            }
+        }
+
+        window.toggleAccordion = function(header) {
+            const content = header.nextElementSibling;
+            content.classList.toggle('open');
+            const icon = header.querySelector('.accordion-icon');
+            icon.textContent = content.classList.contains('open') ? '▼' : '▶';
+        }
+
+        function renderSyllabus() {
+            const container = document.getElementById('syllabus-container');
+            container.innerHTML = '';
+
+            syllabusData.forEach(section => {
+                const secTitle = document.createElement('h4');
+                secTitle.textContent = section.category;
+                secTitle.style.margin = '20px 0 10px 0';
+                secTitle.style.color = 'var(--accent-color)';
+                container.appendChild(secTitle);
+
+                section.subjects.forEach(sub => {
+                    const config = subjectsConfig.find(s => s.name === sub.name);
+                    const weight = config ? config.weight : 1;
+                    const savedTopics = syllabusProgress[sub.name] || [];
+                    
+                    let completedCount = 0;
+                    sub.topics.forEach((_, idx) => {
+                        if (savedTopics[idx]) completedCount++;
+                    });
+                    const percent = Math.round((completedCount / sub.topics.length) * 100);
+                    
+                    const sanitizedName = sub.name.replace(/\s+/g, '_').replace(/[^\w]/g, '');
+
+                    const card = document.createElement('div');
+                    card.className = 'syllabus-category';
+                    
+                    card.innerHTML = `
+                        <div class="syllabus-header" onclick="toggleAccordion(this)">
+                            <div class="syllabus-title-group">
+                                <span class="accordion-icon">▶</span>
+                                <div>
+                                    <div class="syllabus-title">${sub.name}</div>
+                                    <div class="syllabus-meta" id="meta-${sanitizedName}">
+                                        <span class="tag ${weight > 1 ? 'badge-spec' : 'badge-basic'}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                                            Peso ${weight}
+                                        </span>
+                                        • ${completedCount}/${sub.topics.length} tópicos (${percent}%)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress-mini">
+                                <div class="progress-mini-fill" id="prog-${sanitizedName}" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                        <div class="syllabus-content">
+                            ${sub.topics.map((topic, idx) => `
+                                <div class="topic-item">
+                                    <input type="checkbox" class="topic-checkbox" 
+                                        ${savedTopics[idx] ? 'checked' : ''} 
+                                        onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
+                                    <span class="topic-text">${topic}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            });
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            if(!container) return;
+            
+            container.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="margin:0; color:var(--accent-color);">Histórico de Estudos</h3>
+                    <div style="font-size:0.9rem; color:var(--text-muted);">Total: ${formatTime(studyHistory.reduce((acc, curr) => acc + curr.duration, 0))}</div>
+                </div>
+            `;
+            
+            if(studyHistory.length === 0) {
+                container.innerHTML += '<div style="text-align:center; color:var(--text-muted); padding:40px;">Nenhum estudo registrado ainda.</div>';
+                return;
+            }
+            
+            // Sort by date desc
+            const sorted = [...studyHistory].sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            const list = document.createElement('div');
+            list.className = 'history-list';
+            
+            sorted.forEach(h => {
+                const d = new Date(h.date);
+                const item = document.createElement('div');
+                item.style.background = 'var(--card-bg)';
+                item.style.border = '1px solid var(--border-color)';
+                item.style.borderRadius = '8px';
+                item.style.padding = '15px';
+                item.style.marginBottom = '10px';
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.alignItems = 'center';
+                
+                item.innerHTML = `
+                    <div>
+                        <div style="font-weight:600; color:var(--text-color);">${h.subject}</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">
+                            <i class="far fa-calendar"></i> ${d.toLocaleDateString('pt-BR')} 
+                            <i class="far fa-clock" style="margin-left:8px;"></i> ${d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}
+                        </div>
+                        ${h.note ? `<div style="margin-top:8px; font-style:italic; color:#bbb; font-size:0.9rem;">"${h.note}"</div>` : ''}
+                    </div>
+                    <div style="font-weight:bold; font-size:1.1rem; color:var(--accent-color);">
+                        ${formatTime(h.duration)}
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            
+            container.appendChild(list);
+        }
+
+        // Start
+        function init() {
+            renderCalendar();
+            renderSubjects();
+            renderList();
+            updateStats();
+            renderSyllabus();
+            renderTimeStats();
+            renderHistory();
+        }
+        
+        init();
+
+    </script>
+</body>
+</html>

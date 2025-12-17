@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estudo Fiscal Denilson Brandão</title>
+    <title>Sistema de Estudo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --bg-color: #121212;
@@ -503,7 +504,8 @@
             background-color: var(--border-color);
         }
         .dot.done { background-color: var(--success-color); }
-        .dot.todo { background-color: var(--accent-color); }
+        .dot.not-started { background-color: var(--accent-color); }
+        .dot.incomplete { background-color: var(--warning-color); }
 
         /* Subjects View */
         .subjects-grid {
@@ -534,6 +536,21 @@
         }
         .badge-spec { background: var(--tag-spec-bg); color: var(--tag-spec-text); }
         .badge-basic { background: var(--tag-basic-bg); color: var(--tag-basic-text); }
+        .badge-w1 { background: rgba(16,185,129,0.2); color: var(--success-color); }
+        .badge-w2 { background: rgba(245,158,11,0.2); color: var(--warning-color); }
+        .badge-w3 { background: rgba(239,68,68,0.2); color: var(--danger-color); }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .status-pill.ns { color: #93c5fd; background: rgba(59,130,246,0.15); }
+        .status-pill.ic { color: var(--warning-color); background: rgba(245,158,11,0.15); }
+        .status-pill.ok { color: var(--success-color); background: rgba(16,185,129,0.15); }
 
         .subject-stat {
             display: flex;
@@ -819,6 +836,72 @@
             transition: width 0.3s ease;
         }
 
+        .meta-chip {
+            display: flex;
+            align-items: center;
+            background: #1f1f1f;
+            border: 1px solid #444;
+            border-radius: 999px;
+            padding: 4px 8px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .meta-chip .divider { width: 1px; height: 18px; background: #444; margin: 0 6px; }
+        .step-btn {
+            background: #2a2a2a;
+            color: #ddd;
+            border: 1px solid #444;
+            border-radius: 999px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .step-btn:hover { background: #333; color: #fff; border-color: #555; }
+        .chip-seg { display: flex; align-items: center; gap: 6px; color: #bbb; font-size: 0.8rem; }
+        .chip-seg b { color: #fff; font-size: 0.9rem; }
+        .preset-group { display: flex; gap: 6px; margin-left: 8px; }
+        .preset-btn {
+            background: rgba(59,130,246,0.15);
+            color: #93c5fd;
+            border: 1px solid #2d5db3;
+            padding: 4px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .preset-btn:hover { background: rgba(59,130,246,0.25); }
+
+        .start-btn {
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        .start-btn i { margin-right: 6px; }
+
+        .status-chip-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .status-chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: #1f1f1f;
+            color: #ddd;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .status-chip.active { box-shadow: 0 0 0 2px rgba(59,130,246,0.35) inset; }
+        .chip-todo { color: #bbb; }
+        .chip-studying { color: #93c5fd; border-color: #2d5db3; }
+        .chip-done { color: #34d399; border-color: #2b6f54; }
+        .chip-skipped { color: #f59e0b; border-color: #8a5b0b; }
+
     </style>
 </head>
 <body>
@@ -827,7 +910,7 @@
     <nav class="sidebar">
         <div class="brand">
             <i class="fas fa-book-reader"></i>
-            <span>Estudo Fiscal</span>
+            <span>Painel de Estudos</span>
         </div>
 
         <div class="nav-menu">
@@ -878,13 +961,22 @@
 
             <!-- Backup & Config -->
             <div style="margin-top: 20px; padding: 0 15px;">
-                <button onclick="downloadBackup()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fas fa-download"></i> Backup (Salvar)
+                <button id="generate-cycle-button" onclick="generateCycleFromModel()" style="width: 100%; padding: 10px; background: var(--accent-color); border: none; color: #fff; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
+                    <i class="fas fa-play-circle"></i> Gerar Ciclo de Estudo
                 </button>
-                <button onclick="triggerRestore()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fas fa-upload"></i> Restaurar Dados
+                
+            <div style="margin-top: 10px; display: grid; gap: 8px;">
+                <button id="btn-download-xlsx" onclick="downloadModelTemplateXLSX()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fas fa-table"></i> Baixar Modelo Excel
                 </button>
-                <input type="file" id="restore-input" style="display: none;" onchange="restoreBackup(this)">
+                <button id="btn-export-xlsx" onclick="exportCurrentModelXLSX()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fas fa-file-export"></i> Exportar Modelo Atual (Excel)
+                </button>
+                <button id="btn-import-xlsx" onclick="triggerImportModelXLSX()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="fas fa-file-import"></i> Importar Modelo Excel
+                </button>
+                <input type="file" id="import-model-xlsx-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importModelXLSX(this)">
+                </div>
                 
                 <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
                      <button onclick="resetSchedule()" style="width: 100%; padding: 6px; background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
@@ -901,7 +993,7 @@
         <div class="top-bar">
             <div class="page-title">
                 <h1 id="page-title-text">Calendário de Estudos</h1>
-                <p>Foco na meta: Estudo Fiscal - Denilson Brandão</p>
+                <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
             </div>
             <div>
                 <!-- User profile or settings could go here -->
@@ -921,13 +1013,13 @@
                 </div>
                 
                 <div class="calendar-grid">
-                    <div class="week-day">Dom</div>
                     <div class="week-day">Seg</div>
                     <div class="week-day">Ter</div>
                     <div class="week-day">Qua</div>
                     <div class="week-day">Qui</div>
                     <div class="week-day">Sex</div>
                     <div class="week-day">Sáb</div>
+                    <div class="week-day">Dom</div>
                 </div>
                 <div id="calendar-days" class="calendar-grid" style="margin-top: 10px;">
                     <!-- JS generated -->
@@ -943,6 +1035,29 @@
 
             <!-- Tab: List -->
             <div id="view-list" class="view-section">
+                <div id="list-filters" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:10px;">
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Status</label>
+                        <select id="filter-status" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;">
+                            <option value="">Todos</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="feito">Feito</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Matéria</label>
+                        <select id="filter-subject" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;"></select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Início</label>
+                        <input id="filter-start" type="date" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Fim</label>
+                        <input id="filter-end" type="date" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                    </div>
+                    <button onclick="clearListFilters()" style="margin-left:auto; background: transparent; border:1px solid var(--border-color); color:#fff; padding:6px 10px; border-radius:6px;">Limpar</button>
+                </div>
                 <table>
                     <thead>
                         <tr>
@@ -994,6 +1109,46 @@
                             <!-- JS Generated -->
                         </div>
                     </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0;">Contagem de PDF por Matéria</h3>
+                        <div id="pdf-stats-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- JS Generated -->
+                        </div>
+                    </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 10px 0;">Calibração do Ciclo</h3>
+                        <div id="calibration-panel" style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Influência Tópicos (alpha)</label>
+                                <input type="range" id="alpha-range" min="0" max="1" step="0.05" />
+                                <input type="number" id="alpha-num" min="0" max="1" step="0.05" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Curva Peso (beta)</label>
+                                <input type="range" id="beta-range" min="0.5" max="2" step="0.05" />
+                                <input type="number" id="beta-num" min="0.5" max="2" step="0.05" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Curva Tópicos (gamma)</label>
+                                <input type="range" id="gamma-range" min="0" max="2" step="0.05" />
+                                <input type="number" id="gamma-num" min="0" max="2" step="0.05" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Mín/Máx rep.</label>
+                                <input type="number" id="minRep-num" min="1" max="20" step="1" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                                <input type="number" id="maxRep-num" min="1" max="20" step="1" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Normalizar Semana</label>
+                                <input type="checkbox" id="normalizeWeekly-check" />
+                            </div>
+                            <div>
+                                <button onclick="saveCalibrationParams()" style="background: var(--accent-color); color:#fff; border:none; padding:6px 10px; border-radius:6px;">Aplicar</button>
+                                <button onclick="renderCalibrationPreview()" style="background: transparent; border:1px solid var(--border-color); color:#fff; padding:6px 10px; border-radius:6px; margin-left:10px;">Preview</button>
+                            </div>
+                            <div id="calibration-preview" style="margin-top:10px; display:flex; flex-direction:column; gap:6px;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1021,7 +1176,7 @@
     <div id="note-modal">
         <div class="note-modal-content">
             <div class="note-header">
-                <span>Como foi, Denilson?</span>
+                <span>Como foi, Estudante? Lembre-se de anotar em que página parou do PDF/Vídeo Aula</span>
                 <button onclick="cancelNote()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:1.2rem;"><i class="fas fa-times"></i></button>
             </div>
             <div class="note-body">
@@ -1059,10 +1214,81 @@
 
     <script>
         // --- DATA & CONFIG ---
-        const startDate = new Date('2025-12-16');
-        const endDate = new Date('2026-12-31');
+        /**
+         * Salva dados do localStorage em disco via API do servidor.
+         */
+        async function syncToDisk() {
+            try {
+                const payload = {
+                    data: {
+                        estudoFiscalData: JSON.parse(localStorage.getItem('estudoFiscalData') || '{}'),
+                        estudoFiscalSyllabus: JSON.parse(localStorage.getItem('estudoFiscalSyllabus') || '{}'),
+                        estudoFiscalStudyHistory: JSON.parse(localStorage.getItem('estudoFiscalStudyHistory') || '[]'),
+                        estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem('estudoFiscalScheduleStructure') || '[]'),
+                        estudoFiscalModel: JSON.parse(localStorage.getItem('estudoFiscalModel') || 'null')
+                    }
+                };
+                await fetch('/api/save_bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) {
+                console.warn('Falha ao sincronizar com disco:', e);
+            }
+        }
+
+        /**
+         * Envia uma linha de log para o servidor.
+         */
+        async function logEvent(message) {
+            try {
+                await fetch('/api/log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+            } catch (e) {
+                // Silencioso para não interromper fluxo
+            }
+        }
+
+        /**
+         * Carrega dados do disco (se existirem) e injeta em localStorage.
+         * Prioriza o ciclo persistido via /api/cycle.
+         */
+        async function hydrateFromDisk() {
+            try {
+                // 1) Tenta carregar ciclo dedicado
+                const resCycle = await fetch('/api/cycle');
+                const cycle = await resCycle.json();
+                if (cycle && cycle.ok && cycle.schedule) {
+                    localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(cycle.schedule));
+                    await logEvent(`HYDRATE: ciclo carregado (${Array.isArray(cycle.schedule) ? cycle.schedule.length : 0} dias)`);
+                }
+
+                // 2) Carrega demais dados
+                const res = await fetch('/api/load_all');
+                const json = await res.json();
+                if (json && json.ok && json.data) {
+                    const d = json.data;
+                    if (d.estudoFiscalData) localStorage.setItem('estudoFiscalData', JSON.stringify(d.estudoFiscalData));
+                    if (d.estudoFiscalSyllabus) localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(d.estudoFiscalSyllabus));
+                    if (d.estudoFiscalStudyHistory) localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(d.estudoFiscalStudyHistory));
+                    // Só usa backup do schedule se /api/cycle não trouxe nada
+                    if (!cycle.schedule && d.estudoFiscalScheduleStructure) {
+                        localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(d.estudoFiscalScheduleStructure));
+                    }
+                    if (d.estudoFiscalModel) localStorage.setItem('estudoFiscalModel', JSON.stringify(d.estudoFiscalModel));
+                }
+            } catch (e) {
+                console.warn('Falha ao hidratar do disco:', e);
+            }
+        }
+        let startDate = new Date('2025-12-16');
+        let endDate = new Date('2026-12-31');
         
-        const subjectsConfig = [
+        let subjectsConfig = [
             // Conhecimentos Básicos (Peso 1)
             { name: "Língua Portuguesa", type: "Básico", weight: 1, tickets: 1 },
             { name: "Exatas", type: "Básico", weight: 1, tickets: 1 }, // Substitui RLM, Mat. Fin, Estatística
@@ -1087,9 +1313,78 @@
             { name: "Legislação Tributária Estadual", type: "Específico", weight: 3, tickets: 3 }
         ];
 
+        // Config padrão: matérias por dia (Seg..Dom)
+        let slotsPorDia = [5,5,5,5,5,8,8];
+
+        // --- MODEL LOADER ---
+        /**
+         * Carrega um modelo salvo no localStorage e aplica em start/end/subjects.
+         */
+        function loadModelFromStorage() {
+            const raw = localStorage.getItem('estudoFiscalModel');
+            if (!raw) return;
+            try {
+                const model = JSON.parse(raw);
+                if (model.inicioCiclo) startDate = new Date(model.inicioCiclo);
+                if (model.fimCiclo) endDate = new Date(model.fimCiclo);
+                if (Array.isArray(model.materias)) {
+                    subjectsConfig = model.materias.map(m => ({
+                        name: m.nome,
+                        type: m.tipo || 'Básico',
+                        weight: Number(m.peso || 1),
+                        tickets: Number(m.tickets || 1),
+                        qtdePdf: Number(m.qtdePdf || 0),
+                        qtdePaginas: Number(m.qtdePaginas || 0)
+                    }));
+                }
+                if (Array.isArray(model.slotsPorDia) && model.slotsPorDia.length === 7) {
+                    slotsPorDia = model.slotsPorDia.map(n => Number(n) || 0);
+                }
+                if (model.concurso) {
+                    const subEl = document.getElementById('page-subtitle-text');
+                    if (subEl) subEl.textContent = `Foco na meta: ${model.concurso}`;
+                }
+                if (Array.isArray(model.syllabus)) {
+                    syllabusData = model.syllabus; // será definido abaixo como let
+                }
+                const savedScheduleJson = localStorage.getItem('estudoFiscalScheduleStructure');
+                if (savedScheduleJson) {
+                    setGenerateButtonState('success');
+                    try {
+                        const rawSchedule = JSON.parse(savedScheduleJson);
+                        fullSchedule = rawSchedule.map(day => ({
+                            ...day,
+                            date: new Date(day.date),
+                            tasks: day.tasks.map(t => ({...t}))
+                        }));
+                    } catch(e) {
+                        console.error('Falha ao reidratar cronograma salvo:', e);
+                        fullSchedule = [];
+                    }
+                } else {
+                    setGenerateButtonState('pending');
+                    fullSchedule = [];
+                }
+                // Inicializa filtros da lista após carregar modelo
+                setTimeout(initListFilters, 0);
+            } catch (e) {
+                console.error('Falha ao carregar modelo:', e);
+            }
+        }
+
+
         // --- GENERATE CYCLE ---
         let fullSchedule = []; // Array of objects: { date, tasks: [] }
         
+        /**
+         * Gera a estrutura do cronograma considerando Peso e quantidade de tópicos.
+         * Parâmetros de calibração:
+         * - alpha: influência dos tópicos (0 ignora, 1 usa só tópicos)
+         * - beta: curva do Peso (1 linear, >1 amplifica, <1 suaviza)
+         * - gamma: curva dos tópicos (1 linear, >1 amplifica, <1 suaviza)
+         * - minRep/maxRep: limites de repetições por matéria na sequência base
+         * - normalizeWeekly: ajusta proporcionalmente para caber nos slots semanais
+         */
         function generateSchedule() {
             // Check if we have a saved schedule structure
             const savedScheduleJson = localStorage.getItem('estudoFiscalScheduleStructure');
@@ -1112,33 +1407,51 @@
 
             console.log("Generating new schedule structure...");
 
-            // Strategy: Ensure all subjects appear in the weekly cycle by distributing tickets in passes.
-            // Pass 1: Take 1 ticket from every subject (ensures variety and covers all subjects early).
-            // Pass 2+: Take remaining tickets from heavier subjects.
-            
-            let pool = [];
-            subjectsConfig.forEach(sub => {
-                pool.push({ ...sub, remaining: sub.tickets });
+            const defaults = { alpha: 0.3, beta: 1.1, gamma: 0.8, minRep: 1, maxRep: 8, normalizeWeekly: true };
+            const savedParams = JSON.parse(localStorage.getItem('estudoFiscalGenParams') || 'null');
+            const params = Object.assign({}, defaults, savedParams || {});
+
+            const topicCountMap = {};
+            syllabusData.forEach(sec => sec.subjects.forEach(sub => {
+                topicCountMap[sub.name] = Math.max(1, Array.isArray(sub.topics) ? sub.topics.length : 1);
+            }));
+            const topicCounts = subjectsConfig.map(s => topicCountMap[s.name] || 1);
+            const avgTopics = topicCounts.length ? (topicCounts.reduce((a,b)=>a+b,0) / topicCounts.length) : 1;
+
+            const pageCounts = subjectsConfig.map(s => s.qtdePaginas || 0);
+            const avgPages = pageCounts.length ? (pageCounts.reduce((a,b)=>a+b,0) / pageCounts.length) : 0;
+
+            // Calcula repetições por matéria com calibração e normalização semanal opcional
+            const weeklySlots = (Array.isArray(slotsPorDia) ? slotsPorDia.reduce((a,b)=>a+b,0) : 0) || 1;
+            const entries = subjectsConfig.map(sub => {
+                const tc = topicCountMap[sub.name] || 1;
+                const wLin = Number(sub.weight || 1);
+                const w = Math.pow(wLin, params.beta);
+                const ratio = Math.pow(tc / avgTopics, params.gamma);
+                let raw = w * ((1 - params.alpha) + params.alpha * ratio);
+                
+                // Fator de Páginas (se houver dados)
+                if (avgPages > 0) {
+                    const pRatio = (sub.qtdePaginas || 0) / avgPages;
+                    // Ajusta frequência baseado em volume de páginas (raiz quadrada para suavizar)
+                    const pFactor = Math.pow(Math.max(0.1, pRatio), 0.5);
+                    raw = raw * pFactor;
+                }
+
+                let reps = Math.max(params.minRep, Math.min(params.maxRep, Math.round(raw)));
+                return { sub, reps };
             });
-            
-            let baseSequence = [];
-            
-            // Iterate until all tickets are used
-            while(pool.some(p => p.remaining > 0)) {
-                // Get candidates with remaining tickets
-                let candidates = pool.filter(p => p.remaining > 0);
-                
-                // Shuffle candidates to avoid rigid order (e.g., alphabetic) every cycle
-                // This ensures "Exatas" doesn't always strictly follow "Português" if they are adjacent in config.
-                candidates.sort(() => Math.random() - 0.5);
-                
-                candidates.forEach(cand => {
-                    if(cand.remaining > 0) {
-                        baseSequence.push(cand);
-                        cand.remaining--;
-                    }
+            if (params.normalizeWeekly) {
+                const sumReps = entries.reduce((a,b)=>a+b.reps,0) || 1;
+                const scale = weeklySlots / sumReps;
+                entries.forEach(e => {
+                    e.reps = Math.max(params.minRep, Math.min(params.maxRep, Math.round(e.reps * scale)));
                 });
             }
+            let baseSequence = [];
+            entries.forEach(e => {
+                for (let i = 0; i < e.reps; i++) baseSequence.push({ ...e.sub });
+            });
 
             // Queue for consumption
             // We'll repeat this base sequence indefinitely
@@ -1148,8 +1461,8 @@
 
             while(currentDate <= endDate) {
                 const dayOfWeek = currentDate.getDay();
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const hours = isWeekend ? 8 : 5;
+                const dayIdxMonFirst = (dayOfWeek + 6) % 7; // 0=Seg .. 6=Dom
+                const hours = slotsPorDia[dayIdxMonFirst] || 0;
                 
                 let dayTasks = [];
                 let attempts = 0; // fail-safe
@@ -1214,9 +1527,17 @@
             
             // Save the generated structure
             localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+            // Persist ciclo dedicado e log
+            try {
+                fetch('/api/cycle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ schedule: fullSchedule })
+                }).then(() => logEvent(`CYCLE: gerado (${fullSchedule.length} dias)`)).catch(()=>{});
+            } catch(e) {}
         }
 
-        generateSchedule();
+        
 
         // --- STATE MANAGEMENT ---
         // Load status from localStorage
@@ -1232,25 +1553,28 @@
             localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
         }
         
-        // Apply saved status to schedule
-        fullSchedule.forEach(day => {
-            day.tasks.forEach(task => {
-                const data = savedData[task.id];
-                if(data) {
-                    task.status = data.status || 'todo';
-                    task.note = data.note || '';
-                    task.timeSpent = data.timeSpent || 0;
-                    task.durationTarget = data.durationTarget || 3600; // Load target
-                    task.completed = (task.status === 'done'); 
-                } else {
-                    task.status = 'todo';
-                    task.note = '';
-                    task.timeSpent = 0;
-                    task.durationTarget = 3600; // Default 1h
-                    task.completed = false;
-                }
+        /**
+         * Aplica dados salvos (tempo, meta, notas) no cronograma carregado.
+         */
+        function applySavedStatusToSchedule() {
+            const saved = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+            fullSchedule.forEach(day => {
+                day.tasks.forEach(task => {
+                    const data = saved[task.id];
+                    if (data) {
+                        task.note = data.note || '';
+                        task.timeSpent = data.timeSpent || 0;
+                        task.durationTarget = data.durationTarget || 3600;
+                    } else {
+                        task.note = task.note || '';
+                        task.timeSpent = task.timeSpent || 0;
+                        task.durationTarget = task.durationTarget || 3600;
+                    }
+                    const statusNow = deriveTaskStatus(task);
+                    task.completed = (statusNow === 'concluido');
+                });
             });
-        });
+        }
 
         // Current Calendar View State
         let viewDate = new Date();
@@ -1285,6 +1609,29 @@
             };
             const titleEl = document.getElementById('page-title-text');
             if(titleEl) titleEl.textContent = titles[tabName] || 'Painel de Estudos';
+
+            // Render específico ao trocar de aba
+            if (tabName === 'calendar') renderCalendar();
+            else if (tabName === 'subjects') renderSubjects();
+            else if (tabName === 'list') renderList();
+            else if (tabName === 'syllabus') renderSyllabus();
+            else if (tabName === 'time-stats') renderTimeStats();
+            else if (tabName === 'history') renderHistory();
+        }
+
+        function setGenerateButtonState(state) {
+            const btn = document.getElementById('generate-cycle-button');
+            if (!btn) return;
+            if (state === 'pending') {
+                btn.style.background = '#ef4444';
+                btn.innerHTML = '<i class="fas fa-play-circle"></i> Gerar Ciclo de Estudo';
+            } else if (state === 'success') {
+                btn.style.background = '#10b981';
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Ciclo Gerado Sucesso';
+            } else {
+                btn.style.background = 'var(--accent-color)';
+                btn.innerHTML = '<i class="fas fa-play-circle"></i> Gerar Ciclo de Estudo';
+            }
         }
 
         // --- CALENDAR LOGIC ---
@@ -1303,7 +1650,7 @@
             const firstDay = new Date(year, month, 1);
             const lastDay = new Date(year, month + 1, 0);
             
-            const startDayIndex = firstDay.getDay(); // 0-6
+            const startDayIndex = (firstDay.getDay() + 6) % 7; // Semana iniciando na segunda
             const totalDays = lastDay.getDate();
 
             const container = document.getElementById('calendar-days');
@@ -1319,11 +1666,13 @@
             // Days
             for(let d=1; d<=totalDays; d++) {
                 const currentDayDate = new Date(year, month, d);
-                const daySchedule = fullSchedule.find(s => 
-                    s.date.getDate() === d && 
-                    s.date.getMonth() === month && 
-                    s.date.getFullYear() === year
-                );
+                const daySchedule = fullSchedule.find(s => {
+                    const a = new Date(s.date);
+                    a.setHours(0,0,0,0);
+                    const b = new Date(currentDayDate);
+                    b.setHours(0,0,0,0);
+                    return a.getTime() === b.getTime();
+                });
 
                 const div = document.createElement('div');
                 div.className = 'day-cell';
@@ -1340,9 +1689,11 @@
                     div.onclick = () => openDayModal(daySchedule);
                     
                     // Dots for tasks
-                    const dotsHtml = daySchedule.tasks.map(t => 
-                        `<div class="dot ${t.completed ? 'done' : 'todo'}" title="${t.subject}"></div>`
-                    ).join('');
+                    const dotsHtml = daySchedule.tasks.map(t => {
+                        const status = deriveTaskStatus(t);
+                        const cls = status === 'concluido' ? 'done' : (status === 'nao_concluido' ? 'incomplete' : 'not-started');
+                        return `<div class="dot ${cls}" title="${t.subject}"></div>`;
+                    }).join('');
 
                     div.innerHTML = `
                         <div class="day-number">
@@ -1388,11 +1739,9 @@
                 const item = document.createElement('div');
                 item.className = 'task-item';
                 
-                // Determine select class
-                let selectClass = '';
-                if(task.status === 'done') selectClass = 'status-done';
-                else if(task.status === 'todo') selectClass = 'status-todo';
-                else if(task.status === 'studying') selectClass = 'status-studying';
+                const derived = deriveTaskStatus(task);
+                const statusChipClass = derived === 'concluido' ? 'ok' : (derived === 'nao_concluido' ? 'ic' : 'ns');
+                const statusLabel = derived === 'concluido' ? 'Concluído' : (derived === 'nao_concluido' ? 'Não Concluído' : 'Não Iniciado');
 
                 const timeSpent = task.timeSpent || 0;
                 // Default Meta logic: if not set, 1h (3600s). Can be edited.
@@ -1411,7 +1760,7 @@
                         <div class="task-info" style="min-width: 200px;">
                             <div class="task-name" style="font-size: 1.1rem; margin-bottom: 4px;">${task.subject}</div>
                             <div class="task-meta">
-                                <span class="tag ${task.weight === 2 ? 'badge-spec' : 'badge-basic'}" 
+                                <span class="tag ${'badge-w' + (task.weight || 1)}" 
                                       style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
                                     ${task.type}
                                 </span>
@@ -1420,14 +1769,7 @@
                         </div>
                         
                         <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
-                             <!-- Start Button Logic -->
-                             ${task.status !== 'done' ? 
-                                `<button onclick="updateDraftStatus(${index}, {value: 'studying'})" 
-                                    style="background: var(--accent-color); color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-                                    <i class="fas fa-play"></i> Iniciar
-                                 </button>` : 
-                                `<span style="color: var(--success-color); font-weight: bold;"><i class="fas fa-check"></i> Concluído</span>`
-                             }
+                            <span class="status-pill ${statusChipClass}"><i class="fas fa-circle"></i> ${statusLabel}</span>
                         </div>
                     </div>
 
@@ -1442,17 +1784,27 @@
                         </div>
                         
                         <!-- Meta Editor -->
-                        <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem;">
-                            <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
                                 <span style="color: #888;">Meta:</span>
-                                <input type="number" min="0" max="23" value="${Math.floor(durationTarget / 3600)}" 
-                                    onchange="updateDraftMeta(${index}, 'hours', this.value)"
-                                    style="width: 35px; background: #222; border: 1px solid #444; color: #ddd; text-align: center; border-radius: 3px;"> h
-                                <input type="number" min="0" max="59" value="${Math.floor((durationTarget % 3600) / 60)}" 
-                                    onchange="updateDraftMeta(${index}, 'minutes', this.value)"
-                                    style="width: 35px; background: #222; border: 1px solid #444; color: #ddd; text-align: center; border-radius: 3px;"> m
+                                <div class="meta-chip">
+                                    <button class="step-btn" onclick="adjustMeta(${index}, 'hours', -1)">-</button>
+                                    <div class="chip-seg"><span>Horas</span><b>${Math.floor(durationTarget / 3600)}</b></div>
+                                    <button class="step-btn" onclick="adjustMeta(${index}, 'hours', 1)">+</button>
+                                    <div class="divider"></div>
+                                    <button class="step-btn" onclick="adjustMeta(${index}, 'minutes', -5)">-</button>
+                                    <div class="chip-seg"><span>Min</span><b>${Math.floor((durationTarget % 3600) / 60)}</b></div>
+                                    <button class="step-btn" onclick="adjustMeta(${index}, 'minutes', 5)">+</button>
+                                </div>
+                                <div class="preset-group">
+                                    <button class="preset-btn" onclick="setMetaPreset(${index}, 1800)">30m</button>
+                                    <button class="preset-btn" onclick="setMetaPreset(${index}, 2700)">45m</button>
+                                    <button class="preset-btn" onclick="setMetaPreset(${index}, 3600)">1h</button>
+                                    <button class="preset-btn" onclick="setMetaPreset(${index}, 5400)">1h30</button>
+                                    <button class="preset-btn" onclick="setMetaPreset(${index}, 7200)">2h</button>
+                                    ${task._startSuggested ? `<button class="start-btn" onclick="startActiveSession(${index})"><i class='fas fa-play'></i> Iniciar Estudo</button>` : ''}
+                                </div>
                             </div>
-                            
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <span style="color: #888;">Estudado:</span>
                                 <span style="color: white; font-family: monospace;">${formattedTime}</span>
@@ -1460,46 +1812,7 @@
                         </div>
                     </div>
                     
-                    <!-- Manual Edit Toggle -->
-                    <div style="margin-top: 8px;">
-                        <span onclick="document.getElementById('manual-edit-${index}').style.display = document.getElementById('manual-edit-${index}').style.display === 'none' ? 'block' : 'none'" 
-                              style="font-size: 0.8rem; color: var(--accent-color); cursor: pointer; text-decoration: underline;">
-                            Editar Manualmente / Status
-                        </span>
-                    </div>
-
-                    <!-- Hidden Manual Controls (Legacy + Status) -->
-                    <div id="manual-edit-${index}" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid #333; border-radius: 4px;">
-                        <div style="margin-bottom: 10px;">
-                            <label style="font-size: 0.8rem; color: #888;">Status Manual:</label>
-                            <select class="task-status-select ${selectClass}" onchange="updateDraftStatus(${index}, this)" style="width: 100%;">
-                                <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>A FAZER</option>
-                                <option value="studying" ${task.status === 'studying' ? 'selected' : ''}>EM ANDAMENTO</option>
-                                <option value="done" ${task.status === 'done' ? 'selected' : ''}>ESTUDADO (Concluído)</option>
-                                <option value="skipped" ${task.status === 'skipped' ? 'selected' : ''}>NÃO CONCLUÍDO</option>
-                            </select>
-                        </div>
-                        
-                        <div id="manual-time-container-${index}" style="display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-clock" style="color: var(--text-muted);"></i>
-                            <span style="font-size: 0.9rem; color: var(--text-muted);">Ajustar Tempo:</span>
-                            <input type="number" min="0" max="23" 
-                                value="${Math.floor((task.timeSpent || 0) / 3600)}" 
-                                onchange="updateDraftTime(${index}, 'hours', this.value)"
-                                style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
-                            > <span style="font-size: 0.8rem; color: #888;">h</span>
-                            <input type="number" min="0" max="59" 
-                                value="${Math.floor(((task.timeSpent || 0) % 3600) / 60)}" 
-                                onchange="updateDraftTime(${index}, 'minutes', this.value)"
-                                style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
-                            > <span style="font-size: 0.8rem; color: #888;">m</span>
-                            <input type="number" min="0" max="59" 
-                                value="${(task.timeSpent || 0) % 60}" 
-                                onchange="updateDraftTime(${index}, 'seconds', this.value)"
-                                style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
-                            > <span style="font-size: 0.8rem; color: #888;">s</span>
-                        </div>
-                    </div>
+                    
 
                     <div style="margin-top: 10px;">
                         <textarea class="task-observation" placeholder="Anotações..." onchange="updateDraftNote(${index}, this.value)">${task.note || ''}</textarea>
@@ -1523,7 +1836,39 @@
             task.durationTarget = (h * 3600) + (m * 60);
             // Re-render to update bars
             renderModalTasks(); 
+            commitDraft();
         }
+
+        /**
+         * Ajusta meta de horas/minutos via botões incrementais.
+         */
+        window.adjustMeta = function(index, type, delta) {
+            const task = currentDayTasksDraft[index];
+            const current = task.durationTarget || 3600;
+            let h = Math.floor(current / 3600);
+            let m = Math.floor((current % 3600) / 60);
+            if (type === 'hours') {
+                h = Math.max(0, Math.min(23, h + delta));
+            } else if (type === 'minutes') {
+                m = Math.max(0, Math.min(59, m + delta));
+            }
+            task.durationTarget = (h * 3600) + (m * 60);
+            renderModalTasks();
+            commitDraft();
+        }
+
+        /**
+         * Define meta por presets predefinidos (em segundos).
+         */
+        window.setMetaPreset = function(index, seconds) {
+            const task = currentDayTasksDraft[index];
+            task.durationTarget = seconds;
+            task._startSuggested = true;
+            renderModalTasks();
+            commitDraft();
+        }
+
+        
 
         function closeModal() {
             document.getElementById('day-modal').classList.remove('open');
@@ -1591,6 +1936,15 @@
             return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
         }
 
+        function deriveTaskStatus(task) {
+            const spent = Number(task.timeSpent || 0);
+            const target = Number(task.durationTarget || 3600);
+            if (task._inProgress) return 'nao_concluido';
+            if (spent >= Math.max(0, target - 60)) return 'concluido';
+            if (spent > 0) return 'nao_concluido';
+            return 'nao_iniciado';
+        }
+
         // --- SESSION & HISTORY LOGIC ---
         // Load history with migration
         let studyHistory = JSON.parse(localStorage.getItem('estudoFiscalStudyHistory')) || [];
@@ -1617,6 +1971,17 @@
             // currentDayTasksDraft[index] corresponds to fullSchedule's day tasks.
             const dayObj = fullSchedule.find(d => d.date.getTime() === currentModalDate.getTime());
             const realTask = dayObj.tasks[index];
+            // Marca em progresso e persiste status "Não Concluído" imediatamente
+            realTask._inProgress = true;
+            const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+            if(!savedData[realTask.id]) savedData[realTask.id] = {};
+            savedData[realTask.id].status = 'nao_concluido';
+            savedData[realTask.id].note = realTask.note || '';
+            savedData[realTask.id].timeSpent = realTask.timeSpent || 0;
+            savedData[realTask.id].durationTarget = realTask.durationTarget || 3600;
+            localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+            renderCalendar();
+            renderList();
 
             // If there's already a session, pause it? Or stop?
             if(activeSession) {
@@ -1753,6 +2118,24 @@
             if(confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) {
                 pauseTimer();
                 document.getElementById('active-study-bar').classList.remove('visible');
+                // Reverte status para o derivado do tempo atual (provavelmente "Não Iniciado")
+                if(activeSession) {
+                    const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+                    if(dayObj) {
+                        const task = dayObj.tasks[activeSession.taskIndex];
+                        delete task._inProgress;
+                        const d = deriveTaskStatus(task);
+                        const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+                        if(!savedData[task.id]) savedData[task.id] = {};
+                        savedData[task.id].status = d;
+                        savedData[task.id].note = task.note || '';
+                        savedData[task.id].timeSpent = task.timeSpent || 0;
+                        savedData[task.id].durationTarget = task.durationTarget || 3600;
+                        localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+                    }
+                }
+                renderCalendar();
+                renderList();
                 activeSession = null;
             }
         }
@@ -1795,26 +2178,8 @@
                 // Note: durationTarget might need to be loaded from savedData if not in task object yet (init).
                 // But we load savedData at init.
                 const target = task.durationTarget || 3600;
-                
-                // If we reached >= 95% of target, mark as done automatically?
-                // Or user preference?
-                // Let's say if >= 99% (to account for small seconds diff)
-                if(task.timeSpent >= target - 60) { // within 1 minute of target
-                    task.status = 'done';
-                    task.completed = true;
-                } else {
-                    // Keep as 'todo' or 'studying' to allow resume.
-                    // If it was 'todo', it remains 'todo' but with progress bar showing.
-                    // If it was 'studying', we might reset to 'todo' or keep 'studying'.
-                    // Let's reset to 'todo' so it's not "active" in UI, but progress is visible.
-                    // Or maybe 'studying' implies "In Progress".
-                    // Current CSS for 'studying' is orange/blue. 'todo' is gray.
-                    // To show "started", maybe we can use 'studying' as 'in_progress'.
-                    // But 'studying' usually means timer is running.
-                    // Let's keep it 'todo' because the progress bar is the main indicator now.
-                    task.status = 'todo'; 
-                    task.completed = false;
-                }
+                const derivedStatus = deriveTaskStatus(task);
+                task.completed = (derivedStatus === 'concluido');
 
                 // Append note?
                 if(note) {
@@ -1825,11 +2190,13 @@
                 // Save to Global Data (Using Generic Key)
                 const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
                 if(!savedData[task.id]) savedData[task.id] = {};
-                savedData[task.id].status = task.status; 
+                savedData[task.id].status = derivedStatus; 
                 savedData[task.id].note = task.note;
                 savedData[task.id].timeSpent = task.timeSpent;
                 savedData[task.id].durationTarget = task.durationTarget || 3600;
                 localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+                localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                syncToDisk();
             }
 
             // 3. Cleanup
@@ -1922,34 +2289,7 @@
             });
         }
 
-        window.updateDraftStatus = function(index, selectElement) {
-            // Note: selectElement might be a simple object {value: 'studying'} if called from button
-            const newStatus = selectElement.value;
-            const task = currentDayTasksDraft[index];
-            
-            if(newStatus === 'studying') {
-                // New Flow: Start Session immediately
-                startActiveSession(index);
-                return; 
-            }
-            
-            task.status = newStatus;
-            
-            // Re-render to update UI (buttons, manual edit visibility based on status, etc.)
-            // We need to keep the manual edit section open if it was open?
-            // Since we re-render, all 'manual-edit' divs will be hidden by default (display:none).
-            // This might be annoying if user is editing.
-            // But usually status change is a major action.
-            // If user changes to 'done', we might want to auto-open manual edit?
-            // Let's just render.
-            renderModalTasks();
-            
-            // If changed to DONE, maybe auto-open the manual edit section to show it?
-            if(newStatus === 'done') {
-                 const editDiv = document.getElementById(`manual-edit-${index}`);
-                 if(editDiv) editDiv.style.display = 'block';
-            }
-        }
+        
 
         window.updateDraftTime = function(index, type, value) {
             const task = currentDayTasksDraft[index];
@@ -1974,10 +2314,12 @@
             // And keep manual edit open
             const editDiv = document.getElementById(`manual-edit-${index}`);
             if(editDiv) editDiv.style.display = 'block';
+            commitDraft();
         }
 
         window.updateDraftNote = function(index, noteText) {
             currentDayTasksDraft[index].note = noteText;
+            commitDraft();
         }
 
         // Commit Changes
@@ -1989,21 +2331,26 @@
                 // Apply drafts to real object
                 dayObj.tasks = JSON.parse(JSON.stringify(currentDayTasksDraft));
                 
-                // Recalculate completed flags for compatibility
-                dayObj.tasks.forEach(t => t.completed = (t.status === 'done'));
+                // Recalcular concluído com base no status derivado
+                dayObj.tasks.forEach(t => { const d = deriveTaskStatus(t); t.completed = (d === 'concluido'); });
 
                 // Save to Storage
                 const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
                 
                 dayObj.tasks.forEach(t => {
                     if(!savedData[t.id]) savedData[t.id] = {};
-                    savedData[t.id].status = t.status;
+                    const d = deriveTaskStatus(t);
+                    savedData[t.id].status = d;
                     savedData[t.id].note = t.note;
                     savedData[t.id].timeSpent = t.timeSpent || 0;
                     savedData[t.id].durationTarget = t.durationTarget || 3600;
                 });
 
                 localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+                localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                // Persistir ciclo e sincronizar
+                try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
+                syncToDisk();
                 
                 // Refresh Views
                 renderCalendar();
@@ -2044,7 +2391,7 @@
                 card.innerHTML = `
                     <div class="subject-header">
                         <div class="subject-title">${sub.name}</div>
-                        <div class="subject-badge ${sub.weight === 2 ? 'badge-spec' : 'badge-basic'}">Peso ${sub.weight}</div>
+                        <div class="subject-badge ${'badge-w' + (sub.weight || 1)}">Peso ${sub.weight}</div>
                     </div>
                     <div class="subject-stat">
                         <span>Horas planejadas</span>
@@ -2091,6 +2438,16 @@
                 });
             });
 
+            // Apply filters
+            const f = window.listFilters || {};
+            rows = rows.filter(row => {
+                const statusOk = !f.status || (f.status === 'feito' ? row.task.completed : !row.task.completed);
+                const subjectOk = !f.subject || row.task.subject === f.subject;
+                const startOk = !f.start || row.date >= f.start;
+                const endOk = !f.end || row.date <= f.end;
+                return statusOk && subjectOk && startOk && endOk;
+            });
+
             // Let's just render the first 100 and maybe a "Load more" button if needed, 
             // but for now let's render today +/- 15 days?
             // Or just render all. It's about 150 days * 5-8 tasks = ~1000 rows. It's fine.
@@ -2098,11 +2455,14 @@
             // Optimization: Render string HTML first then inject
             let html = '';
             rows.forEach(row => {
+                const st = deriveTaskStatus(row.task);
+                const label = st === 'concluido' ? 'Concluído' : (st === 'nao_concluido' ? 'Não Concluído' : 'Não Iniciado');
+                const color = st === 'concluido' ? 'var(--success-color)' : (st === 'nao_concluido' ? 'var(--warning-color)' : 'var(--accent-color)');
                 html += `
                     <tr>
                         <td>
-                            <span style="color: ${row.task.completed ? 'var(--success-color)' : 'var(--text-muted)'}">
-                                ${row.task.completed ? '<i class="fas fa-check-circle"></i> Feito' : '<i class="far fa-circle"></i> Pendente'}
+                            <span style="color: ${color}">
+                                <i class="fas fa-circle"></i> ${label}
                             </span>
                         </td>
                         <td>${row.date.toLocaleDateString('pt-BR')}</td>
@@ -2112,7 +2472,41 @@
                     </tr>
                 `;
             });
-            tbody.innerHTML = html;
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="color: var(--text-muted); padding: 20px;">Nenhum item no cronograma. Gere o ciclo para listar as tarefas.</td></tr>';
+            } else {
+                tbody.innerHTML = html;
+            }
+        }
+
+        /**
+         * Inicializa e aplica filtros da Lista Completa.
+         */
+        function initListFilters() {
+            window.listFilters = { status: '', subject: '', start: null, end: null };
+            const subjSelect = document.getElementById('filter-subject');
+            if (subjSelect) {
+                subjSelect.innerHTML = '<option value="">Todas</option>' + subjectsConfig.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+            }
+            const statusSelect = document.getElementById('filter-status');
+            const startInput = document.getElementById('filter-start');
+            const endInput = document.getElementById('filter-end');
+            if (statusSelect) statusSelect.onchange = () => { window.listFilters.status = statusSelect.value; renderList(); };
+            if (subjSelect) subjSelect.onchange = () => { window.listFilters.subject = subjSelect.value; renderList(); };
+            if (startInput) startInput.onchange = () => { window.listFilters.start = startInput.value ? new Date(startInput.value) : null; renderList(); };
+            if (endInput) endInput.onchange = () => { window.listFilters.end = endInput.value ? new Date(endInput.value) : null; renderList(); };
+        }
+        function clearListFilters() {
+            const statusSelect = document.getElementById('filter-status');
+            const subjSelect = document.getElementById('filter-subject');
+            const startInput = document.getElementById('filter-start');
+            const endInput = document.getElementById('filter-end');
+            if (statusSelect) statusSelect.value = '';
+            if (subjSelect) subjSelect.value = '';
+            if (startInput) startInput.value = '';
+            if (endInput) endInput.value = '';
+            window.listFilters = { status: '', subject: '', start: null, end: null };
+            renderList();
         }
 
         // --- GLOBAL STATS ---
@@ -2185,6 +2579,7 @@
         let studyTimeChart = null;
 
         function renderTimeStats() {
+            const chartAvailable = (typeof Chart !== 'undefined');
             // Calculate total time per subject
             const subjectTimes = {};
             let totalSeconds = 0;
@@ -2269,59 +2664,136 @@
 
             // Render Chart
             const ctx = document.getElementById('studyTimeChart');
-            if(ctx) {
+            if(ctx && chartAvailable) {
                 if(studyTimeChart) studyTimeChart.destroy();
-                
-                // Colors
-                const colors = [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-                    '#E7E9ED', '#76D7C4', '#F1948A', '#85C1E9', '#F7DC6F', '#D2B4DE'
-                ];
-
+                const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#E7E9ED','#76D7C4','#F1948A','#85C1E9','#F7DC6F','#D2B4DE'];
                 const labels = sortedSubjects.filter(i => i.seconds > 0).map(i => i.name);
-                const data = sortedSubjects.filter(i => i.seconds > 0).map(i => i.seconds / 3600); // in hours
-
+                const data = sortedSubjects.filter(i => i.seconds > 0).map(i => i.seconds / 3600);
                 if(labels.length > 0) {
-                    studyTimeChart = new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                data: data,
-                                backgroundColor: colors.slice(0, labels.length),
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: { color: '#e0e0e0', boxWidth: 10, font: { size: 10 } }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const val = context.raw;
-                                            const total = context.chart._metasets[context.datasetIndex].total;
-                                            const percentage = ((val / total) * 100).toFixed(1) + '%';
-                                            return `${context.label}: ${val.toFixed(2)}h (${percentage})`;
-                                        }
-                                    }
-                                }
-                            }
+                    studyTimeChart = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', boxWidth: 10, font: { size: 10 } } } } } });
+                }
+            }
+
+            // Render PDF Stats
+            const pdfContainer = document.getElementById('pdf-stats-list');
+            if(pdfContainer) {
+                pdfContainer.innerHTML = '';
+                const sortedPdf = [...subjectsConfig].sort((a,b) => (b.qtdePaginas || 0) - (a.qtdePaginas || 0));
+                
+                if(sortedPdf.every(s => !s.qtdePdf && !s.qtdePaginas)) {
+                     pdfContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum dado de PDF/Páginas configurado.</div>';
+                } else {
+                    sortedPdf.forEach(sub => {
+                        const pdfs = sub.qtdePdf || 0;
+                        const pags = sub.qtdePaginas || 0;
+                        if(pdfs > 0 || pags > 0) {
+                             const row = document.createElement('div');
+                             row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                             row.style.padding = '8px 0';
+                             row.innerHTML = `
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="font-weight: 500;">${sub.name}</div>
+                                    <div style="text-align:right;">
+                                        <div style="font-weight: 600; color: var(--accent-color);">${pags} págs</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">${pdfs} PDFs</div>
+                                    </div>
+                                </div>
+                             `;
+                             pdfContainer.appendChild(row);
                         }
                     });
-                } else {
-                    // Empty state for chart?
-                    // ctx.getContext('2d').fillText("Sem dados", 10, 10);
                 }
             }
         }
 
+        /**
+         * Inicializa painel de calibração e sincroniza campos.
+         */
+        function initCalibrationPanel() {
+            const defaults = { alpha: 0.3, beta: 1.1, gamma: 0.8, minRep: 1, maxRep: 8, normalizeWeekly: true };
+            const saved = JSON.parse(localStorage.getItem('estudoFiscalGenParams') || 'null') || defaults;
+            const alphaR = document.getElementById('alpha-range');
+            const alphaN = document.getElementById('alpha-num');
+            const betaR = document.getElementById('beta-range');
+            const betaN = document.getElementById('beta-num');
+            const gammaR = document.getElementById('gamma-range');
+            const gammaN = document.getElementById('gamma-num');
+            const minN = document.getElementById('minRep-num');
+            const maxN = document.getElementById('maxRep-num');
+            const normC = document.getElementById('normalizeWeekly-check');
+            if (!alphaR) return; // panel not in current view
+            alphaR.value = saved.alpha; alphaN.value = saved.alpha;
+            betaR.value = saved.beta; betaN.value = saved.beta;
+            gammaR.value = saved.gamma; gammaN.value = saved.gamma;
+            minN.value = saved.minRep; maxN.value = saved.maxRep; normC.checked = !!saved.normalizeWeekly;
+            alphaR.oninput = () => { alphaN.value = alphaR.value; };
+            alphaN.oninput = () => { alphaR.value = alphaN.value; };
+            betaR.oninput = () => { betaN.value = betaR.value; };
+            betaN.oninput = () => { betaR.value = betaN.value; };
+            gammaR.oninput = () => { gammaN.value = gammaR.value; };
+            gammaN.oninput = () => { gammaR.value = gammaN.value; };
+        }
+
+        /**
+         * Salva parâmetros de calibração.
+         */
+        function saveCalibrationParams() {
+            const params = {
+                alpha: parseFloat(document.getElementById('alpha-num').value),
+                beta: parseFloat(document.getElementById('beta-num').value),
+                gamma: parseFloat(document.getElementById('gamma-num').value),
+                minRep: parseInt(document.getElementById('minRep-num').value) || 1,
+                maxRep: parseInt(document.getElementById('maxRep-num').value) || 8,
+                normalizeWeekly: !!document.getElementById('normalizeWeekly-check').checked
+            };
+            localStorage.setItem('estudoFiscalGenParams', JSON.stringify(params));
+            alert('Parâmetros aplicados. Gere o ciclo para efetivar no cronograma.');
+        }
+
+        /**
+         * Renderiza preview da distribuição de repetições por matéria.
+         */
+        function renderCalibrationPreview() {
+            const container = document.getElementById('calibration-preview');
+            if (!container) return;
+            const defaults = { alpha: 0.3, beta: 1.1, gamma: 0.8, minRep: 1, maxRep: 8, normalizeWeekly: true };
+            const params = {
+                alpha: parseFloat(document.getElementById('alpha-num').value),
+                beta: parseFloat(document.getElementById('beta-num').value),
+                gamma: parseFloat(document.getElementById('gamma-num').value),
+                minRep: parseInt(document.getElementById('minRep-num').value) || defaults.minRep,
+                maxRep: parseInt(document.getElementById('maxRep-num').value) || defaults.maxRep,
+                normalizeWeekly: !!document.getElementById('normalizeWeekly-check').checked
+            };
+            const topicCountMap = {};
+            syllabusData.forEach(sec => sec.subjects.forEach(sub => {
+                topicCountMap[sub.name] = Math.max(1, Array.isArray(sub.topics) ? sub.topics.length : 1);
+            }));
+            const topicCounts = subjectsConfig.map(s => topicCountMap[s.name] || 1);
+            const avgTopics = topicCounts.length ? (topicCounts.reduce((a,b)=>a+b,0) / topicCounts.length) : 1;
+            const weeklySlots = (Array.isArray(slotsPorDia) ? slotsPorDia.reduce((a,b)=>a+b,0) : 0) || 1;
+            const entries = subjectsConfig.map(sub => {
+                const tc = topicCountMap[sub.name] || 1;
+                const wLin = Number(sub.weight || 1);
+                const w = Math.pow(wLin, params.beta);
+                const ratio = Math.pow(tc / avgTopics, params.gamma);
+                const raw = w * ((1 - params.alpha) + params.alpha * ratio);
+                let reps = Math.max(params.minRep, Math.min(params.maxRep, Math.round(raw)));
+                return { name: sub.name, reps };
+            });
+            if (params.normalizeWeekly) {
+                const sumReps = entries.reduce((a,b)=>a+b.reps,0) || 1;
+                const scale = weeklySlots / sumReps;
+                entries.forEach(e => { e.reps = Math.max(params.minRep, Math.min(params.maxRep, Math.round(e.reps * scale))); });
+            }
+            container.innerHTML = entries.map(e => {
+                const pct = Math.round((e.reps / Math.max(1, entries.reduce((a,b)=>Math.max(a,b.reps), 1))) * 100);
+                return `<div style="display:flex; align-items:center; gap:10px;"><span style="width:200px;">${e.name}</span><div style="flex:1; height:8px; background:#333; border-radius:4px; overflow:hidden;"><div style="width:${pct}%; height:100%; background: var(--accent-color);"></div></div><span style="width:40px; text-align:right;">${e.reps}</span></div>`;
+            }).join('');
+        }
+
         // --- SYLLABUS LOGIC ---
-        const syllabusData = [
+        let syllabusData = [
             {
                 category: "Conhecimentos Básicos",
                 subjects: [
@@ -2444,6 +2916,16 @@
             }
         ];
 
+        (function(){
+            const rawModel = localStorage.getItem('estudoFiscalModel');
+            if(rawModel){
+                try{
+                    const model = JSON.parse(rawModel);
+                    if(Array.isArray(model.syllabus)) syllabusData = model.syllabus;
+                }catch(e){}
+            }
+        })();
+
         let syllabusProgress = JSON.parse(localStorage.getItem('estudoFiscalSyllabus')) || {};
         
         // Migrate Syllabus
@@ -2512,7 +2994,7 @@
             const metaEl = document.getElementById(`meta-${sanitizedName}`);
             if(metaEl) {
                 metaEl.innerHTML = `
-                    <span class="tag ${weight > 1 ? 'badge-spec' : 'badge-basic'}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                    <span class="tag ${'badge-w' + (weight || 1)}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
                         Peso ${weight}
                     </span>
                     • ${completedCount}/${syllabusSubject.topics.length} tópicos (${percent}%)
@@ -2567,7 +3049,7 @@
                                 <div>
                                     <div class="syllabus-title">${sub.name}</div>
                                     <div class="syllabus-meta" id="meta-${sanitizedName}">
-                                        <span class="tag ${weight > 1 ? 'badge-spec' : 'badge-basic'}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                                        <span class="tag ${'badge-w' + (weight || 1)}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
                                             Peso ${weight}
                                         </span>
                                         • ${completedCount}/${sub.topics.length} tópicos (${percent}%)
@@ -2703,6 +3185,486 @@
             reader.readAsText(file);
         }
         
+        // --- MODEL IMPORT/EXPORT (CSV) ---
+        /**
+         * Exporta um CSV de modelo com colunas padrão e exemplos.
+         */
+        function downloadModelTemplateCSV() {
+            const headers = ['Concurso','Orgao','InicioCiclo','FimCiclo','Categoria','Materia','Peso','Tickets','Topico'];
+            const rows = [];
+            rows.push(['SEFAZ - Exemplo','Secretaria da Fazenda','2025-12-16','2026-12-31','Basico','Língua Portuguesa','1','1','Interpretação de textos']);
+            rows.push(['SEFAZ - Exemplo','Secretaria da Fazenda','2025-12-16','2026-12-31','Basico','Exatas','1','1','Lógica proposicional']);
+            rows.push(['SEFAZ - Exemplo','Secretaria da Fazenda','2025-12-16','2026-12-31','Especifico','Auditoria','3','3','Planejamento da auditoria']);
+            const csv = [headers.join(','), ...rows.map(r => r.map(s => '"' + String(s).replace(/"/g,'""') + '"').join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'modelo_concurso.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        /**
+         * Abre seletor de arquivo para importar CSV de modelo.
+         */
+        function triggerImportModel() {
+            document.getElementById('import-model-input').click();
+        }
+
+        /**
+         * Importa CSV selecionado, parseia e aplica como novo modelo.
+         */
+        function importModelCSV(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    const rows = parseCSV(text);
+                    const model = buildModelFromCSV(rows);
+                    if(!model) {
+                        alert('CSV inválido. Verifique as colunas: Concurso, Orgao, InicioCiclo, FimCiclo, Categoria, Materia, Peso, Tickets, Topico');
+                        return;
+                    }
+                    applyImportedModel(model);
+                    alert('Modelo importado com sucesso! Cronograma regenerado.');
+                } catch(err) {
+                    alert('Erro ao importar CSV: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        /**
+         * Parser CSV simples com suporte a aspas e vírgulas.
+         */
+        function parseCSV(text) {
+            const lines = text.replace(/\r/g,'').split('\n').filter(l => l.trim().length > 0);
+            const rows = [];
+            for (const line of lines) {
+                const result = [];
+                let cur = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    if (inQuotes) {
+                        if (ch === '"') {
+                            if (line[i+1] === '"') { cur += '"'; i++; }
+                            else { inQuotes = false; }
+                        } else cur += ch;
+                    } else {
+                        if (ch === '"') inQuotes = true;
+                        else if (ch === ',') { result.push(cur); cur = ''; }
+                        else cur += ch;
+                    }
+                }
+                result.push(cur);
+                rows.push(result.map(v => v.trim()));
+            }
+            return rows;
+        }
+
+        // Normaliza valores de data (string dd/mm/yyyy, yyyy-mm-dd ou serial Excel) para 'yyyy-mm-dd'
+        function normalizeDateValue(val) {
+            if (val == null) return '';
+            if (typeof val === 'number' && typeof XLSX !== 'undefined' && XLSX.SSF) {
+                try { return XLSX.SSF.format('yyyy-mm-dd', val); } catch(e) {}
+            }
+            const s = String(val).trim();
+            const iso = /^\d{4}-\d{2}-\d{2}$/;
+            const br = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            if (iso.test(s)) return s;
+            const m = s.match(br);
+            if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+            // Fallback: Date.parse
+            const d = new Date(s);
+            if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+            return '';
+        }
+
+        function capitalizeWord(s) {
+            const t = String(s || '').trim();
+            if (!t) return '';
+            return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+        }
+
+        function normalizeCategoryLabel(cat) {
+            const raw = String(cat || '').trim();
+            if (!raw) return 'Conhecimentos Básicos';
+            const lower = raw.toLowerCase();
+            if (lower.startsWith('conhecimentos')) return raw;
+            if (['basico','básico'].includes(lower)) return 'Conhecimentos Básicos';
+            if (['especifico','específico'].includes(lower)) return 'Conhecimentos Específicos';
+            return 'Conhecimentos ' + capitalizeWord(raw);
+        }
+
+        function shortCategoryLabelFromTitle(title) {
+            const t = String(title || '').trim();
+            const m = t.match(/^conhecimentos\s+(.*)$/i);
+            return m ? m[1] : t;
+        }
+
+        /**
+         * Constrói o modelo a partir das linhas do CSV.
+         */
+        function buildModelFromCSV(rows) {
+            if (!rows || rows.length < 2) return null;
+            const header = rows[0].map(h => h.toLowerCase());
+            const idx = {
+                concurso: header.indexOf('concurso'),
+                orgao: header.indexOf('orgao'),
+                inicio: header.indexOf('iniciociclo'),
+                fim: header.indexOf('fimciclo'),
+                seg: header.indexOf('seg'),
+                ter: header.indexOf('ter'),
+                qua: header.indexOf('qua'),
+                qui: header.indexOf('qui'),
+                sex: header.indexOf('sex'),
+                sab: header.indexOf('sab'),
+                dom: header.indexOf('dom'),
+                categoria: header.indexOf('categoria'),
+                materia: header.indexOf('materia'),
+                peso: header.indexOf('peso'),
+                tickets: header.indexOf('tickets'),
+                topico: header.indexOf('topico')
+            };
+            const required = ['concurso','orgao','inicio','fim','categoria','materia','peso','tickets','topico'];
+            if (required.some(k => idx[k] === -1)) return null;
+
+            const materiasMap = new Map();
+            const syllabusMap = new Map(); // key: categoria|materia -> { category, name, topics: [] }
+            let concurso = '';
+            let orgao = '';
+            let inicioCiclo = '';
+            let fimCiclo = '';
+            let slotsPorDiaLocal = null;
+
+            for (let r = 1; r < rows.length; r++) {
+                const row = rows[r];
+                if (row.length === 0) continue;
+                concurso = concurso || row[idx.concurso];
+                orgao = orgao || row[idx.orgao];
+                inicioCiclo = inicioCiclo || normalizeDateValue(row[idx.inicio]);
+                fimCiclo = fimCiclo || normalizeDateValue(row[idx.fim]);
+                if (!slotsPorDiaLocal && idx.seg !== -1) {
+                    const seg = Number(row[idx.seg] || 0);
+                    const ter = Number(row[idx.ter] || 0);
+                    const qua = Number(row[idx.qua] || 0);
+                    const qui = Number(row[idx.qui] || 0);
+                    const sex = Number(row[idx.sex] || 0);
+                    const sab = Number(row[idx.sab] || 0);
+                    const dom = Number(row[idx.dom] || 0);
+                    const arr = [seg,ter,qua,qui,sex,sab,dom];
+                    if (arr.some(n => !isNaN(n))) slotsPorDiaLocal = arr.map(n => Number(n)||0);
+                }
+                const rawCategoria = row[idx.categoria] || 'Basico';
+                const materia = row[idx.materia];
+                if (!materia) continue;
+                let peso = Number(row[idx.peso] || 1);
+                peso = Math.min(3, Math.max(1, isNaN(peso) ? 1 : peso));
+                let tickets = Number(row[idx.tickets]);
+                tickets = Math.max(1, isNaN(tickets) ? peso : tickets);
+                const topico = row[idx.topico] || '';
+
+                const categoriaCompleta = normalizeCategoryLabel(rawCategoria);
+                const categoriaCurta = shortCategoryLabelFromTitle(categoriaCompleta);
+
+                if (!materiasMap.has(materia)) materiasMap.set(materia, { nome: materia, tipo: categoriaCurta, peso, tickets });
+                const key = categoriaCompleta + '|' + materia;
+                if (!syllabusMap.has(key)) syllabusMap.set(key, { category: categoriaCompleta, name: materia, topics: [] });
+                if (topico) syllabusMap.get(key).topics.push(topico);
+            }
+
+            const materias = Array.from(materiasMap.values());
+            const syllabusArray = [];
+            const byCategory = {};
+            syllabusMap.forEach(item => {
+                const cat = item.category;
+                if (!byCategory[cat]) byCategory[cat] = [];
+                byCategory[cat].push({ name: item.name, topics: item.topics.length ? item.topics : ['Tópico 1'] });
+            });
+            Object.keys(byCategory).forEach(cat => {
+                syllabusArray.push({ category: cat, subjects: byCategory[cat] });
+            });
+
+            const model = { concurso, orgao, inicioCiclo, fimCiclo, materias, syllabus: syllabusArray };
+            if (slotsPorDiaLocal) model.slotsPorDia = slotsPorDiaLocal;
+            return model;
+        }
+
+        /**
+         * Constrói o modelo a partir de duas abas do Excel: Gerais e Conteudo.
+         */
+        function buildModelFromSheets(generalRows, contentRows) {
+            if (!generalRows || generalRows.length < 2 || !contentRows || contentRows.length < 2) return null;
+            const gh = generalRows[0].map(h => String(h).toLowerCase());
+            const gi = {
+                concurso: gh.indexOf('concurso'),
+                orgao: gh.indexOf('orgao'),
+                inicio: gh.indexOf('iniciociclo'),
+                fim: gh.indexOf('fimciclo'),
+                seg: gh.indexOf('seg'), ter: gh.indexOf('ter'), qua: gh.indexOf('qua'),
+                qui: gh.indexOf('qui'), sex: gh.indexOf('sex'), sab: gh.indexOf('sab'), dom: gh.indexOf('dom')
+            };
+            if ([gi.concurso, gi.orgao, gi.inicio, gi.fim].some(v => v === -1)) return null;
+            const g = generalRows[1];
+            const concurso = g[gi.concurso];
+            const orgao = g[gi.orgao];
+            const inicioCiclo = normalizeDateValue(g[gi.inicio]);
+            const fimCiclo = normalizeDateValue(g[gi.fim]);
+            const slotsPorDiaLocal = [g[gi.seg], g[gi.ter], g[gi.qua], g[gi.qui], g[gi.sex], g[gi.sab], g[gi.dom]].map(n => Number(n)||0);
+
+            const ch = contentRows[0].map(h => String(h).toLowerCase());
+            const ci = {
+                categoria: ch.indexOf('categoria'),
+                materia: ch.indexOf('materia'),
+                peso: ch.indexOf('peso'),
+                tickets: ch.indexOf('tickets'),
+                topico: ch.indexOf('topico'),
+                qtdePdf: ch.indexOf('qtde pdf'),
+                qtdePaginas: ch.indexOf('qtde paginas')
+            };
+            if ([ci.categoria, ci.materia, ci.peso, ci.tickets, ci.topico].some(v => v === -1)) return null;
+
+            const materiasMap = new Map();
+            const syllabusMap = new Map();
+            for (let r = 1; r < contentRows.length; r++) {
+                const row = contentRows[r];
+                if (!row || row.length === 0) continue;
+                const categoriaRaw = row[ci.categoria] || 'Basico';
+                const materia = row[ci.materia];
+                if (!materia) continue;
+                let peso = Number(row[ci.peso] || 1);
+                peso = Math.min(3, Math.max(1, isNaN(peso) ? 1 : peso));
+                let tickets = Number(row[ci.tickets]);
+                tickets = Math.max(1, isNaN(tickets) ? peso : tickets);
+                let qtdePdf = Number(row[ci.qtdePdf] || 0);
+                let qtdePaginas = Number(row[ci.qtdePaginas] || 0);
+                const topico = row[ci.topico] || '';
+                const categoriaCompleta = normalizeCategoryLabel(categoriaRaw);
+                const categoriaCurta = shortCategoryLabelFromTitle(categoriaCompleta);
+                if (!materiasMap.has(materia)) materiasMap.set(materia, { nome: materia, tipo: categoriaCurta, peso, tickets, qtdePdf, qtdePaginas });
+                const key = categoriaCompleta + '|' + materia;
+                if (!syllabusMap.has(key)) syllabusMap.set(key, { category: categoriaCompleta, name: materia, topics: [] });
+                if (topico) syllabusMap.get(key).topics.push(topico);
+            }
+
+            const materias = Array.from(materiasMap.values());
+            const byCategory = {};
+            syllabusMap.forEach(item => {
+                const cat = item.category;
+                if (!byCategory[cat]) byCategory[cat] = [];
+                byCategory[cat].push({ name: item.name, topics: item.topics.length ? item.topics : [] });
+            });
+            const syllabusArray = Object.keys(byCategory).map(cat => ({ category: cat, subjects: byCategory[cat] }));
+
+            return { concurso, orgao, inicioCiclo, fimCiclo, slotsPorDia: slotsPorDiaLocal, materias, syllabus: syllabusArray };
+        }
+
+        /**
+         * Aplica o modelo importado no sistema e regenera cronograma.
+         */
+        function applyImportedModel(model) {
+            localStorage.setItem('estudoFiscalModel', JSON.stringify(model));
+            loadModelFromStorage();
+            localStorage.removeItem('estudoFiscalScheduleStructure');
+            fullSchedule = [];
+            setGenerateButtonState('pending');
+            init();
+            syncToDisk();
+        }
+
+        function generateCycleFromModel() {
+            const raw = localStorage.getItem('estudoFiscalModel');
+            if (raw) loadModelFromStorage();
+            localStorage.removeItem('estudoFiscalScheduleStructure');
+            fullSchedule = [];
+            generateSchedule();
+            setGenerateButtonState('success');
+            init();
+            syncToDisk();
+        }
+
+        /**
+         * Exporta o modelo atual (matérias + syllabus) para CSV.
+         */
+        function exportCurrentModelCSV() {
+            const headers = ['Concurso','Orgao','InicioCiclo','FimCiclo','Categoria','Materia','Peso','Tickets','Topico'];
+            const modelRaw = localStorage.getItem('estudoFiscalModel');
+            const model = modelRaw ? JSON.parse(modelRaw) : null;
+            const concurso = model?.concurso || 'Modelo Atual';
+            const orgao = model?.orgao || '';
+            const inicio = (model?.inicioCiclo) || startDate.toISOString().slice(0,10);
+            const fim = (model?.fimCiclo) || endDate.toISOString().slice(0,10);
+
+            const rows = [];
+            // Map subjects to categories via syllabusData when possível
+            const catMap = {};
+            syllabusData.forEach(sec => sec.subjects.forEach(s => { catMap[s.name] = sec.category; }));
+            subjectsConfig.forEach(m => {
+                const categoria = (catMap[m.name] || (m.type === 'Específico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos'));
+                const catLabel = categoria.includes('Especí') ? 'Especifico' : 'Basico';
+                // Add one row without tópico
+                rows.push([concurso, orgao, inicio, fim, catLabel, m.name, String(m.weight), String(m.tickets), '']);
+                // Add topic rows
+                const sec = syllabusData.find(sec => sec.subjects.some(s => s.name === m.name));
+                const subj = sec ? sec.subjects.find(s => s.name === m.name) : null;
+                if (subj && Array.isArray(subj.topics)) {
+                    subj.topics.forEach(t => rows.push([concurso, orgao, inicio, fim, catLabel, m.name, String(m.weight), String(m.tickets), t]));
+                }
+            });
+
+            const csv = [headers.join(','), ...rows.map(r => r.map(s => '"' + String(s).replace(/"/g,'""') + '"').join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'modelo_atual.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- MODEL IMPORT/EXPORT (Excel - XLSX) ---
+        /**
+         * Baixa um workbook Excel de modelo com cabeçalhos e exemplos.
+         */
+        function downloadModelTemplateXLSX() {
+            const concurso = 'Concurso - Modelo';
+            const orgao = 'Órgão';
+            const inicio = startDate.toLocaleDateString('pt-BR');
+            const fim = endDate.toLocaleDateString('pt-BR');
+            const generalHeaders = ['Concurso','Orgao','InicioCiclo','FimCiclo','Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
+            const generalSheet = [generalHeaders, [concurso, orgao, inicio, fim, ...slotsPorDia]];
+
+            const contentHeaders = ['Categoria','Materia','Peso','Tickets','Topico'];
+            const contentRows = [];
+            const catMap = {};
+            syllabusData.forEach(sec => sec.subjects.forEach(s => { catMap[s.name] = sec.category; }));
+            subjectsConfig.forEach(m => {
+                const categoria = (catMap[m.name] || (m.type === 'Específico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos'));
+                const catLabel = categoria.includes('Especí') ? 'Especifico' : 'Basico';
+                contentRows.push([catLabel, m.name, String(m.weight), String(m.tickets), '']);
+                const sec = syllabusData.find(sec => sec.subjects.some(s => s.name === m.name));
+                const subj = sec ? sec.subjects.find(s => s.name === m.name) : null;
+                const topics = subj && Array.isArray(subj.topics) && subj.topics.length > 0 ? subj.topics : [];
+                topics.forEach(t => contentRows.push([catLabel, m.name, String(m.weight), String(m.tickets), t]));
+            });
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generalSheet), 'Gerais');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([contentHeaders, ...contentRows]), 'Conteudo');
+            XLSX.writeFile(wb, 'modelo_ciclo_estudo.xlsx');
+        }
+
+        /**
+         * Exporta o modelo atual para Excel (inclui tópicos do syllabus).
+         */
+        function exportCurrentModelXLSX() {
+            const modelRaw = localStorage.getItem('estudoFiscalModel');
+            const model = modelRaw ? JSON.parse(modelRaw) : null;
+            const concurso = model?.concurso || (document.getElementById('page-subtitle-text')?.textContent.replace('Foco na meta: ','') || 'Modelo Atual');
+            const orgao = model?.orgao || '';
+            const inicio = (model?.inicioCiclo ? new Date(model.inicioCiclo) : startDate).toLocaleDateString('pt-BR');
+            const fim = (model?.fimCiclo ? new Date(model.fimCiclo) : endDate).toLocaleDateString('pt-BR');
+            const slots = Array.isArray(model?.slotsPorDia) ? model.slotsPorDia : slotsPorDia;
+            const generalHeaders = ['Concurso','Orgao','InicioCiclo','FimCiclo','Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
+            const generalSheet = [generalHeaders, [concurso, orgao, inicio, fim, ...slots]];
+
+            const contentHeaders = ['Categoria','Materia','Peso','Tickets','Topico'];
+            const rows = [];
+            if (model) {
+                const materiaConfigMap = new Map();
+                if (Array.isArray(model.materias)) {
+                    model.materias.forEach(m => materiaConfigMap.set(m.nome, m));
+                }
+                if (Array.isArray(model.syllabus)) {
+                    model.syllabus.forEach(sec => {
+                        const catShort = shortCategoryLabelFromTitle(sec.category);
+                        (sec.subjects || []).forEach(sub => {
+                            const cfg = materiaConfigMap.get(sub.name);
+                            const pesoNum = cfg ? Number(cfg.peso || 1) : 1;
+                            const peso = Math.min(3, Math.max(1, isNaN(pesoNum) ? 1 : pesoNum));
+                            const ticketsNum = cfg ? Number(cfg.tickets) : NaN;
+                            const tickets = Math.max(1, isNaN(ticketsNum) ? peso : ticketsNum);
+                            rows.push([catShort, sub.name, String(peso), String(tickets), '']);
+                            if (Array.isArray(sub.topics)) {
+                                sub.topics.forEach(t => rows.push([catShort, sub.name, String(peso), String(tickets), t]));
+                            }
+                        });
+                    });
+                }
+            } else {
+                const catMap = {};
+                syllabusData.forEach(sec => sec.subjects.forEach(s => { catMap[s.name] = sec.category; }));
+                subjectsConfig.forEach(m => {
+                    const categoria = (catMap[m.name] || (m.type === 'Específico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos'));
+                    const catShort = shortCategoryLabelFromTitle(categoria);
+                    rows.push([catShort, m.name, String(m.weight), String(m.tickets), '']);
+                    const sec = syllabusData.find(sec => sec.subjects.some(s => s.name === m.name));
+                    const subj = sec ? sec.subjects.find(s => s.name === m.name) : null;
+                    if (subj && Array.isArray(subj.topics)) {
+                        subj.topics.forEach(t => rows.push([catShort, m.name, String(m.weight), String(m.tickets), t]));
+                    }
+                });
+            }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generalSheet), 'Gerais');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([contentHeaders, ...rows]), 'Conteudo');
+            XLSX.writeFile(wb, 'modelo_ciclo_estudo_atual.xlsx');
+        }
+
+        /**
+         * Abre seletor de arquivo para importar Excel.
+         */
+        function triggerImportModelXLSX() {
+            document.getElementById('import-model-xlsx-input').click();
+        }
+
+        /**
+         * Importa arquivo Excel, converte em linhas e aplica modelo.
+         */
+        function importModelXLSX(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(data, { type: 'array' });
+                    let model = null;
+                    if (wb.SheetNames.includes('Gerais') && wb.SheetNames.includes('Conteudo')) {
+                        const gRows = XLSX.utils.sheet_to_json(wb.Sheets['Gerais'], { header: 1 });
+                        const cRows = XLSX.utils.sheet_to_json(wb.Sheets['Conteudo'], { header: 1 });
+                        model = buildModelFromSheets(gRows, cRows);
+                    } else {
+                        const wsName = wb.SheetNames[0];
+                        const ws = wb.Sheets[wsName];
+                        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                        model = buildModelFromCSV(rows);
+                    }
+                    if(!model) {
+                        alert('Planilha inválida. Use duas abas: Gerais e Conteudo.');
+                        return;
+                    }
+                    applyImportedModel(model);
+                    alert('Modelo Excel importado com sucesso! Cronograma regenerado.');
+                } catch(err) {
+                    alert('Erro ao importar Excel: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            input.value = '';
+        }
+        
+        
+        
         function resetSchedule() {
             if(confirm("Tem certeza? Isso irá gerar um NOVO cronograma aleatório e apagar o progresso visual do calendário (histórico e syllabus serão mantidos).")) {
                 localStorage.removeItem('estudoFiscalScheduleStructure');
@@ -2713,12 +3675,61 @@
                 if(confirm("Deseja limpar também o status de 'FEITO' das tarefas do calendário antigo? (Recomendado)")) {
                     localStorage.removeItem('estudoFiscalData');
                 }
+                syncToDisk();
                 location.reload();
             }
         }
 
+        function setupOfflineFallbacks() {
+            const hasXLSX = (typeof XLSX !== 'undefined');
+            const btnDL = document.getElementById('btn-download-xlsx');
+            const btnEX = document.getElementById('btn-export-xlsx');
+            const btnIM = document.getElementById('btn-import-xlsx');
+            if (btnDL && btnEX && btnIM && !hasXLSX) {
+                btnDL.innerHTML = '<i class="fas fa-table"></i> Baixar Modelo CSV';
+                btnDL.onclick = downloadModelTemplateCSV;
+                btnEX.innerHTML = '<i class="fas fa-file-export"></i> Exportar Modelo Atual (CSV)';
+                btnEX.onclick = () => alert('Use Backup JSON para exportar progresso; modelo CSV disponível em Baixar Modelo CSV.');
+                btnIM.innerHTML = '<i class="fas fa-file-import"></i> Importar Modelo CSV';
+                btnIM.onclick = triggerImportModel;
+                const inputX = document.getElementById('import-model-xlsx-input');
+                if(inputX) inputX.style.display = 'none';
+            }
+        }
+
+        function commitDraft() {
+            if(!currentModalDate) return;
+            const dayObj = fullSchedule.find(d => d.date.getTime() === currentModalDate.getTime());
+            if(!dayObj) return;
+            dayObj.tasks = JSON.parse(JSON.stringify(currentDayTasksDraft));
+            dayObj.tasks.forEach(t => { const d = deriveTaskStatus(t); t.completed = (d === 'concluido'); });
+            const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+            dayObj.tasks.forEach(t => {
+                if(!savedData[t.id]) savedData[t.id] = {};
+                const d = deriveTaskStatus(t);
+                savedData[t.id].status = d;
+                savedData[t.id].note = t.note;
+                savedData[t.id].timeSpent = t.timeSpent || 0;
+                savedData[t.id].durationTarget = t.durationTarget || 3600;
+            });
+            localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+            localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+            try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
+            renderCalendar();
+            renderSubjects();
+            renderList();
+            updateStats();
+            renderTimeStats();
+            syncToDisk();
+        }
+
         // Start
         function init() {
+            const hasSchedule = !!localStorage.getItem('estudoFiscalScheduleStructure');
+            setGenerateButtonState(hasSchedule ? 'success' : 'pending');
+            // Garante reidratação do cronograma e aplicação de status
+            loadModelFromStorage();
+            applySavedStatusToSchedule();
             renderCalendar();
             renderSubjects();
             renderList();
@@ -2726,10 +3737,14 @@
             renderSyllabus();
             renderTimeStats();
             renderHistory();
+            initCalibrationPanel();
+            setupOfflineFallbacks();
         }
         
-        init();
+        // Hidrata dados do disco (se existirem) e então inicia a UI
+        hydrateFromDisk().then(() => { init(); });
 
-    </script>
+
+</script>
 </body>
 </html>

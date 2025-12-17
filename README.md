@@ -1,15 +1,15 @@
-# Sistema de Estudos — PainelCicloEstudo2
+# Sistema de Estudos
 
 Projeto em HTML/CSS/JS focado em planejamento e acompanhamento de estudos para concursos. Ele oferece calendário inteligente, controle de sessões com cronômetro, registro de histórico, desempenho por matérias e persistência de dados sem servidor via arquivo auto-contido.
 
 ## Visão Geral
-- Interface única em `PainelCicloEstudo2.html` com sidebar, calendário, abas de progresso, histórico e Pomodoro.
+- Interface única em `index.html` com sidebar, calendário, abas de progresso, histórico e Pomodoro.
 - Dados salvos no navegador (`localStorage`) e exportáveis para um arquivo HTML que embute seu progresso.
 - Importação/Exportação de modelo (matérias, conteúdos e parâmetros) via Excel.
 - Cronômetro de estudo com barra fixa e atalhos de teclado.
 
 ## Como Usar
-- Windows: abra o arquivo `PainelCicloEstudo2.html` com duplo clique (modo offline) ou hospede em um servidor local.
+- Windows: abra o arquivo `index.html` com duplo clique (modo offline) ou hospede em um servidor local.
 - Login: no modo arquivo (`file://`) o login é oculto automaticamente. Em servidor, use `CICLO / CICLO`.
 - Gere o ciclo e navegue pelo calendário para ver tarefas/matérias por dia.
 

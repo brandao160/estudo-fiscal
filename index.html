@@ -432,6 +432,28 @@
             gap: 10px;
         }
 
+        .bar-progress {
+            position: relative;
+            width: 280px;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-left: 20px;
+        }
+        .bar-progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color), #22c55e);
+            transition: width 0.3s ease;
+        }
+        .bar-target {
+            margin-left: 10px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
         .bar-btn {
             border: none;
             padding: 8px 20px;
@@ -1474,6 +1496,11 @@
                         <i class="fas fa-save"></i> Salvar Progresso
                     </button>
                     <p style="font-size: 0.7rem; color: #aaa; margin-bottom: 15px; text-align: center;">Baixa uma cópia do site com seus dados salvos.</p>
+                    <button onclick="triggerImportProgress()" style="width: 100%; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px;">
+                        <i class="fas fa-upload"></i> Carregar Progresso
+                    </button>
+                    <input type="file" id="import-progress-input" accept=".html,.json,text/html,application/json" style="display:none" onchange="importProgressFile(this)">
+                    <p style="font-size: 0.7rem; color: #aaa; text-align: center;">Carrega progresso de um arquivo HTML/JSON salvo.</p>
 
                      <button onclick="resetSchedule()" style="width: 100%; padding: 6px; background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
                         <i class="fas fa-sync-alt"></i> Regerar Cronograma
@@ -1706,6 +1733,10 @@
                 <i class="fas fa-stopwatch"></i>
                 <span id="bar-timer-display">0h 0m 0s</span>
             </div>
+            <div class="bar-progress">
+                <div id="bar-progress-fill" class="bar-progress-fill"></div>
+            </div>
+            <span id="bar-target-label" class="bar-target"></span>
         </div>
         <div class="bar-controls">
             <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
@@ -1938,8 +1969,8 @@
                 console.warn('Falha ao hidratar do disco:', e);
             }
         }
-        let startDate = new Date('2025-12-16');
-        let endDate = new Date('2026-12-31');
+        let startDate = new Date(2025, 11, 16);
+        let endDate = new Date(2026, 11, 31);
         
         let subjectsConfig = [
             // Conhecimentos Básicos (Peso 1)
@@ -1978,8 +2009,20 @@
             if (!raw) return;
             try {
                 const model = JSON.parse(raw);
-                if (model.inicioCiclo) startDate = new Date(model.inicioCiclo);
-                if (model.fimCiclo) endDate = new Date(model.fimCiclo);
+                /**
+                 * Converte string de data (ISO yyyy-mm-dd ou dd/mm/yyyy) para Date local sem deslocamento de fuso.
+                 */
+                function parseLocalDateString(s) {
+                    const str = String(s || '').trim();
+                    let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+                    m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                    if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+                    const d = new Date(str);
+                    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                }
+                if (model.inicioCiclo) startDate = parseLocalDateString(model.inicioCiclo);
+                if (model.fimCiclo) endDate = parseLocalDateString(model.fimCiclo);
                 if (Array.isArray(model.materias)) {
                     subjectsConfig = model.materias.map(m => ({
                         name: m.nome,
@@ -2005,11 +2048,15 @@
                     setGenerateButtonState('success');
                     try {
                         const rawSchedule = JSON.parse(savedScheduleJson);
-                        fullSchedule = rawSchedule.map(day => ({
-                            ...day,
-                            date: new Date(day.date),
-                            tasks: day.tasks.map(t => ({...t}))
-                        }));
+                        fullSchedule = rawSchedule.map(day => {
+                            const d = new Date(day.date);
+                            const local = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                            return {
+                                ...day,
+                                date: local,
+                                tasks: day.tasks.map(t => ({...t}))
+                            };
+                        });
                     } catch(e) {
                         console.error('Falha ao reidratar cronograma salvo:', e);
                         fullSchedule = [];
@@ -2045,11 +2092,15 @@
             if (savedScheduleJson) {
                 // Parse saved dates strings back to Date objects
                 const rawSchedule = JSON.parse(savedScheduleJson);
-                fullSchedule = rawSchedule.map(day => ({
-                    ...day,
-                    date: new Date(day.date),
-                    tasks: day.tasks.map(t => ({...t})) // clone tasks
-                }));
+                fullSchedule = rawSchedule.map(day => {
+                    const d = new Date(day.date);
+                    const local = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                    return {
+                        ...day,
+                        date: local,
+                        tasks: day.tasks.map(t => ({...t})) // clone tasks
+                    };
+                });
                 
                 // If saved schedule ends before current endDate, we might need to extend it?
                 // For now, let's assume the user wants to keep the saved structure.
@@ -2689,13 +2740,17 @@
                 elapsedAtStart: realTask.timeSpent || 0, // seconds
                 elapsedSession: 0,
                 paused: false,
-                interval: null
+                interval: null,
+                target: Number(realTask.durationTarget || 3600),
+                alarmPlayed: false,
+                resumeStart: performance.now()
             };
 
             // Show Bar
             const bar = document.getElementById('active-study-bar');
             bar.classList.add('visible');
             document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
             
             // Request Notification Permission
             if("Notification" in window && Notification.permission === "default") {
@@ -2704,6 +2759,7 @@
 
             updateBarTimer();
             resumeTimer();
+            window.addEventListener('keydown', barKeyHandler);
         }
 
         function togglePauseResume() {
@@ -2720,37 +2776,9 @@
         function resumeTimer() {
             if(!activeSession) return;
             activeSession.paused = false;
-            activeSession.lastResumeTime = Date.now();
-            
-            activeSession.interval = setInterval(() => {
-                const now = Date.now();
-                // We don't add diff to elapsedSession directly every tick to avoid drift, just for display
-                // Actually simpler: 
-                activeSession.elapsedSession += 1;
-                activeSession.lastResumeTime = now; // reset for next tick
-                
-                // Check Alarm (1h = 3600s)
-                const total = activeSession.elapsedAtStart + activeSession.elapsedSession;
-                if(total === 3600) { 
-                    playAlarm();
-                    // Visual cue
-                    const timerEl = document.getElementById('bar-timer-display');
-                    if(timerEl) {
-                        timerEl.style.color = '#ff6b6b';
-                        timerEl.style.textShadow = '0 0 10px #ff6b6b';
-                        setTimeout(() => {
-                             timerEl.style.color = '#fff';
-                             timerEl.style.textShadow = 'none';
-                        }, 5000);
-                    }
-                    // Notification if supported
-                    if("Notification" in window && Notification.permission === "granted") {
-                        new Notification("Meta Batida!", { body: "Você completou 1 hora de estudo!" });
-                    }
-                }
-                
-                updateBarTimer();
-            }, 1000);
+            activeSession.resumeStart = performance.now();
+            clearInterval(activeSession.interval);
+            activeSession.interval = setInterval(updateBarTimer, 1000);
         }
 
         function playAlarm() {
@@ -2789,12 +2817,37 @@
             if(!activeSession) return;
             activeSession.paused = true;
             clearInterval(activeSession.interval);
+            const delta = Math.floor((performance.now() - activeSession.resumeStart) / 1000);
+            if(delta > 0) activeSession.elapsedSession += delta;
         }
 
         function updateBarTimer() {
             if(!activeSession) return;
-            const total = activeSession.elapsedAtStart + activeSession.elapsedSession;
+            const liveDelta = activeSession.paused ? 0 : Math.floor((performance.now() - activeSession.resumeStart) / 1000);
+            const total = activeSession.elapsedAtStart + activeSession.elapsedSession + liveDelta;
             document.getElementById('bar-timer-display').textContent = formatTime(total);
+            const target = Math.max(1, Number(activeSession.target || 3600));
+            const pct = Math.min(100, Math.round((total / target) * 100));
+            const fill = document.getElementById('bar-progress-fill');
+            if(fill) fill.style.width = pct + '%';
+            const label = document.getElementById('bar-target-label');
+            if(label) label.textContent = `/ Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
+            if(!activeSession.alarmPlayed && total >= target) {
+                activeSession.alarmPlayed = true;
+                playAlarm();
+                const timerEl = document.getElementById('bar-timer-display');
+                if(timerEl) {
+                    timerEl.style.color = '#10b981';
+                    timerEl.style.textShadow = '0 0 10px #10b981';
+                    setTimeout(() => {
+                         timerEl.style.color = '#fff';
+                         timerEl.style.textShadow = 'none';
+                    }, 5000);
+                }
+                if("Notification" in window && Notification.permission === "granted") {
+                    new Notification("Meta Batida!", { body: "Você completou sua meta de estudo!" });
+                }
+            }
         }
 
         function finishSession() {
@@ -2831,6 +2884,7 @@
                 renderCalendar();
                 renderList();
                 activeSession = null;
+                window.removeEventListener('keydown', barKeyHandler);
             }
         }
 
@@ -2913,6 +2967,21 @@
             renderCalendar();
             renderTimeStats();
             updateStats();
+            window.removeEventListener('keydown', barKeyHandler);
+        }
+
+        function barKeyHandler(e) {
+            if(!activeSession) return;
+            if(e.key === ' ') {
+                e.preventDefault();
+                togglePauseResume();
+            } else if(e.key === 'Enter') {
+                e.preventDefault();
+                finishSession();
+            } else if(e.key === 'Escape') {
+                e.preventDefault();
+                cancelSession();
+            }
         }
 
         function renderHistory() {
@@ -4384,6 +4453,67 @@
             URL.revokeObjectURL(url);
             
             showToast('Progresso salvo em novo arquivo HTML!', 'success');
+        }
+        
+        /**
+         * Abre o seletor de arquivo para importar progresso (HTML/JSON).
+         */
+        function triggerImportProgress() {
+            const input = document.getElementById('import-progress-input');
+            if (input) input.click();
+        }
+
+        /**
+         * Restaura progresso a partir de um payload de dados válido.
+         */
+        function restoreProgressFromPayload(payload) {
+            const d = payload || {};
+            const restore = (key, val) => { if (val !== undefined && val !== null) localStorage.setItem(key, JSON.stringify(val)); };
+            restore('estudoFiscalData', d.estudoFiscalData);
+            restore('estudoFiscalSyllabus', d.estudoFiscalSyllabus);
+            restore('estudoFiscalStudyHistory', d.estudoFiscalStudyHistory);
+            restore('estudoFiscalScheduleStructure', d.estudoFiscalScheduleStructure);
+            restore('estudoFiscalModel', d.estudoFiscalModel);
+            try { sessionStorage.setItem('logged_in', 'true'); } catch(e) {}
+            // Força recarregar estrutura e UI
+            fullSchedule = [];
+            init();
+            showToast('Progresso carregado com sucesso!', 'success');
+        }
+
+        /**
+         * Importa progresso de um arquivo HTML salvo (com HARDCODED_DATA) ou JSON.
+         */
+        function importProgressFile(input) {
+            const file = input?.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function() {
+                try {
+                    const text = String(reader.result || '');
+                    let payload = null;
+                    const isJSON = file.name.toLowerCase().endsWith('.json') || (file.type || '').includes('json');
+                    if (isJSON) {
+                        payload = JSON.parse(text);
+                    } else {
+                        // Extrai conteúdo da tag de persistência
+                        const block = text.match(/<script id="persistence-data">([\s\S]*?)<\/script>/i);
+                        if (!block) throw new Error('Bloco de persistência não encontrado no HTML.');
+                        const stmt = block[1];
+                        const jsonMatch = stmt.match(/window\.HARDCODED_DATA\s*=\s*([^;]+);/i);
+                        if (!jsonMatch) throw new Error('HARDCODED_DATA não encontrado no script.');
+                        const jsonStr = jsonMatch[1].trim();
+                        payload = JSON.parse(jsonStr);
+                    }
+                    if (!payload || typeof payload !== 'object') throw new Error('Payload inválido.');
+                    restoreProgressFromPayload(payload);
+                } catch (e) {
+                    showToast('Falha ao carregar progresso: ' + e.message, 'error');
+                } finally {
+                    input.value = '';
+                }
+            };
+            reader.readAsText(file);
         }
 
         /**

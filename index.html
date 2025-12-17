@@ -9,14 +9,20 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
-            --bg-color: #121212;
-            --sidebar-bg: #1e1e1e;
-            --card-bg: #252525;
-            --hover-bg: #333333;
-            --text-color: #e0e0e0;
-            --text-muted: #a0a0a0;
-            --border-color: #3f3f3f;
-            --accent-color: #3b82f6; /* Azul moderno */
+            /* Dark Mode (Default) */
+            --bg-color: #0f172a; /* Slate 900 */
+            --sidebar-bg: rgba(15, 23, 42, 0.85);
+            --sidebar-text: #e2e8f0;
+            --sidebar-muted: #94a3b8;
+            --sidebar-border: rgba(59, 130, 246, 0.1);
+            --sidebar-card-bg: rgba(30, 41, 59, 0.6);
+            
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --hover-bg: rgba(51, 65, 85, 0.6);
+            --text-color: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: rgba(59, 130, 246, 0.1);
+            --accent-color: #3b82f6;
             --accent-hover: #2563eb;
             --success-color: #10b981;
             --warning-color: #f59e0b;
@@ -25,6 +31,84 @@
             --tag-spec-text: #93c5fd;
             --tag-basic-bg: rgba(245, 158, 11, 0.2);
             --tag-basic-text: #fcd34d;
+            --glass-blur: blur(16px);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            /* Modern Deep Blue/Black Gradient */
+            --body-bg: radial-gradient(circle at 80% 10%, #1e3a8a, #0f172a 45%, #020617 85%);
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f3f4f6;
+            
+            /* Sidebar - Dark Mode Style for Contrast */
+            --sidebar-bg: #1e1e2d;
+            --sidebar-text: #e0e0e0;
+            --sidebar-muted: #a0a0a0;
+            --sidebar-border: rgba(255, 255, 255, 0.1);
+            --sidebar-card-bg: rgba(255, 255, 255, 0.05);
+
+            --card-bg: #ffffff;
+            --hover-bg: #f9fafb;
+            --text-color: #111827;
+            --text-muted: #6b7280;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --accent-color: #2563eb;
+            --accent-hover: #1d4ed8;
+            --tag-spec-bg: rgba(37, 99, 235, 0.1);
+            --tag-spec-text: #1d4ed8;
+            --tag-basic-bg: rgba(245, 158, 11, 0.1);
+            --tag-basic-text: #b45309;
+            --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --body-bg: #f3f4f6; /* Flat background or subtle gradient for light mode */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--body-bg);
+            background-attachment: fixed;
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            background: rgba(30, 30, 30, 0.9);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            min-width: 250px;
+            animation: slideIn 0.3s ease-out forwards;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 0.95rem;
+        }
+        .toast.success { border-left-color: var(--success-color); }
+        .toast.error { border-left-color: var(--danger-color); }
+        .toast.warning { border-left-color: var(--warning-color); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            to { transform: translateX(100%); opacity: 0; }
         }
 
         /* --- STICKY TIMER BAR --- */
@@ -43,6 +127,264 @@
             z-index: 2000;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
             font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* --- POMODORO WIDGET --- */
+        #pomodoro-widget {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            width: 220px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            z-index: 5000;
+            display: none; /* Toggle via JS */
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', sans-serif;
+            transition: all 0.3s ease;
+        }
+        #pomodoro-widget.minimized {
+            width: 60px;
+            height: 60px;
+            padding: 0;
+            border-radius: 50%;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        #pomodoro-widget.minimized .pomo-content { display: none; }
+        #pomodoro-widget.minimized .pomo-icon { display: flex; }
+        
+        .pomo-icon {
+            display: none;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .pomo-content { width: 100%; text-align: center; }
+        .pomo-timer {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin: 10px 0;
+            font-variant-numeric: tabular-nums;
+        }
+        .pomo-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .pomo-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .pomo-btn:hover { background: var(--hover-bg); }
+        .pomo-btn.active { background: var(--accent-color); border-color: var(--accent-color); }
+        
+        .pomo-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .pomo-action-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .pomo-close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        /* --- GLASSMORPHISM UTILS --- */
+        .glass-panel {
+            background: var(--sidebar-bg) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--sidebar-border) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            color: var(--sidebar-text);
+        }
+
+        /* --- LOGIN OVERLAY MODERNIZED --- */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 80% 10%, #1e3a8a, #0f172a 45%, #020617 85%);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .login-box {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 50px 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 400px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            animation: loginAppear 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        /* Decorative blur blob */
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            left: -50px;
+            width: 100px;
+            height: 100px;
+            background: var(--accent-color);
+            filter: blur(60px);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        @keyframes loginAppear {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .login-header {
+            margin-bottom: 30px;
+        }
+        
+        .login-icon-circle {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .login-title {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .login-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1rem;
+            transition: color 0.3s;
+            pointer-events: none;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+        
+        .login-input:focus + i {
+            color: var(--accent-color);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            animation: shake 0.4s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
 
         #active-study-bar.visible {
@@ -307,7 +649,7 @@
         .sidebar {
             width: 260px;
             background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--border-color);
+            border-right: 1px solid var(--sidebar-border);
             padding: 20px;
             padding-bottom: 40px; /* Extra padding for bottom scroll */
             display: flex;
@@ -315,6 +657,8 @@
             gap: 20px;
             flex-shrink: 0;
             overflow-y: auto; /* Allow scrolling if content is too tall */
+            color: var(--sidebar-text);
+            scrollbar-color: var(--sidebar-border) var(--sidebar-bg);
         }
 
         .brand {
@@ -342,13 +686,13 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            color: var(--text-muted);
+            color: var(--sidebar-muted);
             transition: all 0.2s;
             font-weight: 500;
         }
 
         .nav-item:hover {
-            background-color: var(--hover-bg);
+            background-color: rgba(255, 255, 255, 0.1);
             color: #fff;
         }
 
@@ -370,9 +714,17 @@
             border-radius: 10px;
             border: 1px solid var(--border-color);
         }
+        
+        .sidebar .mini-stat {
+            background-color: var(--sidebar-card-bg);
+            border: 1px solid var(--sidebar-border);
+        }
 
         .mini-stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
-        .mini-stat-value { font-size: 1.2rem; font-weight: 700; color: #fff; }
+        .sidebar .mini-stat-label { color: var(--sidebar-muted); }
+
+        .mini-stat-value { font-size: 1.2rem; font-weight: 700; color: var(--text-color); }
+        .sidebar .mini-stat-value { color: var(--sidebar-text); }
 
         .progress-circle {
             width: 100%;
@@ -839,17 +1191,17 @@
         .meta-chip {
             display: flex;
             align-items: center;
-            background: #1f1f1f;
-            border: 1px solid #444;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 999px;
             padding: 4px 8px;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         }
-        .meta-chip .divider { width: 1px; height: 18px; background: #444; margin: 0 6px; }
+        .meta-chip .divider { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.1); margin: 0 6px; }
         .step-btn {
-            background: #2a2a2a;
-            color: #ddd;
-            border: 1px solid #444;
+            background: rgba(51, 65, 85, 0.6);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 999px;
             width: 28px;
             height: 28px;
@@ -859,7 +1211,7 @@
             cursor: pointer;
             font-weight: 700;
         }
-        .step-btn:hover { background: #333; color: #fff; border-color: #555; }
+        .step-btn:hover { background: rgba(71, 85, 105, 0.8); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
         .chip-seg { display: flex; align-items: center; gap: 6px; color: #bbb; font-size: 0.8rem; }
         .chip-seg b { color: #fff; font-size: 0.9rem; }
         .preset-group { display: flex; gap: 6px; margin-left: 8px; }
@@ -891,8 +1243,8 @@
             padding: 6px 10px;
             border-radius: 999px;
             border: 1px solid var(--border-color);
-            background: #1f1f1f;
-            color: #ddd;
+            background: rgba(30, 41, 59, 0.6);
+            color: #e2e8f0;
             cursor: pointer;
             font-size: 0.85rem;
         }
@@ -902,12 +1254,148 @@
         .chip-done { color: #34d399; border-color: #2b6f54; }
         .chip-skipped { color: #f59e0b; border-color: #8a5b0b; }
 
+        /* Smooth Tab Animations */
+        .content-area {
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .view-section {
+            display: none;
+            width: 100%;
+            animation: none; /* Override old fade */
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease; /* Fallback for initial load */
+        }
+        
+        /* Sliding Animation Classes */
+        .view-section.slide-left-out {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: calc(100% - 60px);
+            animation: slideLeftOut 0.3s forwards ease-in-out;
+            pointer-events: none;
+        }
+        .view-section.slide-left-in {
+            display: block;
+            position: relative;
+            animation: slideLeftIn 0.3s forwards ease-in-out;
+        }
+        
+        .view-section.slide-right-out {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: calc(100% - 60px);
+            animation: slideRightOut 0.3s forwards ease-in-out;
+            pointer-events: none;
+        }
+        .view-section.slide-right-in {
+            display: block;
+            position: relative;
+            animation: slideRightIn 0.3s forwards ease-in-out;
+        }
+        
+        @keyframes slideLeftOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(-50px); opacity: 0; }
+        }
+        @keyframes slideLeftIn {
+            from { transform: translateX(50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideRightOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(50px); opacity: 0; }
+        }
+        @keyframes slideRightIn {
+            from { transform: translateX(-50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
     </style>
 </head>
 <body>
+    <!-- PERSISTENCE SCRIPT (DO NOT REMOVE) -->
+    <script id="persistence-data">
+        window.HARDCODED_DATA = null;
+    </script>
+    <div id="toast-container"></div>
+    <!-- POMODORO WIDGET -->
+    <div id="pomodoro-widget">
+        <button class="pomo-close" onclick="togglePomodoro(false)"><i class="fas fa-times"></i></button>
+        <div class="pomo-icon" onclick="togglePomodoroMin()"><i class="fas fa-clock"></i></div>
+        <div class="pomo-content">
+            <div class="pomo-controls">
+                <button class="pomo-btn active" onclick="setPomoMode('work')">Foco</button>
+                <button class="pomo-btn" onclick="setPomoMode('short')">Curto</button>
+                <button class="pomo-btn" onclick="setPomoMode('long')">Longo</button>
+            </div>
+            <div class="pomo-timer" id="pomo-display">25:00</div>
+            <div class="pomo-actions">
+                <button class="pomo-action-btn" id="pomo-start-btn" onclick="togglePomoTimer()"><i class="fas fa-play"></i></button>
+                <button class="pomo-action-btn" onclick="resetPomoTimer()"><i class="fas fa-redo"></i></button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="login-icon-circle">
+                    <i class="fas fa-user-astronaut"></i>
+                </div>
+                <div class="login-title">Bem-vindo</div>
+                <div class="login-subtitle">Entre para continuar seus estudos</div>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="login-user" class="login-input" placeholder="Usuário">
+                <i class="fas fa-user"></i>
+            </div>
+            
+            <div class="input-group">
+                <input type="password" id="login-pass" class="login-input" placeholder="Senha">
+                <i class="fas fa-lock"></i>
+            </div>
+            
+            <button class="login-btn" onclick="checkLogin()">Acessar Painel</button>
+            <div id="login-error" class="login-error">
+                <i class="fas fa-exclamation-circle"></i> Credenciais inválidas
+            </div>
+        </div>
+        <div style="margin-top: 20px; color: var(--text-muted); font-size: 0.8rem;">
+            &copy; 2025 Painel de Estudos
+        </div>
+    </div>
+    <script>
+        /**
+         * Oculta o overlay de login imediatamente em ambientes locais (file://) ou quando há dados embutidos.
+         * Fazemos isso aqui (logo após o HTML do overlay) para garantir que funcione mesmo se scripts posteriores falharem.
+         */
+        (function autoHideLoginOverlay() {
+            try {
+                var shouldSkip = (sessionStorage.getItem('logged_in') === 'true') ||
+                                 (window.location.protocol === 'file:') ||
+                                 !!window.HARDCODED_DATA;
+                if (shouldSkip) {
+                    var overlay = document.getElementById('login-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                }
+            } catch (e) {
+                // Fallback silencioso
+            }
+        })();
+    </script>
 
     <!-- Sidebar -->
-    <nav class="sidebar">
+    <nav class="sidebar glass-panel">
         <div class="brand">
             <i class="fas fa-book-reader"></i>
             <span>Painel de Estudos</span>
@@ -964,6 +1452,9 @@
                 <button id="generate-cycle-button" onclick="generateCycleFromModel()" style="width: 100%; padding: 10px; background: var(--accent-color); border: none; color: #fff; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
                     <i class="fas fa-play-circle"></i> Gerar Ciclo de Estudo
                 </button>
+                <button class="generate-btn" style="width: 100%; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="togglePomodoro(true)">
+                    <i class="fas fa-clock"></i> Pomodoro
+                </button>
                 
             <div style="margin-top: 10px; display: grid; gap: 8px;">
                 <button id="btn-download-xlsx" onclick="downloadModelTemplateXLSX()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -979,6 +1470,11 @@
                 </div>
                 
                 <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <button onclick="saveSelfContainedHTML()" style="width: 100%; padding: 10px; background: var(--success-color); border: none; color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px;">
+                        <i class="fas fa-save"></i> Salvar Progresso
+                    </button>
+                    <p style="font-size: 0.7rem; color: #aaa; margin-bottom: 15px; text-align: center;">Baixa uma cópia do site com seus dados salvos.</p>
+
                      <button onclick="resetSchedule()" style="width: 100%; padding: 6px; background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
                         <i class="fas fa-sync-alt"></i> Regerar Cronograma
                     </button>
@@ -996,7 +1492,9 @@
                 <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
             </div>
             <div>
-                <!-- User profile or settings could go here -->
+                <button id="theme-toggle" class="btn-secondary" style="padding: 8px 12px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-color: var(--border-color); color: var(--text-color); background: transparent;" onclick="toggleTheme()" title="Alternar Tema">
+                    <i class="fas fa-sun"></i>
+                </button>
             </div>
         </div>
 
@@ -1180,6 +1678,16 @@
                 <button onclick="cancelNote()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:1.2rem;"><i class="fas fa-times"></i></button>
             </div>
             <div class="note-body">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1;">
+                        <label class="note-label">Questões Feitas</label>
+                        <input type="number" id="note-questions-total" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="note-label">Acertos</label>
+                        <input type="number" id="note-questions-correct" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
+                    </div>
+                </div>
                 <label class="note-label">Anotações</label>
                 <textarea id="note-textarea" class="note-textarea" placeholder="Faça suas anotações aqui!"></textarea>
             </div>
@@ -1213,11 +1721,134 @@
     </div>
 
     <script>
+        /* --- POMODORO LOGIC --- */
+        let pomoInterval = null;
+        let pomoTime = 25 * 60;
+        let pomoActive = false;
+        let pomoMode = 'work'; // work, short, long
+
+        function togglePomodoro(show) {
+            const w = document.getElementById('pomodoro-widget');
+            if(show) {
+                w.style.display = 'flex';
+                w.classList.remove('minimized');
+            } else {
+                w.style.display = 'none';
+                clearInterval(pomoInterval);
+                pomoActive = false;
+                updatePomoButton();
+            }
+        }
+
+        function togglePomodoroMin() {
+            const w = document.getElementById('pomodoro-widget');
+            w.classList.toggle('minimized');
+        }
+
+        function setPomoMode(mode) {
+            pomoMode = mode;
+            pomoActive = false;
+            clearInterval(pomoInterval);
+            updatePomoButton();
+            
+            document.querySelectorAll('.pomo-btn').forEach(b => b.classList.remove('active'));
+            if(mode === 'work') {
+                pomoTime = 25 * 60;
+                event.target.classList.add('active');
+            } else if(mode === 'short') {
+                pomoTime = 5 * 60;
+                event.target.classList.add('active');
+            } else {
+                pomoTime = 15 * 60;
+                event.target.classList.add('active');
+            }
+            updatePomoDisplay();
+        }
+
+        function updatePomoDisplay() {
+            const m = Math.floor(pomoTime / 60).toString().padStart(2, '0');
+            const s = (pomoTime % 60).toString().padStart(2, '0');
+            document.getElementById('pomo-display').textContent = `${m}:${s}`;
+            if(pomoActive) document.title = `(${m}:${s}) Painel de Estudos`;
+            else document.title = 'Painel de Estudos';
+        }
+
+        function togglePomoTimer() {
+            if(pomoActive) {
+                clearInterval(pomoInterval);
+                pomoActive = false;
+            } else {
+                pomoInterval = setInterval(() => {
+                    pomoTime--;
+                    if(pomoTime <= 0) {
+                        clearInterval(pomoInterval);
+                        pomoActive = false;
+                        showToast('Tempo esgotado! Hora de trocar o status.', 'success');
+                        // Play sound?
+                    }
+                    updatePomoDisplay();
+                }, 1000);
+                pomoActive = true;
+            }
+            updatePomoButton();
+        }
+
+        function resetPomoTimer() {
+            clearInterval(pomoInterval);
+            pomoActive = false;
+            updatePomoButton();
+            if(pomoMode === 'work') pomoTime = 25 * 60;
+            else if(pomoMode === 'short') pomoTime = 5 * 60;
+            else pomoTime = 15 * 60;
+            updatePomoDisplay();
+        }
+
+        function updatePomoButton() {
+            const btn = document.getElementById('pomo-start-btn');
+            btn.innerHTML = pomoActive ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+        }
+
+        /* --- TOAST LOGIC --- */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'info-circle';
+            if(type === 'success') icon = 'check-circle';
+            if(type === 'error') icon = 'exclamation-circle';
+            if(type === 'warning') icon = 'exclamation-triangle';
+
+            toast.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-${icon}"></i>
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:inherit; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto remove
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Override default alert
+        window.alert = function(msg) {
+            showToast(msg, 'info');
+        }
+
         // --- DATA & CONFIG ---
+        const ENABLE_API = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
         /**
          * Salva dados do localStorage em disco via API do servidor.
          */
         async function syncToDisk() {
+            if (!ENABLE_API) return;
             try {
                 const payload = {
                     data: {
@@ -1242,6 +1873,7 @@
          * Envia uma linha de log para o servidor.
          */
         async function logEvent(message) {
+            if (!ENABLE_API) return;
             try {
                 await fetch('/api/log', {
                     method: 'POST',
@@ -1258,6 +1890,27 @@
          * Prioriza o ciclo persistido via /api/cycle.
          */
         async function hydrateFromDisk() {
+            // 0) Verifica se há dados hardcoded (modo offline / arquivo salvo)
+            if (window.HARDCODED_DATA) {
+                console.log('Carregando dados embutidos (modo offline)...');
+                const d = window.HARDCODED_DATA;
+                
+                // Helper para salvar no localStorage apenas se o dado existir
+                const restore = (key, val) => {
+                    if (val) localStorage.setItem(key, JSON.stringify(val));
+                };
+
+                restore('estudoFiscalData', d.estudoFiscalData);
+                restore('estudoFiscalSyllabus', d.estudoFiscalSyllabus);
+                restore('estudoFiscalStudyHistory', d.estudoFiscalStudyHistory);
+                restore('estudoFiscalScheduleStructure', d.estudoFiscalScheduleStructure);
+                restore('estudoFiscalModel', d.estudoFiscalModel);
+                
+                showToast('Dados recuperados do arquivo salvo!', 'success');
+                return;
+            }
+
+            if (!ENABLE_API) return;
             try {
                 // 1) Tenta carregar ciclo dedicado
                 const resCycle = await fetch('/api/cycle');
@@ -1528,13 +2181,15 @@
             // Save the generated structure
             localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
             // Persist ciclo dedicado e log
-            try {
-                fetch('/api/cycle', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ schedule: fullSchedule })
-                }).then(() => logEvent(`CYCLE: gerado (${fullSchedule.length} dias)`)).catch(()=>{});
-            } catch(e) {}
+            if (ENABLE_API) {
+                try {
+                    fetch('/api/cycle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ schedule: fullSchedule })
+                    }).then(() => logEvent(`CYCLE: gerado (${fullSchedule.length} dias)`)).catch(()=>{});
+                } catch(e) {}
+            }
         }
 
         
@@ -1583,40 +2238,77 @@
         // --- RENDER FUNCTIONS ---
 
 
+        const tabOrder = ['calendar', 'subjects', 'list', 'syllabus', 'time-stats', 'history'];
+        let currentTab = 'calendar';
+
         function switchTab(tabName) {
+            if (tabName === currentTab) return;
+
+            // Determine direction
+            const oldIndex = tabOrder.indexOf(currentTab);
+            const newIndex = tabOrder.indexOf(tabName);
+            const direction = newIndex > oldIndex ? 'left' : 'right';
+
             // Update UI Tabs
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            // Find the nav item that calls this function with the same tabName
-            // Note: In inline onclick, 'this' might not be the element if not passed, 
-            // but event.currentTarget is reliable if we use it.
-            // However, since we might call this programmatically, let's look it up.
             const navItem = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(`'${tabName}'`));
             if(navItem) navItem.classList.add('active');
 
-            // Update Views
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            const view = document.getElementById(`view-${tabName}`);
-            if(view) view.classList.add('active');
-
-            // Update Title
-            const titles = {
-                'calendar': 'Calendário de Estudos',
-                'subjects': 'Progresso por Matéria',
-                'list': 'Cronograma Completo',
-                'syllabus': 'Conteúdo Programático',
-                'time-stats': 'Tempo de Estudo',
-                'history': 'Histórico de Estudos'
-            };
-            const titleEl = document.getElementById('page-title-text');
-            if(titleEl) titleEl.textContent = titles[tabName] || 'Painel de Estudos';
-
-            // Render específico ao trocar de aba
+            // Render specific content BEFORE showing
             if (tabName === 'calendar') renderCalendar();
             else if (tabName === 'subjects') renderSubjects();
             else if (tabName === 'list') renderList();
             else if (tabName === 'syllabus') renderSyllabus();
             else if (tabName === 'time-stats') renderTimeStats();
             else if (tabName === 'history') renderHistory();
+
+            // Get Views
+            const oldView = document.getElementById(`view-${currentTab}`);
+            const newView = document.getElementById(`view-${tabName}`);
+            const contentArea = document.querySelector('.content-area');
+
+            // Reset scroll
+            if(contentArea) contentArea.scrollTop = 0;
+
+            if (oldView && newView) {
+                // Clean any ongoing animation classes
+                oldView.classList.remove('slide-left-in', 'slide-right-in', 'slide-left-out', 'slide-right-out', 'active');
+                newView.classList.remove('slide-left-in', 'slide-right-in', 'slide-left-out', 'slide-right-out', 'active');
+
+                // Prepare classes
+                const outClass = direction === 'left' ? 'slide-left-out' : 'slide-right-out';
+                const inClass = direction === 'left' ? 'slide-left-in' : 'slide-right-in';
+
+                // Apply classes
+                oldView.classList.add(outClass);
+                newView.classList.add(inClass);
+
+                // Update Title
+                const titles = {
+                    'calendar': 'Calendário de Estudos',
+                    'subjects': 'Progresso por Matéria',
+                    'list': 'Cronograma Completo',
+                    'syllabus': 'Conteúdo Programático',
+                    'time-stats': 'Tempo de Estudo',
+                    'history': 'Histórico de Estudos'
+                };
+                const titleEl = document.getElementById('page-title-text');
+                if(titleEl) titleEl.textContent = titles[tabName] || 'Painel de Estudos';
+
+                // Cleanup after animation
+                setTimeout(() => {
+                    oldView.classList.remove(outClass);
+                    // oldView remains hidden (no active class)
+                    
+                    newView.classList.remove(inClass);
+                    newView.classList.add('active');
+                }, 300);
+            } else {
+                 // Fallback
+                 document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                 if(newView) newView.classList.add('active');
+            }
+            currentTab = tabName;
         }
 
         function setGenerateButtonState(state) {
@@ -2110,8 +2802,10 @@
             pauseTimer();
             // Open Note Modal
             document.getElementById('note-modal').classList.add('open');
-            // Clear textarea
+            // Clear textarea and inputs
             document.getElementById('note-textarea').value = '';
+            document.getElementById('note-questions-total').value = '';
+            document.getElementById('note-questions-correct').value = '';
         }
 
         function cancelSession() {
@@ -2151,6 +2845,14 @@
             if(!activeSession) return;
             
             const note = document.getElementById('note-textarea').value;
+            const qTotal = parseInt(document.getElementById('note-questions-total').value) || 0;
+            const qCorrect = parseInt(document.getElementById('note-questions-correct').value) || 0;
+            
+            if (qCorrect > qTotal) {
+                alert('O número de acertos não pode ser maior que o total de questões.');
+                return;
+            }
+
             const now = new Date();
             
             // 1. Add to History
@@ -2160,7 +2862,9 @@
                 subject: activeSession.subject,
                 duration: activeSession.elapsedSession, // Only what was studied NOW
                 startTime: activeSession.startTime,
-                note: note
+                note: note,
+                questions: qTotal,
+                correct: qCorrect
             };
             
             studyHistory.unshift(historyItem); // Add to top
@@ -2258,6 +2962,21 @@
                 group.items.forEach(item => {
                     const startT = new Date(item.startTime).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
                     
+                    // Question Stats
+                    let statsHtml = '';
+                    if (item.questions && item.questions > 0) {
+                        const rate = Math.round((item.correct / item.questions) * 100);
+                        const colorClass = rate >= 80 ? '#10b981' : (rate >= 60 ? '#f59e0b' : '#ef4444');
+                        statsHtml = `
+                            <div style="font-size: 0.8rem; margin-top: 4px; display: flex; gap: 10px; align-items: center;">
+                                <span style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">
+                                    <i class="fas fa-tasks" style="font-size: 0.7rem;"></i> ${item.correct}/${item.questions}
+                                </span>
+                                <span style="color: ${colorClass}; font-weight: 600;">${rate}%</span>
+                            </div>
+                        `;
+                    }
+
                     // Subject color (random or consistent?)
                     // Let's use accent color for now
                     
@@ -2273,6 +2992,7 @@
                                     <span><i class="fas fa-stopwatch"></i> ${formatTime(item.duration)}</span>
                                 </div>
                             </div>
+                            ${statsHtml}
                             ${item.note ? `<div class="history-note">${item.note}</div>` : ''}
                         </div>
                     `;
@@ -2349,7 +3069,9 @@
                 localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
                 localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
                 // Persistir ciclo e sincronizar
-                try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
+                if (ENABLE_API) {
+                    try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
+                }
                 syncToDisk();
                 
                 // Refresh Views
@@ -2386,6 +3108,18 @@
 
                 const percent = total === 0 ? 0 : Math.round((done / total) * 100);
 
+                // Calculate Question Performance
+                let qTotal = 0;
+                let qCorrect = 0;
+                studyHistory.forEach(h => {
+                    if (h.subject === sub.name && h.questions) {
+                        qTotal += h.questions;
+                        qCorrect += (h.correct || 0);
+                    }
+                });
+                const qRate = qTotal === 0 ? 0 : Math.round((qCorrect / qTotal) * 100);
+                const qColor = qRate >= 80 ? '#10b981' : (qRate >= 60 ? '#f59e0b' : '#ef4444');
+
                 const card = document.createElement('div');
                 card.className = 'subject-card';
                 card.innerHTML = `
@@ -2401,6 +3135,16 @@
                         <span>Concluído</span>
                         <span>${done}h (${percent}%)</span>
                     </div>
+                    
+                    <!-- Performance -->
+                     <div class="subject-stat" style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                        <span>Desempenho</span>
+                        <span style="color: ${qTotal > 0 ? qColor : 'var(--text-muted)'}; font-weight: bold;">
+                            ${qTotal > 0 ? qRate + '%' : '-'} 
+                            <span style="font-size:0.7em; font-weight:normal; color:var(--text-muted);">(${qCorrect}/${qTotal})</span>
+                        </span>
+                    </div>
+
                     <div class="progress-circle">
                         <div class="progress-fill" style="width: ${percent}%"></div>
                     </div>
@@ -2669,8 +3413,34 @@
                 const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#E7E9ED','#76D7C4','#F1948A','#85C1E9','#F7DC6F','#D2B4DE'];
                 const labels = sortedSubjects.filter(i => i.seconds > 0).map(i => i.name);
                 const data = sortedSubjects.filter(i => i.seconds > 0).map(i => i.seconds / 3600);
+                const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
                 if(labels.length > 0) {
-                    studyTimeChart = new Chart(ctx, { type: 'pie', data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0', boxWidth: 10, font: { size: 10 } } } } } });
+                    studyTimeChart = new Chart(ctx, { 
+                        type: 'pie', 
+                        data: { 
+                            labels, 
+                            datasets: [{ 
+                                data, 
+                                backgroundColor: colors.slice(0, labels.length), 
+                                borderWidth: 1,
+                                borderColor: getComputedStyle(document.body).getPropertyValue('--card-bg').trim()
+                            }] 
+                        }, 
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { 
+                                    position: 'bottom', 
+                                    labels: { 
+                                        color: textColor, 
+                                        boxWidth: 10, 
+                                        font: { size: 10 } 
+                                    } 
+                                } 
+                            } 
+                        } 
+                    });
                 }
             }
 
@@ -3543,24 +4313,77 @@
             const generalHeaders = ['Concurso','Orgao','InicioCiclo','FimCiclo','Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
             const generalSheet = [generalHeaders, [concurso, orgao, inicio, fim, ...slotsPorDia]];
 
-            const contentHeaders = ['Categoria','Materia','Peso','Tickets','Topico'];
+            const contentHeaders = ['Categoria','Materia','Peso','Tickets','Qtde PDF','Qtde Paginas','Topico'];
             const contentRows = [];
             const catMap = {};
             syllabusData.forEach(sec => sec.subjects.forEach(s => { catMap[s.name] = sec.category; }));
             subjectsConfig.forEach(m => {
                 const categoria = (catMap[m.name] || (m.type === 'Específico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos'));
                 const catLabel = categoria.includes('Especí') ? 'Especifico' : 'Basico';
-                contentRows.push([catLabel, m.name, String(m.weight), String(m.tickets), '']);
+                const pdf = String(m.qtdePdf || 0);
+                const pag = String(m.qtdePaginas || 0);
+                contentRows.push([catLabel, m.name, String(m.weight), String(m.tickets), pdf, pag, '']);
                 const sec = syllabusData.find(sec => sec.subjects.some(s => s.name === m.name));
                 const subj = sec ? sec.subjects.find(s => s.name === m.name) : null;
                 const topics = subj && Array.isArray(subj.topics) && subj.topics.length > 0 ? subj.topics : [];
-                topics.forEach(t => contentRows.push([catLabel, m.name, String(m.weight), String(m.tickets), t]));
+                topics.forEach(t => contentRows.push([catLabel, m.name, String(m.weight), String(m.tickets), pdf, pag, t]));
             });
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(generalSheet), 'Gerais');
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([contentHeaders, ...contentRows]), 'Conteudo');
             XLSX.writeFile(wb, 'modelo_ciclo_estudo.xlsx');
+        }
+
+        /**
+         * Saves the current page with all user data embedded into the HTML file.
+         * This allows the user to download a self-contained copy of their progress.
+         */
+        function saveSelfContainedHTML() {
+            // 1. Gather all data
+            const persistencePayload = {
+                estudoFiscalData: JSON.parse(localStorage.getItem('estudoFiscalData') || '{}'),
+                estudoFiscalSyllabus: JSON.parse(localStorage.getItem('estudoFiscalSyllabus') || '{}'),
+                estudoFiscalStudyHistory: JSON.parse(localStorage.getItem('estudoFiscalStudyHistory') || '[]'),
+                estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem('estudoFiscalScheduleStructure') || '[]'),
+                estudoFiscalModel: JSON.parse(localStorage.getItem('estudoFiscalModel') || 'null')
+            };
+
+            // 2. Get current HTML
+            let htmlContent = document.documentElement.outerHTML;
+
+            // 3. Prepare the data script injection
+            // Procuramos pela tag específica id="persistence-data" e substituímos seu conteúdo.
+            
+            // Regex to find the block. We use [\\s\\S]*? to match across newlines.
+            const regex = new RegExp(`(<script id="persistence-data">)[\\s\\S]*?(<\\/script>)`, 'i');
+            
+            if (!regex.test(htmlContent)) {
+                alert('Erro: Marcador de persistência não encontrado no HTML.');
+                return;
+            }
+
+            const newScriptContent = `
+        window.HARDCODED_DATA = ${JSON.stringify(persistencePayload)};
+    `;
+            
+            // Replace the script content in the HTML string
+            htmlContent = htmlContent.replace(regex, (match, p1, p2) => {
+                return p1 + newScriptContent + p2;
+            });
+
+            // 4. Create Blob and trigger download
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'PainelCicloEstudo2_Salvo.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast('Progresso salvo em novo arquivo HTML!', 'success');
         }
 
         /**
@@ -3577,7 +4400,7 @@
             const generalHeaders = ['Concurso','Orgao','InicioCiclo','FimCiclo','Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
             const generalSheet = [generalHeaders, [concurso, orgao, inicio, fim, ...slots]];
 
-            const contentHeaders = ['Categoria','Materia','Peso','Tickets','Topico'];
+            const contentHeaders = ['Categoria','Materia','Peso','Tickets','Qtde PDF','Qtde Paginas','Topico'];
             const rows = [];
             if (model) {
                 const materiaConfigMap = new Map();
@@ -3593,9 +4416,12 @@
                             const peso = Math.min(3, Math.max(1, isNaN(pesoNum) ? 1 : pesoNum));
                             const ticketsNum = cfg ? Number(cfg.tickets) : NaN;
                             const tickets = Math.max(1, isNaN(ticketsNum) ? peso : ticketsNum);
-                            rows.push([catShort, sub.name, String(peso), String(tickets), '']);
+                            const pdf = String(cfg ? (cfg.qtdePdf || 0) : 0);
+                            const pag = String(cfg ? (cfg.qtdePaginas || 0) : 0);
+                            
+                            rows.push([catShort, sub.name, String(peso), String(tickets), pdf, pag, '']);
                             if (Array.isArray(sub.topics)) {
-                                sub.topics.forEach(t => rows.push([catShort, sub.name, String(peso), String(tickets), t]));
+                                sub.topics.forEach(t => rows.push([catShort, sub.name, String(peso), String(tickets), pdf, pag, t]));
                             }
                         });
                     });
@@ -3606,11 +4432,13 @@
                 subjectsConfig.forEach(m => {
                     const categoria = (catMap[m.name] || (m.type === 'Específico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos'));
                     const catShort = shortCategoryLabelFromTitle(categoria);
-                    rows.push([catShort, m.name, String(m.weight), String(m.tickets), '']);
+                    const pdf = String(m.qtdePdf || 0);
+                    const pag = String(m.qtdePaginas || 0);
+                    rows.push([catShort, m.name, String(m.weight), String(m.tickets), pdf, pag, '']);
                     const sec = syllabusData.find(sec => sec.subjects.some(s => s.name === m.name));
                     const subj = sec ? sec.subjects.find(s => s.name === m.name) : null;
                     if (subj && Array.isArray(subj.topics)) {
-                        subj.topics.forEach(t => rows.push([catShort, m.name, String(m.weight), String(m.tickets), t]));
+                        subj.topics.forEach(t => rows.push([catShort, m.name, String(m.weight), String(m.tickets), pdf, pag, t]));
                     }
                 });
             }
@@ -3714,7 +4542,9 @@
             });
             localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
             localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
-            try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
+            if (ENABLE_API) {
+                try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
+            }
             renderCalendar();
             renderSubjects();
             renderList();
@@ -3725,6 +4555,25 @@
 
         // Start
         function init() {
+            // 0. Check for HARDCODED_DATA (Self-Contained File)
+            if (window.HARDCODED_DATA) {
+                console.log('Carregando dados embutidos (Self-Contained Mode)...');
+                const d = window.HARDCODED_DATA;
+                if (d.estudoFiscalData) localStorage.setItem('estudoFiscalData', JSON.stringify(d.estudoFiscalData));
+                if (d.estudoFiscalSyllabus) localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(d.estudoFiscalSyllabus));
+                if (d.estudoFiscalStudyHistory) localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(d.estudoFiscalStudyHistory));
+                if (d.estudoFiscalScheduleStructure) localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(d.estudoFiscalScheduleStructure));
+                if (d.estudoFiscalModel) localStorage.setItem('estudoFiscalModel', JSON.stringify(d.estudoFiscalModel));
+                
+                showToast('Dados restaurados do arquivo salvo!', 'success');
+            }
+
+            // Se tivermos dados no storage mas fullSchedule estiver vazio (ex: F5), carregamos.
+            const savedScheduleJson = localStorage.getItem('estudoFiscalScheduleStructure');
+            if (fullSchedule.length === 0 && savedScheduleJson) {
+                generateSchedule(); // A função generateSchedule detecta o storage e carrega dele em vez de gerar novo
+            }
+
             const hasSchedule = !!localStorage.getItem('estudoFiscalScheduleStructure');
             setGenerateButtonState(hasSchedule ? 'success' : 'pending');
             // Garante reidratação do cronograma e aplicação de status
@@ -3741,6 +4590,123 @@
             setupOfflineFallbacks();
         }
         
+        // --- LOGIN LOGIC ---
+        function checkLogin() {
+            try {
+                const userEl = document.getElementById('login-user');
+                const passEl = document.getElementById('login-pass');
+                const errorMsg = document.getElementById('login-error');
+                const overlay = document.getElementById('login-overlay');
+                
+                if (!userEl || !passEl) {
+                    alert('Erro: Campos de login não encontrados no DOM.');
+                    return;
+                }
+
+                // Normalize input
+                const rawUser = userEl.value || '';
+                const rawPass = passEl.value || '';
+                const user = rawUser.trim().toUpperCase();
+                const pass = rawPass.trim().toUpperCase();
+                
+                // Debug log (can be removed later)
+                // console.log('Login attempt:', user, pass);
+
+                if ((user === 'CICLO' || user === 'ADMIN') && (pass === 'CICLO' || pass === 'ADMIN')) {
+                    // Success
+                    if(overlay) {
+                        overlay.style.transition = 'opacity 0.5s ease';
+                        overlay.style.opacity = '0';
+                        setTimeout(() => {
+                            overlay.style.display = 'none';
+                        }, 500);
+                    }
+                    
+                    try {
+                        sessionStorage.setItem('logged_in', 'true');
+                    } catch(e) {
+                        console.warn('SessionStorage unavailable', e);
+                    }
+                } else {
+                    // Error
+                    if (errorMsg) {
+                        errorMsg.style.display = 'block';
+                        errorMsg.style.animation = 'none';
+                        errorMsg.offsetHeight; /* trigger reflow */
+                        errorMsg.style.animation = 'shake 0.4s ease-in-out';
+                        
+                        // Optional: Clear password on error
+                        passEl.value = '';
+                        passEl.focus();
+                    } else {
+                        alert('Credenciais inválidas! Use Usuário: CICLO, Senha: CICLO');
+                    }
+                }
+            } catch(err) {
+                alert('Erro ao processar login: ' + err.message);
+            }
+        }
+
+        // Check session on load
+        if (sessionStorage.getItem('logged_in') === 'true' || window.location.protocol === 'file:' || window.HARDCODED_DATA) {
+             const overlay = document.getElementById('login-overlay');
+             if(overlay) overlay.style.display = 'none';
+        }
+
+        // Enter key support
+        const passInput = document.getElementById('login-pass');
+        const userInput = document.getElementById('login-user');
+        if(passInput) {
+            passInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') checkLogin();
+            });
+        }
+        if(userInput) {
+            userInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') passInput.focus();
+            });
+        }
+
+        // --- THEME LOGIC ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
+            
+            // Re-render chart if visible to update colors
+            if (currentTab === 'time-stats') {
+                setTimeout(renderTimeStats, 50); // Small delay to allow CSS to apply
+            }
+        }
+
+        function updateThemeIcon(theme) {
+            const btn = document.getElementById('theme-toggle');
+            if(!btn) return;
+            const icon = btn.querySelector('i');
+            if(theme === 'light') {
+                icon.className = 'fas fa-moon'; // Show moon to switch to dark
+                btn.title = "Modo Escuro";
+            } else {
+                icon.className = 'fas fa-sun'; // Show sun to switch to light
+                btn.title = "Modo Claro";
+            }
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+            // We need to wait for DOM to update icon, but attribute is set immediately
+            // Since script is at end of body, element might exist if not async
+            // But to be safe, we call updateThemeIcon inside init() or here if element exists
+            updateThemeIcon(saved);
+        }
+
+        // Init theme
+        initTheme();
+
         // Hidrata dados do disco (se existirem) e então inicia a UI
         hydrateFromDisk().then(() => { init(); });
 

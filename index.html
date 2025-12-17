@@ -1239,10 +1239,14 @@
                 if(data) {
                     task.status = data.status || 'todo';
                     task.note = data.note || '';
+                    task.timeSpent = data.timeSpent || 0;
+                    task.durationTarget = data.durationTarget || 3600; // Load target
                     task.completed = (task.status === 'done'); 
                 } else {
                     task.status = 'todo';
                     task.note = '';
+                    task.timeSpent = 0;
+                    task.durationTarget = 3600; // Default 1h
                     task.completed = false;
                 }
             });
@@ -1391,56 +1395,134 @@
                 else if(task.status === 'studying') selectClass = 'status-studying';
 
                 const timeSpent = task.timeSpent || 0;
+                // Default Meta logic: if not set, 1h (3600s). Can be edited.
+                if(!task.durationTarget) task.durationTarget = 3600; 
+                const durationTarget = task.durationTarget;
+                
+                const percent = Math.min(100, Math.round((timeSpent / durationTarget) * 100));
+                const remaining = Math.max(0, durationTarget - timeSpent);
+                
                 const formattedTime = formatTime(timeSpent);
+                const formattedTarget = formatTime(durationTarget);
+                const formattedRemaining = formatTime(remaining);
 
                 item.innerHTML = `
-                    <div class="task-header-row">
-                        <div class="task-info">
-                            <div class="task-name">${task.subject}</div>
+                    <div class="task-header-row" style="flex-wrap: wrap;">
+                        <div class="task-info" style="min-width: 200px;">
+                            <div class="task-name" style="font-size: 1.1rem; margin-bottom: 4px;">${task.subject}</div>
                             <div class="task-meta">
                                 <span class="tag ${task.weight === 2 ? 'badge-spec' : 'badge-basic'}" 
                                       style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
                                     ${task.type}
                                 </span>
-                                • Peso ${task.weight}
+                                <span style="margin-left:8px; font-size: 0.85rem; color: #888;">Peso ${task.weight}</span>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div id="timer-container-${index}" style="display: ${task.status === 'studying' ? 'block' : 'none'}; font-family: monospace; font-size: 1.1rem; color: var(--accent-color);">
-                                <i class="fas fa-stopwatch"></i> <span id="timer-${index}">${formattedTime}</span>
+                        
+                        <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+                             <!-- Start Button Logic -->
+                             ${task.status !== 'done' ? 
+                                `<button onclick="updateDraftStatus(${index}, {value: 'studying'})" 
+                                    style="background: var(--accent-color); color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                                    <i class="fas fa-play"></i> Iniciar
+                                 </button>` : 
+                                `<span style="color: var(--success-color); font-weight: bold;"><i class="fas fa-check"></i> Concluído</span>`
+                             }
+                        </div>
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div style="margin-top: 12px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; color: #ccc;">
+                            <span>Progresso: <b>${percent}%</b></span>
+                            <span>Falta: <b>${formattedRemaining}</b></span>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                            <div style="width: ${percent}%; height: 100%; background: ${percent >= 100 ? 'var(--success-color)' : 'var(--accent-color)'}; transition: width 0.3s ease;"></div>
+                        </div>
+                        
+                        <!-- Meta Editor -->
+                        <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #888;">Meta:</span>
+                                <input type="number" min="0" max="23" value="${Math.floor(durationTarget / 3600)}" 
+                                    onchange="updateDraftMeta(${index}, 'hours', this.value)"
+                                    style="width: 35px; background: #222; border: 1px solid #444; color: #ddd; text-align: center; border-radius: 3px;"> h
+                                <input type="number" min="0" max="59" value="${Math.floor((durationTarget % 3600) / 60)}" 
+                                    onchange="updateDraftMeta(${index}, 'minutes', this.value)"
+                                    style="width: 35px; background: #222; border: 1px solid #444; color: #ddd; text-align: center; border-radius: 3px;"> m
                             </div>
-                            <select class="task-status-select ${selectClass}" onchange="updateDraftStatus(${index}, this)">
-                                <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>A FAZER</option>
-                                <option value="studying" ${task.status === 'studying' ? 'selected' : ''}>ESTUDANDO</option>
-                                <option value="done" ${task.status === 'done' ? 'selected' : ''}>ESTUDADO</option>
-                                <option value="skipped" ${task.status === 'skipped' ? 'selected' : ''}>NÃO CONCLUÍDO</option>
-                            </select>
+                            
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #888;">Estudado:</span>
+                                <span style="color: white; font-family: monospace;">${formattedTime}</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Manual Time Edit (Done) -->
-                    <div id="manual-time-container-${index}" style="display: ${task.status === 'done' ? 'flex' : 'none'}; align-items: center; gap: 8px; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 4px; width: fit-content;">
-                        <i class="fas fa-clock" style="color: var(--text-muted);"></i>
-                        <span style="font-size: 0.9rem; color: var(--text-muted);">Tempo:</span>
-                        <input type="number" min="0" max="23" 
-                            value="${Math.floor((task.timeSpent || 0) / 3600)}" 
-                            onchange="updateDraftTime(${index}, 'hours', this.value)"
-                            style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
-                        > <span style="font-size: 0.8rem; color: #888;">h</span>
-                        <input type="number" min="0" max="59" 
-                            value="${Math.floor(((task.timeSpent || 0) % 3600) / 60)}" 
-                            onchange="updateDraftTime(${index}, 'minutes', this.value)"
-                            style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
-                        > <span style="font-size: 0.8rem; color: #888;">m</span>
+                    <!-- Manual Edit Toggle -->
+                    <div style="margin-top: 8px;">
+                        <span onclick="document.getElementById('manual-edit-${index}').style.display = document.getElementById('manual-edit-${index}').style.display === 'none' ? 'block' : 'none'" 
+                              style="font-size: 0.8rem; color: var(--accent-color); cursor: pointer; text-decoration: underline;">
+                            Editar Manualmente / Status
+                        </span>
                     </div>
 
-                    <div>
-                        <span class="obs-label" style="font-size: 0.85rem; margin-bottom: 5px;">Observações</span>
-                        <textarea class="task-observation" placeholder="Anote o que estudou..." onchange="updateDraftNote(${index}, this.value)">${task.note || ''}</textarea>
+                    <!-- Hidden Manual Controls (Legacy + Status) -->
+                    <div id="manual-edit-${index}" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid #333; border-radius: 4px;">
+                        <div style="margin-bottom: 10px;">
+                            <label style="font-size: 0.8rem; color: #888;">Status Manual:</label>
+                            <select class="task-status-select ${selectClass}" onchange="updateDraftStatus(${index}, this)" style="width: 100%;">
+                                <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>A FAZER</option>
+                                <option value="studying" ${task.status === 'studying' ? 'selected' : ''}>EM ANDAMENTO</option>
+                                <option value="done" ${task.status === 'done' ? 'selected' : ''}>ESTUDADO (Concluído)</option>
+                                <option value="skipped" ${task.status === 'skipped' ? 'selected' : ''}>NÃO CONCLUÍDO</option>
+                            </select>
+                        </div>
+                        
+                        <div id="manual-time-container-${index}" style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-clock" style="color: var(--text-muted);"></i>
+                            <span style="font-size: 0.9rem; color: var(--text-muted);">Ajustar Tempo:</span>
+                            <input type="number" min="0" max="23" 
+                                value="${Math.floor((task.timeSpent || 0) / 3600)}" 
+                                onchange="updateDraftTime(${index}, 'hours', this.value)"
+                                style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
+                            > <span style="font-size: 0.8rem; color: #888;">h</span>
+                            <input type="number" min="0" max="59" 
+                                value="${Math.floor(((task.timeSpent || 0) % 3600) / 60)}" 
+                                onchange="updateDraftTime(${index}, 'minutes', this.value)"
+                                style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
+                            > <span style="font-size: 0.8rem; color: #888;">m</span>
+                            <input type="number" min="0" max="59" 
+                                value="${(task.timeSpent || 0) % 60}" 
+                                onchange="updateDraftTime(${index}, 'seconds', this.value)"
+                                style="width: 40px; background: #2a2a2a; border: 1px solid #444; color: white; padding: 2px 5px; border-radius: 4px; text-align: center;"
+                            > <span style="font-size: 0.8rem; color: #888;">s</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 10px;">
+                        <textarea class="task-observation" placeholder="Anotações..." onchange="updateDraftNote(${index}, this.value)">${task.note || ''}</textarea>
                     </div>
                 `;
                 list.appendChild(item);
             });
+        }
+        
+        window.updateDraftMeta = function(index, type, value) {
+            const task = currentDayTasksDraft[index];
+            let currentTarget = task.durationTarget || 3600;
+            let h = Math.floor(currentTarget / 3600);
+            let m = Math.floor((currentTarget % 3600) / 60);
+            
+            const val = parseInt(value) || 0;
+            
+            if(type === 'hours') h = val;
+            if(type === 'minutes') m = val;
+            
+            task.durationTarget = (h * 3600) + (m * 60);
+            // Re-render to update bars
+            renderModalTasks(); 
         }
 
         function closeModal() {
@@ -1510,7 +1592,15 @@
         }
 
         // --- SESSION & HISTORY LOGIC ---
-        let studyHistory = JSON.parse(localStorage.getItem('sefazStudyHistory')) || [];
+        // Load history with migration
+        let studyHistory = JSON.parse(localStorage.getItem('estudoFiscalStudyHistory')) || [];
+        const oldSefazHistory = JSON.parse(localStorage.getItem('sefazStudyHistory'));
+        if (oldSefazHistory && studyHistory.length === 0) {
+            console.log("Migrating SEFAZ-GO history to Estudo Fiscal...");
+            studyHistory = oldSefazHistory;
+            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(studyHistory));
+        }
+
         let activeSession = null; // { taskIndex, startTime, subject, timerInterval }
 
         // Triggered when "ESTUDANDO" is selected in modal
@@ -1691,28 +1781,55 @@
             };
             
             studyHistory.unshift(historyItem); // Add to top
-            localStorage.setItem('sefazStudyHistory', JSON.stringify(studyHistory));
+            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(studyHistory));
 
             // 2. Update Cycle Task (Total Time)
             const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
             if(dayObj) {
                 const task = dayObj.tasks[activeSession.taskIndex];
                 task.timeSpent = (task.timeSpent || 0) + activeSession.elapsedSession;
-                task.status = 'done'; // Mark as done? Or keep studying? User clicked "Check" so likely done.
-                // If they want to study more later, they can start again.
+                
+                // Determine Status based on Target
+                // Default target is 3600s (1h) if not set.
+                // If durationTarget was saved in memory (task object), use it.
+                // Note: durationTarget might need to be loaded from savedData if not in task object yet (init).
+                // But we load savedData at init.
+                const target = task.durationTarget || 3600;
+                
+                // If we reached >= 95% of target, mark as done automatically?
+                // Or user preference?
+                // Let's say if >= 99% (to account for small seconds diff)
+                if(task.timeSpent >= target - 60) { // within 1 minute of target
+                    task.status = 'done';
+                    task.completed = true;
+                } else {
+                    // Keep as 'todo' or 'studying' to allow resume.
+                    // If it was 'todo', it remains 'todo' but with progress bar showing.
+                    // If it was 'studying', we might reset to 'todo' or keep 'studying'.
+                    // Let's reset to 'todo' so it's not "active" in UI, but progress is visible.
+                    // Or maybe 'studying' implies "In Progress".
+                    // Current CSS for 'studying' is orange/blue. 'todo' is gray.
+                    // To show "started", maybe we can use 'studying' as 'in_progress'.
+                    // But 'studying' usually means timer is running.
+                    // Let's keep it 'todo' because the progress bar is the main indicator now.
+                    task.status = 'todo'; 
+                    task.completed = false;
+                }
+
                 // Append note?
                 if(note) {
                     const timeString = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
                     task.note = (task.note ? task.note + '\n' : '') + `[${timeString}] ${note}`;
                 }
                 
-                // Save to Global Data
-                const savedData = JSON.parse(localStorage.getItem('sefazGoData')) || {};
+                // Save to Global Data (Using Generic Key)
+                const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
                 if(!savedData[task.id]) savedData[task.id] = {};
-                savedData[task.id].status = task.status;
+                savedData[task.id].status = task.status; 
                 savedData[task.id].note = task.note;
                 savedData[task.id].timeSpent = task.timeSpent;
-                localStorage.setItem('sefazGoData', JSON.stringify(savedData));
+                savedData[task.id].durationTarget = task.durationTarget || 3600;
+                localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
             }
 
             // 3. Cleanup
@@ -1806,46 +1923,32 @@
         }
 
         window.updateDraftStatus = function(index, selectElement) {
+            // Note: selectElement might be a simple object {value: 'studying'} if called from button
             const newStatus = selectElement.value;
             const task = currentDayTasksDraft[index];
             
             if(newStatus === 'studying') {
                 // New Flow: Start Session immediately
                 startActiveSession(index);
-                // Reset select to 'todo' or keep it? 
-                // If we close modal, it doesn't matter visually inside modal.
-                // But we shouldn't save 'studying' status to draft if we are leaving modal logic.
-                // Actually, startActiveSession uses the draft index to find real task.
                 return; 
-            }
-
-            // Old Logic for other statuses
-            if(newStatus === 'done') {
-                // Show manual time
-                const manual = document.getElementById(`manual-time-container-${index}`);
-                if(manual) {
-                    manual.style.display = 'flex';
-                    // Sync timer value if it was running locally (legacy)
-                    const h = Math.floor((task.timeSpent || 0) / 3600);
-                    const m = Math.floor(((task.timeSpent || 0) % 3600) / 60);
-                    const inputs = manual.querySelectorAll('input');
-                    if(inputs.length >= 2) {
-                        inputs[0].value = h;
-                        inputs[1].value = m;
-                    }
-                }
-            } else {
-                 const manual = document.getElementById(`manual-time-container-${index}`);
-                 if(manual) manual.style.display = 'none';
             }
             
             task.status = newStatus;
             
-            // Visual update
-            selectElement.className = 'task-status-select';
-            if(newStatus === 'done') selectElement.classList.add('status-done');
-            else if(newStatus === 'todo') selectElement.classList.add('status-todo');
-            else if(newStatus === 'studying') selectElement.classList.add('status-studying');
+            // Re-render to update UI (buttons, manual edit visibility based on status, etc.)
+            // We need to keep the manual edit section open if it was open?
+            // Since we re-render, all 'manual-edit' divs will be hidden by default (display:none).
+            // This might be annoying if user is editing.
+            // But usually status change is a major action.
+            // If user changes to 'done', we might want to auto-open manual edit?
+            // Let's just render.
+            renderModalTasks();
+            
+            // If changed to DONE, maybe auto-open the manual edit section to show it?
+            if(newStatus === 'done') {
+                 const editDiv = document.getElementById(`manual-edit-${index}`);
+                 if(editDiv) editDiv.style.display = 'block';
+            }
         }
 
         window.updateDraftTime = function(index, type, value) {
@@ -1861,9 +1964,16 @@
                 h = val;
             } else if(type === 'minutes') {
                 m = val;
+            } else if(type === 'seconds') {
+                s = val;
             }
 
             task.timeSpent = (h * 3600) + (m * 60) + s;
+            // We should re-render to update progress bar if time changes
+            renderModalTasks();
+            // And keep manual edit open
+            const editDiv = document.getElementById(`manual-edit-${index}`);
+            if(editDiv) editDiv.style.display = 'block';
         }
 
         window.updateDraftNote = function(index, noteText) {
@@ -1883,16 +1993,17 @@
                 dayObj.tasks.forEach(t => t.completed = (t.status === 'done'));
 
                 // Save to Storage
-                const savedData = JSON.parse(localStorage.getItem('sefazGoData')) || {};
+                const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
                 
                 dayObj.tasks.forEach(t => {
                     if(!savedData[t.id]) savedData[t.id] = {};
                     savedData[t.id].status = t.status;
                     savedData[t.id].note = t.note;
                     savedData[t.id].timeSpent = t.timeSpent || 0;
+                    savedData[t.id].durationTarget = t.durationTarget || 3600;
                 });
 
-                localStorage.setItem('sefazGoData', JSON.stringify(savedData));
+                localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
                 
                 // Refresh Views
                 renderCalendar();
@@ -1900,6 +2011,7 @@
                 renderList();
                 updateStats();
                 renderTimeStats();
+                renderHistory(); // Also update history view
                 
                 // Close
                 closeModal();
@@ -2540,7 +2652,7 @@
             const data = {
                 estudoFiscalData: JSON.parse(localStorage.getItem('estudoFiscalData') || '{}'),
                 estudoFiscalSyllabus: JSON.parse(localStorage.getItem('estudoFiscalSyllabus') || '{}'),
-                sefazStudyHistory: JSON.parse(localStorage.getItem('sefazStudyHistory') || '[]'),
+                estudoFiscalStudyHistory: JSON.parse(localStorage.getItem('estudoFiscalStudyHistory') || '[]'),
                 estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem('estudoFiscalScheduleStructure') || 'null'),
                 backupDate: new Date().toISOString()
             };
@@ -2572,7 +2684,13 @@
                     if(confirm(`Restaurar backup de ${new Date(data.backupDate).toLocaleDateString('pt-BR')}? Isso substituirá os dados atuais.`)) {
                         if(data.estudoFiscalData) localStorage.setItem('estudoFiscalData', JSON.stringify(data.estudoFiscalData));
                         if(data.estudoFiscalSyllabus) localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(data.estudoFiscalSyllabus));
-                        if(data.sefazStudyHistory) localStorage.setItem('sefazStudyHistory', JSON.stringify(data.sefazStudyHistory));
+                        
+                        if(data.estudoFiscalStudyHistory) {
+                            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(data.estudoFiscalStudyHistory));
+                        } else if(data.sefazStudyHistory) {
+                            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(data.sefazStudyHistory));
+                        }
+
                         if(data.estudoFiscalScheduleStructure) localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(data.estudoFiscalScheduleStructure));
                         
                         alert('Backup restaurado com sucesso! A página será recarregada.');

@@ -969,8 +969,8 @@
 
         .modal {
             background: var(--card-bg);
-            width: 800px;
-            max-width: 95%;
+            width: 1100px;
+            max-width: 98%;
             border-radius: 12px;
             border: 1px solid var(--border-color);
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
@@ -1518,7 +1518,10 @@
                 <h1 id="page-title-text">Calendário de Estudos</h1>
                 <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
             </div>
-            <div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="open-model-editor-btn" class="btn-primary" style="padding: 8px 14px; border-radius: 8px; font-weight: 700;" onclick="openModelEditor()" title="Editar Tabela de Matérias">
+                    Tabela de Matérias
+                </button>
                 <button id="theme-toggle" class="btn-secondary" style="padding: 8px 12px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-color: var(--border-color); color: var(--text-color); background: transparent;" onclick="toggleTheme()" title="Alternar Tema">
                     <i class="fas fa-sun"></i>
                 </button>
@@ -1693,6 +1696,89 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="saveModalChanges()">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Editor Modal -->
+    <div class="modal-overlay" id="model-editor-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Tabela de Matérias</div>
+                <button class="close-modal" onclick="closeModelEditor()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="subject-card" style="margin-bottom: 20px; padding: 20px;">
+                    <h3 style="margin: 0 0 12px 0;">Gerais</h3>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="font-size:0.85rem; color: var(--text-muted);">Concurso</label>
+                            <input id="model-concurso" type="text" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.85rem; color: var(--text-muted);">Órgão</label>
+                            <input id="model-orgao" type="text" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.85rem; color: var(--text-muted);">Início do Ciclo</label>
+                            <input id="model-inicio" type="date" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.85rem; color: var(--text-muted);">Fim do Ciclo</label>
+                            <input id="model-fim" type="date" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <label style="font-size:0.85rem; color: var(--text-muted); display:block; margin-bottom:6px;">Slots por dia (Seg a Dom)</label>
+                        <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:8px;">
+                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Seg</span><input id="slots-seg" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
+                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Ter</span><input id="slots-ter" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
+                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Qua</span><input id="slots-qua" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
+                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Qui</span><input id="slots-qui" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
+                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Sex</span><input id="slots-sex" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
+                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Sáb</span><input id="slots-sab" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
+                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Dom</span><input id="slots-dom" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="subject-card" style="padding: 20px;">
+                    <div style="display:flex; justify-content: space-between; align-items:center;">
+                        <h3 style="margin: 0;">Conteúdo</h3>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-secondary" onclick="addContentRow()" title="Adicionar linha">+ Linha</button>
+                        </div>
+                    </div>
+                    <table id="model-editor-table" style="width:100%; margin-top:10px; table-layout:fixed;">
+                        <colgroup>
+                            <col style="width:10%;">
+                            <col style="width:26%;">
+                            <col style="width:8%;">
+                            <col style="width:10%;">
+                            <col style="width:10%;">
+                            <col style="width:10%;">
+                            <col style="width:23%;">
+                            <col style="width:3%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Categoria</th>
+                                <th>Matéria</th>
+                                <th>Peso</th>
+                                <th>Tickets</th>
+                                <th>Qtde PDF</th>
+                                <th>Qtde Paginas</th>
+                                <th>Tópico</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="model-editor-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModelEditor()">Cancelar</button>
+                <button id="model-editor-load-btn" class="btn btn-primary" onclick="addRowsToExistingModel()" title="Adicionar apenas estas linhas ao Modelo">Adicionar ao Modelo</button>
+                <button id="model-editor-save-btn" class="btn btn-primary" onclick="saveModelFromEditor()">Salvar Modelo</button>
             </div>
         </div>
     </div>
@@ -4149,6 +4235,365 @@
         }
 
         /**
+         * Abre o editor de modelo (Tabela de Matérias) e pré-carrega dados.
+         */
+        function openModelEditor() {
+            const modal = document.getElementById('model-editor-modal');
+            if (!modal) return;
+            modal.classList.add('open');
+            setModelEditorLoadState(false);
+            populateModelEditorFromStorageOrDefaults();
+        }
+
+        /**
+         * Fecha o editor de modelo.
+         */
+        function closeModelEditor() {
+            const modal = document.getElementById('model-editor-modal');
+            if (!modal) return;
+            modal.classList.remove('open');
+        }
+
+        /**
+         * Limpa todas as linhas do conteúdo no editor.
+         */
+        function clearModelEditorRows() {
+            const tbody = document.getElementById('model-editor-tbody');
+            if (tbody) tbody.innerHTML = '';
+        }
+
+        /**
+         * Adiciona uma nova linha de conteúdo ao editor de modelo.
+         */
+        function addContentRow(rowData) {
+            const tbody = document.getElementById('model-editor-tbody');
+            if (!tbody) return;
+            const tr = document.createElement('tr');
+            const d = Object.assign({
+                categoria: 'Basico',
+                materia: '',
+                peso: 1,
+                tickets: 1,
+                qtdePdf: 0,
+                qtdePaginas: 0,
+                topico: ''
+            }, rowData || {});
+            tr.innerHTML = `
+                <td>
+                    <select name="categoria" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;">
+                        <option value="Basico" ${String(d.categoria).toLowerCase().includes('bas') ? 'selected' : ''}>Basico</option>
+                        <option value="Especifico" ${String(d.categoria).toLowerCase().includes('esp') ? 'selected' : ''}>Especifico</option>
+                    </select>
+                </td>
+                <td><input name="materia" type="text" value="${d.materia || ''}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
+                <td><input name="peso" type="number" min="1" max="3" value="${Number(d.peso)||1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
+                <td><input name="tickets" type="number" min="1" value="${Number(d.tickets)||1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
+                <td><input name="qtdePdf" type="number" min="0" value="${Number(d.qtdePdf)||0}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
+                <td><input name="qtdePaginas" type="number" min="0" value="${Number(d.qtdePaginas)||0}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
+                <td><input name="topico" type="text" value="${d.topico || ''}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
+                <td style="text-align:right;">
+                    <button class="btn-secondary" onclick="removeContentRow(this)" title="Remover" style="padding:6px 10px;"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        /**
+         * Remove a linha de conteúdo clicada.
+         */
+        function removeContentRow(btn) {
+            const tr = btn && btn.closest('tr');
+            if (tr) tr.remove();
+        }
+
+        /**
+         * Preenche o bloco de gerais do editor a partir de um modelo.
+         */
+        function fillGeneralFieldsFromModel(model) {
+            const concurso = model?.concurso || (document.getElementById('page-subtitle-text')?.textContent.replace('Foco na meta: ','') || '');
+            const orgao = model?.orgao || '';
+            const inicio = model?.inicioCiclo ? normalizeDateValue(model.inicioCiclo) : startDate.toISOString().slice(0,10);
+            const fim = model?.fimCiclo ? normalizeDateValue(model.fimCiclo) : endDate.toISOString().slice(0,10);
+            const slots = Array.isArray(model?.slotsPorDia) ? model.slotsPorDia : slotsPorDia;
+
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+            setVal('model-concurso', concurso);
+            setVal('model-orgao', orgao);
+            setVal('model-inicio', inicio);
+            setVal('model-fim', fim);
+            setVal('slots-seg', Number(slots[0]||0));
+            setVal('slots-ter', Number(slots[1]||0));
+            setVal('slots-qua', Number(slots[2]||0));
+            setVal('slots-qui', Number(slots[3]||0));
+            setVal('slots-sex', Number(slots[4]||0));
+            setVal('slots-sab', Number(slots[5]||0));
+            setVal('slots-dom', Number(slots[6]||0));
+        }
+
+        /**
+         * Carrega no editor um modelo salvo (localStorage) ou um exemplo básico.
+         */
+        function populateModelEditorFromStorageOrDefaults() {
+            const raw = localStorage.getItem('estudoFiscalModel');
+            const model = raw ? JSON.parse(raw) : null;
+            clearModelEditorRows();
+            if (model && Array.isArray(model.materias)) {
+                fillGeneralFieldsFromModel(model);
+                const catBySubject = {};
+                (model.syllabus || []).forEach(sec => (sec.subjects || []).forEach(s => { catBySubject[s.name] = sec.category; }));
+                model.materias.forEach(m => {
+                    const catFull = normalizeCategoryLabel(catBySubject[m.nome] || m.tipo || 'Basico');
+                    const catShort = shortCategoryLabelFromTitle(catFull);
+                    addContentRow({
+                        categoria: catShort,
+                        materia: m.nome,
+                        peso: m.peso || 1,
+                        tickets: m.tickets || m.peso || 1,
+                        qtdePdf: m.qtdePdf || 0,
+                        qtdePaginas: m.qtdePaginas || 0,
+                        topico: ''
+                    });
+                    const sec = (model.syllabus || []).find(sec => (sec.subjects || []).some(s => s.name === m.nome));
+                    const subj = sec ? sec.subjects.find(s => s.name === m.nome) : null;
+                    if (subj && Array.isArray(subj.topics)) {
+                        subj.topics.forEach(t => addContentRow({
+                            categoria: catShort,
+                            materia: m.nome,
+                            peso: m.peso || 1,
+                            tickets: m.tickets || m.peso || 1,
+                            qtdePdf: m.qtdePdf || 0,
+                            qtdePaginas: m.qtdePaginas || 0,
+                            topico: t
+                        }));
+                    }
+                });
+                setModelEditorLoadState(true);
+            } else {
+                fillGeneralFieldsFromModel(null);
+                addContentRow({ categoria: 'Basico', materia: 'Língua Portuguesa', peso: 1, tickets: 1, qtdePdf: 0, qtdePaginas: 0, topico: '' });
+                addContentRow({ categoria: 'Especifico', materia: 'Auditoria', peso: 3, tickets: 3, qtdePdf: 0, qtdePaginas: 0, topico: '' });
+                setModelEditorLoadState(false);
+            }
+        }
+
+        /**
+         * Carrega um modelo padrão completo no editor, baseado na configuração atual.
+         */
+        function loadModelTemplateIntoEditor() {
+            const catMap = {};
+            syllabusData.forEach(sec => sec.subjects.forEach(s => { catMap[s.name] = shortCategoryLabelFromTitle(sec.category); }));
+            clearModelEditorRows();
+            subjectsConfig.forEach(m => {
+                const catShort = catMap[m.name] || (m.type === 'Específico' ? 'Especifico' : 'Basico');
+                addContentRow({
+                    categoria: catShort,
+                    materia: m.name,
+                    peso: m.weight || 1,
+                    tickets: m.tickets || (m.weight || 1),
+                    qtdePdf: m.qtdePdf || 0,
+                    qtdePaginas: m.qtdePaginas || 0,
+                    topico: ''
+                });
+            });
+            setModelEditorLoadState(true);
+            showToast('Modelo carregado com matérias padrão. Ajuste e salve.', 'success');
+        }
+
+        /**
+         * Atualiza estado visual do botão Carregar e habilita/desabilita Salvar.
+         */
+        function setModelEditorLoadState(loaded) {
+            const loadBtn = document.getElementById('model-editor-load-btn');
+            const saveBtn = document.getElementById('model-editor-save-btn');
+            if (loadBtn) {
+                loadBtn.textContent = 'Adicionar ao Modelo';
+                loadBtn.style.background = 'var(--accent-color)';
+                loadBtn.style.color = '#fff';
+            }
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = '1';
+                saveBtn.style.cursor = 'pointer';
+            }
+        }
+
+        /**
+         * Adiciona apenas as linhas atuais ao modelo existente (merge sem sobrescrever gerais).
+         */
+        function addRowsToExistingModel() {
+            try {
+                const rawModel = localStorage.getItem('estudoFiscalModel');
+                const getVal = id => document.getElementById(id)?.value || '';
+                let model = rawModel ? JSON.parse(rawModel) : {
+                    concurso: getVal('model-concurso').trim(),
+                    orgao: getVal('model-orgao').trim(),
+                    inicioCiclo: normalizeDateValue(getVal('model-inicio')) || startDate.toISOString().slice(0,10),
+                    fimCiclo: normalizeDateValue(getVal('model-fim')) || endDate.toISOString().slice(0,10),
+                    slotsPorDia: [
+                        Number(getVal('slots-seg')||slotsPorDia[0]||0),
+                        Number(getVal('slots-ter')||slotsPorDia[1]||0),
+                        Number(getVal('slots-qua')||slotsPorDia[2]||0),
+                        Number(getVal('slots-qui')||slotsPorDia[3]||0),
+                        Number(getVal('slots-sex')||slotsPorDia[4]||0),
+                        Number(getVal('slots-sab')||slotsPorDia[5]||0),
+                        Number(getVal('slots-dom')||slotsPorDia[6]||0)
+                    ],
+                    materias: [],
+                    syllabus: []
+                };
+                model.materias = Array.isArray(model.materias) ? model.materias : [];
+                model.syllabus = Array.isArray(model.syllabus) ? model.syllabus : [];
+
+                const rows = document.querySelectorAll('#model-editor-tbody tr');
+                const materiasMap = new Map();
+                const syllabusMap = new Map();
+                rows.forEach(tr => {
+                    const categoriaRaw = tr.querySelector('[name="categoria"]')?.value || 'Basico';
+                    const materia = tr.querySelector('[name="materia"]')?.value?.trim();
+                    if (!materia) return;
+                    let peso = Number(tr.querySelector('[name="peso"]')?.value || 1);
+                    peso = Math.min(3, Math.max(1, isNaN(peso) ? 1 : peso));
+                    let tickets = Number(tr.querySelector('[name="tickets"]')?.value);
+                    tickets = Math.max(1, isNaN(tickets) ? peso : tickets);
+                    let qtdePdf = Number(tr.querySelector('[name="qtdePdf"]')?.value || 0);
+                    let qtdePaginas = Number(tr.querySelector('[name="qtdePaginas"]')?.value || 0);
+                    const topico = tr.querySelector('[name="topico"]')?.value?.trim() || '';
+
+                    const categoriaCompleta = normalizeCategoryLabel(categoriaRaw);
+                    const categoriaCurta = shortCategoryLabelFromTitle(categoriaCompleta);
+                    if (!materiasMap.has(materia)) materiasMap.set(materia, { nome: materia, tipo: categoriaCurta, peso, tickets, qtdePdf, qtdePaginas });
+                    const key = categoriaCompleta + '|' + materia;
+                    if (!syllabusMap.has(key)) syllabusMap.set(key, { category: categoriaCompleta, name: materia, topics: [] });
+                    if (topico) syllabusMap.get(key).topics.push(topico);
+                });
+
+                // Merge materias
+                materiasMap.forEach((m) => {
+                    const idx = model.materias.findIndex(mm => mm.nome === m.nome);
+                    if (idx >= 0) {
+                        model.materias[idx] = { ...model.materias[idx], ...m };
+                    } else {
+                        model.materias.push(m);
+                    }
+                });
+
+                // Merge syllabus
+                syllabusMap.forEach(item => {
+                    let section = model.syllabus.find(sec => sec.category === item.category);
+                    if (!section) {
+                        section = { category: item.category, subjects: [] };
+                        model.syllabus.push(section);
+                    }
+                    let subj = section.subjects.find(s => s.name === item.name);
+                    if (!subj) {
+                        subj = { name: item.name, topics: [] };
+                        section.subjects.push(subj);
+                    }
+                    const merged = new Set([...(subj.topics || []), ...item.topics]);
+                    subj.topics = Array.from(merged).filter(t => t && String(t).trim().length > 0);
+                });
+
+                localStorage.setItem('estudoFiscalModel', JSON.stringify(model));
+
+                // Feedback visual do botão
+                const btn = document.getElementById('model-editor-load-btn');
+                if (btn) {
+                    btn.textContent = 'Adicionado!';
+                    btn.style.background = 'var(--success-color)';
+                    setTimeout(() => {
+                        btn.textContent = 'Adicionar ao Modelo';
+                        btn.style.background = 'var(--accent-color)';
+                    }, 1500);
+                }
+
+                // Atualiza UI de abas (sem regenerar cronograma)
+                loadModelFromStorage();
+                renderSyllabus();
+                renderSubjects();
+                renderTimeStats();
+                updateStats();
+                renderList();
+                setGenerateButtonState('pending');
+                showToast('Matérias adicionadas ao modelo. Gere o ciclo para aplicar.', 'success');
+            } catch (e) {
+                showToast('Erro ao adicionar ao modelo: ' + e.message, 'error');
+            }
+        }
+        /**
+         * Salva o modelo preenchido no editor em localStorage e sinaliza geração de ciclo.
+         */
+        function saveModelFromEditor() {
+            try {
+                const getVal = id => document.getElementById(id)?.value || '';
+                const concurso = getVal('model-concurso').trim();
+                const orgao = getVal('model-orgao').trim();
+                const inicioCiclo = normalizeDateValue(getVal('model-inicio'));
+                const fimCiclo = normalizeDateValue(getVal('model-fim'));
+                const slotsPorDiaLocal = [
+                    Number(getVal('slots-seg')||0),
+                    Number(getVal('slots-ter')||0),
+                    Number(getVal('slots-qua')||0),
+                    Number(getVal('slots-qui')||0),
+                    Number(getVal('slots-sex')||0),
+                    Number(getVal('slots-sab')||0),
+                    Number(getVal('slots-dom')||0)
+                ];
+
+                const materiasMap = new Map();
+                const syllabusMap = new Map();
+                const rows = document.querySelectorAll('#model-editor-tbody tr');
+                rows.forEach(tr => {
+                    const categoriaRaw = tr.querySelector('[name="categoria"]')?.value || 'Basico';
+                    const materia = tr.querySelector('[name="materia"]')?.value?.trim();
+                    if (!materia) return;
+                    let peso = Number(tr.querySelector('[name="peso"]')?.value || 1);
+                    peso = Math.min(3, Math.max(1, isNaN(peso) ? 1 : peso));
+                    let tickets = Number(tr.querySelector('[name="tickets"]')?.value);
+                    tickets = Math.max(1, isNaN(tickets) ? peso : tickets);
+                    let qtdePdf = Number(tr.querySelector('[name="qtdePdf"]')?.value || 0);
+                    let qtdePaginas = Number(tr.querySelector('[name="qtdePaginas"]')?.value || 0);
+                    const topico = tr.querySelector('[name="topico"]')?.value?.trim() || '';
+
+                    const categoriaCompleta = normalizeCategoryLabel(categoriaRaw);
+                    const categoriaCurta = shortCategoryLabelFromTitle(categoriaCompleta);
+
+                    if (!materiasMap.has(materia)) materiasMap.set(materia, { nome: materia, tipo: categoriaCurta, peso, tickets, qtdePdf, qtdePaginas });
+                    const key = categoriaCompleta + '|' + materia;
+                    if (!syllabusMap.has(key)) syllabusMap.set(key, { category: categoriaCompleta, name: materia, topics: [] });
+                    if (topico) syllabusMap.get(key).topics.push(topico);
+                });
+
+                const materias = Array.from(materiasMap.values());
+                const byCategory = {};
+                syllabusMap.forEach(item => {
+                    const cat = item.category;
+                    if (!byCategory[cat]) byCategory[cat] = [];
+                    byCategory[cat].push({ name: item.name, topics: item.topics });
+                });
+                const syllabusArray = Object.keys(byCategory).map(cat => ({ category: cat, subjects: byCategory[cat] }));
+
+                const model = { concurso, orgao, inicioCiclo, fimCiclo, slotsPorDia: slotsPorDiaLocal, materias, syllabus: syllabusArray };
+                localStorage.setItem('estudoFiscalModel', JSON.stringify(model));
+                // Limpa cronograma antigo para forçar nova geração e atualizar abas
+                localStorage.removeItem('estudoFiscalScheduleStructure');
+                loadModelFromStorage();
+                applySavedStatusToSchedule();
+                renderCalendar();
+                renderSubjects();
+                renderList();
+                updateStats();
+                renderSyllabus();
+                renderTimeStats();
+                renderHistory();
+                setGenerateButtonState('pending');
+                showToast('Modelo salvo. Gere o ciclo para atualizar a Lista Completa.', 'success');
+                closeModelEditor();
+            } catch (e) {
+                showToast('Erro ao salvar modelo: ' + e.message, 'error');
+            }
+        }
+
+        /**
          * Constrói o modelo a partir das linhas do CSV.
          */
         function buildModelFromCSV(rows) {
@@ -4844,3 +5289,4 @@
 </script>
 </body>
 </html>
+

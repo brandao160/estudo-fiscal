@@ -2243,76 +2243,79 @@
                 for (let i = 0; i < e.reps; i++) baseSequence.push({ ...e.sub });
             });
 
-            // Queue for consumption
-            // We'll repeat this base sequence indefinitely
-            let queue = [...baseSequence]; 
-            
+            // Interleaving strategy por pesos:
+            // 1) Separa sequência base por grupos de peso.
+            const seqW3 = baseSequence.filter(s => Number(s.weight) >= 3);
+            const seqW2 = baseSequence.filter(s => Number(s.weight) === 2);
+            const seqW1 = baseSequence.filter(s => Number(s.weight) === 1);
+            let q3 = [...seqW3], q2 = [...seqW2], q1 = [...seqW1];
+            const replenish = () => {
+                if (q3.length === 0 && seqW3.length) q3 = [...seqW3];
+                if (q2.length === 0 && seqW2.length) q2 = [...seqW2];
+                if (q1.length === 0 && seqW1.length) q1 = [...seqW1];
+            };
+            const hasQueue = (w) => w === 3 ? q3.length > 0 : (w === 2 ? q2.length > 0 : q1.length > 0);
+            const takeFrom = (w, dayTasks, currentDate) => {
+                let q = (w === 3) ? q3 : (w === 2 ? q2 : q1);
+                if (q.length === 0) return false;
+                let idx = 0;
+                while (idx < q.length && dayTasks.some(t => t.subject === q[idx].name)) idx++;
+                if (idx >= q.length) return false;
+                const cand = q.splice(idx, 1)[0];
+                const taskId = `task-${currentDate.getTime()}-${dayTasks.length}`;
+                dayTasks.push({ id: taskId, subject: cand.name, type: cand.type, weight: cand.weight, completed: false });
+                return true;
+            };
+            const startPattern = [3, 1, 2];
             let currentDate = new Date(startDate);
+            let dayCounter = 0;
+            let weekHasW3 = false;
 
-            while(currentDate <= endDate) {
+            while (currentDate <= endDate) {
                 const dayOfWeek = currentDate.getDay();
                 const dayIdxMonFirst = (dayOfWeek + 6) % 7; // 0=Seg .. 6=Dom
                 const hours = slotsPorDia[dayIdxMonFirst] || 0;
-                
+                if (dayIdxMonFirst === 0) weekHasW3 = false; // reset no início da semana
+
                 let dayTasks = [];
-                let attempts = 0; // fail-safe
-                
-                while(dayTasks.length < hours && attempts < 100) {
-                    if(queue.length === 0) queue = [...baseSequence]; // Replenish
-                    
-                    // Peek the next candidate
-                    let candidateIndex = 0;
-                    let candidate = queue[candidateIndex];
-                    
-                    // Check if candidate is already in today's tasks
-                    // Search forward in queue for a non-duplicate subject
-                    while(dayTasks.some(t => t.subject === candidate.name) && candidateIndex < queue.length - 1) {
-                        candidateIndex++;
-                        candidate = queue[candidateIndex];
+                replenish();
+
+                // Garante ao menos um peso 3 por semana (se houver)
+                if (!weekHasW3 && hasQueue(3) && hours > 0) {
+                    takeFrom(3, dayTasks, currentDate);
+                }
+
+                // Alterna pesos por dia seguindo padrão cíclico
+                const order = [startPattern[dayCounter % startPattern.length], ...[3,2,1].filter(w => w !== startPattern[dayCounter % startPattern.length])];
+                let orderIdx = 0;
+                let attempts = 0;
+                while (dayTasks.length < hours && attempts < 200) {
+                    replenish();
+                    let wDesired = order[orderIdx % order.length];
+                    let picked = false;
+                    // Tenta peso desejado
+                    if (hasQueue(wDesired)) {
+                        picked = takeFrom(wDesired, dayTasks, currentDate);
                     }
-                    
-                    // If we found a valid candidate (even if deep in queue)
-                    if(!dayTasks.some(t => t.subject === candidate.name)) {
-                        // Remove from queue at that index
-                        queue.splice(candidateIndex, 1);
-                        
-                        // Add to day
-                        const taskId = `task-${currentDate.getTime()}-${dayTasks.length}`;
-                        dayTasks.push({
-                            id: taskId,
-                            subject: candidate.name,
-                            type: candidate.type,
-                            weight: candidate.weight,
-                            completed: false
-                        });
-                    } else {
-                        // If we exhausted queue and still overlap (rare given diversity), just take head
-                        // But let's try to replenish first if queue is small
-                        if(queue.length < 5) {
-                             queue = [...queue, ...baseSequence];
-                             continue; // try again with fresh stock
+                    // Fallback: tenta outros pesos disponíveis
+                    if (!picked) {
+                        for (const w of [3,2,1]) {
+                            if (w !== wDesired && hasQueue(w)) {
+                                picked = takeFrom(w, dayTasks, currentDate);
+                                if (picked) break;
+                            }
                         }
-                        
-                        // Force take head
-                        candidate = queue.shift();
-                        const taskId = `task-${currentDate.getTime()}-${dayTasks.length}`;
-                        dayTasks.push({
-                            id: taskId,
-                            subject: candidate.name,
-                            type: candidate.type,
-                            weight: candidate.weight,
-                            completed: false
-                        });
                     }
+                    if (!picked) break;
+                    orderIdx++;
                     attempts++;
                 }
 
-                fullSchedule.push({
-                    date: new Date(currentDate),
-                    tasks: dayTasks
-                });
+                if (dayTasks.some(t => Number(t.weight) >= 3)) weekHasW3 = true;
 
+                fullSchedule.push({ date: new Date(currentDate), tasks: dayTasks });
                 currentDate.setDate(currentDate.getDate() + 1);
+                dayCounter++;
             }
             
             // Save the generated structure
@@ -3651,12 +3654,15 @@
             betaR.value = saved.beta; betaN.value = saved.beta;
             gammaR.value = saved.gamma; gammaN.value = saved.gamma;
             minN.value = saved.minRep; maxN.value = saved.maxRep; normC.checked = !!saved.normalizeWeekly;
-            alphaR.oninput = () => { alphaN.value = alphaR.value; };
-            alphaN.oninput = () => { alphaR.value = alphaN.value; };
-            betaR.oninput = () => { betaN.value = betaR.value; };
-            betaN.oninput = () => { betaR.value = betaN.value; };
-            gammaR.oninput = () => { gammaN.value = gammaR.value; };
-            gammaN.oninput = () => { gammaR.value = gammaN.value; };
+            alphaR.oninput = () => { alphaN.value = alphaR.value; setGenerateButtonState('pending'); };
+            alphaN.oninput = () => { alphaR.value = alphaN.value; setGenerateButtonState('pending'); };
+            betaR.oninput = () => { betaN.value = betaR.value; setGenerateButtonState('pending'); };
+            betaN.oninput = () => { betaR.value = betaN.value; setGenerateButtonState('pending'); };
+            gammaR.oninput = () => { gammaN.value = gammaR.value; setGenerateButtonState('pending'); };
+            gammaN.oninput = () => { gammaR.value = gammaN.value; setGenerateButtonState('pending'); };
+            minN.oninput = () => { setGenerateButtonState('pending'); };
+            maxN.oninput = () => { setGenerateButtonState('pending'); };
+            normC.onchange = () => { setGenerateButtonState('pending'); };
         }
 
         /**
@@ -3672,6 +3678,7 @@
                 normalizeWeekly: !!document.getElementById('normalizeWeekly-check').checked
             };
             localStorage.setItem('estudoFiscalGenParams', JSON.stringify(params));
+            setGenerateButtonState('pending');
             alert('Parâmetros aplicados. Gere o ciclo para efetivar no cronograma.');
         }
 
@@ -5289,4 +5296,3 @@
 </script>
 </body>
 </html>
-

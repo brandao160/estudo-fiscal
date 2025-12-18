@@ -1,114 +1,116 @@
-# Sistema de Estudos
+# Sistema de Estudos — Cronograma Inteligente
 
-Projeto em HTML/CSS/JS focado em planejamento e acompanhamento de estudos para concursos. Ele oferece calendário inteligente, controle de sessões com cronômetro, registro de histórico, desempenho por matérias e persistência de dados sem servidor via arquivo auto-contido.
+Projeto em HTML/CSS/JS focado em planejamento e acompanhamento de estudos para concursos. Funciona 100% offline (sem servidor), com calendário, distribuição inteligente por pesos, painel de calibração, Pomodoro, histórico e exportação/importação de modelo e progresso.
 
 ## Visão Geral
-- Interface única em `index.html` com sidebar, calendário, abas de progresso, histórico e Pomodoro.
-- Dados salvos no navegador (`localStorage`) e exportáveis para um arquivo HTML que embute seu progresso.
-- Importação/Exportação de modelo (matérias, conteúdos e parâmetros) via Excel.
-- Cronômetro de estudo com barra fixa e atalhos de teclado.
+- Arquivo único: abra `PainelCicloEstudo2.html` diretamente no Windows (duplo clique) ou sirva em um servidor local.
+- Dados persistidos no navegador (`localStorage`) e exportáveis para um HTML auto-contido via “Salvar Progresso”.
+- Calendário com tarefas por dia, lista filtrável e visão por matérias.
+- Controle de sessão de estudo com cronômetro e atalhos.
+- Importação/Exportação do modelo (matérias, pesos, tópicos) via Excel.
+- Painel de calibração para ajustar finamente a distribuição semanal e diária.
+
+## Como Funciona o Cronograma
+O sistema gera um cronograma semanal que respeita capacidade, pesos e dispersão, e seleciona diariamente as matérias com base em cotas e uma função de prioridade.
+
+- Capacidade semanal (`weeklySlots`): soma dos `slotsPorDia` (horas ou blocos por dia).
+- Número de matérias (`N`): quantidade de matérias no modelo.
+- Cota-alvo semanal por matéria (apportionment ponderado):
+  - `target_i = weeklySlots * (N * (peso_i^beta)) / Σ(N * (peso_j^beta))`
+  - Conversão para inteiros via “Maior Resto” mantendo a soma total ≤ `weeklySlots`.
+- Cobertura mínima semanal:
+  - Se `weeklySlots >= N` e `minCoverage` estiver ativado, cada matéria recebe pelo menos 1 ocorrência por semana.
+- Limites:
+  - `minRep` e `maxRep` aplicados por matéria após normalização.
+- Seleção diária (evita repetição no mesmo dia e privilegia espaçamento):
+  - Para cada slot do dia, escolhe-se a matéria com maior `score` entre as elegíveis:
+  - `score = restante + dispersion * gap - penalize + weightBias * (peso - 1)`
+    - `restante`: cotas ainda disponíveis na semana para a matéria
+    - `gap`: dias desde a última vez que a matéria foi alocada na semana
+    - `penalize`: pequena penalização se `avoidConsecutive` estiver ativo e o `gap` for 1
+    - `weightBias`: viés diário para reforçar pesos maiores
+- Peso 3 reforçado:
+  - Pelo `beta` nas cotas semanais e pelo `weightBias` na escolha diária.
+  - Opcionalmente o primeiro slot do dia tenta alocar peso 3 quando houver cota disponível.
+
+Referência no código:
+- Função `generateSchedule`: `c:\python\CicloEstudo\PainelCicloEstudo2.html:2180`
+
+## Calibração do Ciclo
+O painel “Calibração do Ciclo” permite ajustar como o cronograma é gerado. Todos os parâmetros afetam o modelo e têm preview.
+
+- `beta` (curva de peso): >1 amplifica matérias de maior peso; <1 suaviza diferenças.
+- `weightBias` (viés diário de peso): reforça a prioridade de matérias de maior peso na escolha diária.
+- `dispersion` (dispersão semanal): valor de 0 a 1; aumenta preferência por espaçar ocorrências ao longo da semana.
+- `minRep` / `maxRep`: limites mínimo/máximo de ocorrências por matéria na semana.
+- `normalizeWeekly`: normaliza cotas para caber na capacidade semanal.
+- `minCoverage`: tenta garantir ao menos 1 ocorrência por matéria por semana quando houver capacidade.
+- `avoidConsecutive`: evita alocar a mesma matéria em dias consecutivos quando existirem alternativas.
+- `Preview`: mostra a distribuição semanal calculada antes de gerar.
+
+Referências no código:
+- Inicialização do painel: `c:\python\CicloEstudo\PainelCicloEstudo2.html:3643`
+- Salvamento dos parâmetros: `c:\python\CicloEstudo\PainelCicloEstudo2.html:3676`
+- Preview da distribuição: `c:\python\CicloEstudo\PainelCicloEstudo2.html:3694`
+
+### Dicas de Configuração
+- Priorização forte ao peso 3:
+  - `beta`: 1.3
+  - `weightBias`: 1.0
+  - `dispersion`: 0.6
+  - `minCoverage`: ligado
+  - `avoidConsecutive`: ligado
+  - `normalizeWeekly`: ligado
+  - `minRep`: 1, `maxRep`: 8 (ajuste conforme sua semana)
 
 ## Como Usar
-- Windows: abra o arquivo `index.html` com duplo clique (modo offline) ou hospede em um servidor local.
-- Login: no modo arquivo (`file://`) o login é oculto automaticamente. Em servidor, use `CICLO / CICLO`.
-- Gere o ciclo e navegue pelo calendário para ver tarefas/matérias por dia.
+- Windows: abra `PainelCicloEstudo2.html` (modo offline) ou hospede em servidor local.
+- Login: em `file://` o login é oculto; em servidor use `CICLO / CICLO`.
+- Gere o ciclo e navegue pelo calendário para ver tarefas por dia. Use filtros por status/matéria.
+- Se ajustar calibração, clique em “Aplicar” e depois “Gerar Ciclo de Estudo”.
+- Use “Limpar” para descartar um cronograma salvo e gerar outro com as novas regras.
 
-## Botões da Sidebar
-- `Ciclo Gerado Sucesso`
-  - Indicador de status. Fica verde quando o cronograma foi gerado ou reidratado com sucesso.
+## Importação/Exportação de Modelo (Excel)
+- Botões na sidebar:
+  - `Baixar Modelo Excel`: baixa estrutura base para edição.
+  - `Exportar Modelo Atual (Excel)`: exporta o modelo atualmente carregado.
+  - `Importar Modelo Excel`: importa um arquivo Excel com abas `Gerais` e `Conteudo`.
+- Aba `Gerais`:
+  - `Concurso`, `Órgão`, `InicioCiclo`, `FimCiclo`, `Seg`…`Dom` (slots diários).
+- Aba `Conteudo`:
+  - `Categoria`, `Materia`, `Peso` (1–3), `Tickets`, `Qtde PDF`, `Qtde Paginas`, `Topico`.
+  - `Peso` guia a frequência; `Qtde Paginas` é informativo (gestão de acervo).
+  - `Topico` preenche o conteúdo programático (syllabus).
 
-- `Pomodoro`
-  - Abre o widget Pomodoro (25/5/15). Você pode minimizar, iniciar/pausar e acompanhar o tempo.
+## Persistência (localStorage)
+- `estudoFiscalModel`: modelo atual (datas, matérias, syllabus, `slotsPorDia`).
+- `estudoFiscalScheduleStructure`: cronograma de dias e tarefas.
+- `estudoFiscalData`: status por tarefa (nota, tempo, meta, concluído).
+- `estudoFiscalStudyHistory`: histórico de sessões (data, matéria, duração, anotações).
+- `estudoFiscalSyllabus`: conteúdo programático estruturado por categoria/matéria.
 
-- `Baixar Modelo Excel`
-  - Baixa um arquivo Excel com a estrutura de modelo (matérias, pesos, tickets, tópicos) para edição.
-  - Use para construir/ajustar seu conteúdo programático fora do sistema.
-
-- `Exportar Modelo Atual (Excel)`
-  - Exporta o modelo que está carregado no painel (inclui matérias e tópicos) para Excel.
-  - Útil para compartilhar ou versionar seu modelo atual.
-
-- `Importar Modelo Excel`
-  - Importa um arquivo Excel com duas abas: `Gerais` e `Conteudo` (ou um CSV compatível).
-  - Após importar, o sistema aplica o modelo e gera/regenera o cronograma.
-
-- `Salvar Progresso`
-  - Gera e baixa um arquivo `PainelCicloEstudo2_Salvo.html` com seus dados embutidos.
-  - Abra esse arquivo depois para continuar exatamente de onde parou (modo offline sem servidor).
-
-- `Carregar Progresso`
-  - Abre um seletor de arquivo para importar um HTML salvo (auto-contido) ou um JSON de backup.
-  - Restaura `cronograma`, `status`, `histórico`, `syllabus` e `modelo` na interface.
-
-- `Regerar Cronograma`
-  - Apaga o progresso visual do calendário e cria um novo cronograma com base no modelo atual.
-  - O histórico e o syllabus são preservados. Use com atenção para não perder marcas do calendário.
-
-## Fluxo de Salvar e Carregar
-- Salvar: clique em `Salvar Progresso` para baixar um HTML com seus dados.
-- Carregar: clique em `Carregar Progresso` e selecione o HTML salvo ou um JSON válido.
-- No modo arquivo, o login é oculto e seus dados são restaurados automaticamente ao abrir um HTML salvo.
-
-## Cronômetro de Estudo
-- Barra fixa no rodapé mostra:
-  - Matéria atual, tempo total, meta formatada e barra de progresso (%).
+## Pomodoro e Atalhos
+- Barra fixa de sessão com:
+  - Matéria atual, tempo total, meta formatada e barra de progresso.
   - Botões: `Pausar/Continuar`, `Salvar` (abre anotações), `Cancelar`.
-- Atalhos de teclado:
+- Atalhos:
   - Espaço: Pausar/Continuar
   - Enter: Salvar
   - Esc: Cancelar
 
-## Estrutura de Dados (localStorage)
-- `estudoFiscalModel`: modelo atual (datas do ciclo, matérias, syllabus, `slotsPorDia`).
-- `estudoFiscalScheduleStructure`: cronograma de dias e tarefas.
-- `estudoFiscalData`: status por tarefa (nota, tempo gasto, meta, concluído).
-- `estudoFiscalStudyHistory`: histórico de sessões (data, matéria, duração, anotações, questões/acertos).
-- `estudoFiscalSyllabus`: conteúdo programático estruturado por categoria e matéria.
+## Fluxo de Salvar e Carregar
+- `Salvar Progresso`: baixa `PainelCicloEstudo2_Salvo.html` com seus dados embutidos.
+- `Carregar Progresso`: reidrata cronograma, status, histórico, syllabus e modelo.
+- `Regerar Cronograma`: zera marcações do calendário e gera novo cronograma; histórico e syllabus são preservados.
 
-## Excel (Formato do Modelo)
-- Aba `Gerais`: informações do concurso (concurso, órgão, início/fim do ciclo, horas por dia da semana).
-- Aba `Conteudo`: `Categoria`, `Materia`, `Peso`, `Tickets`, `Qtde PDF`, `Qtde Paginas`, `Topico`.
-- Datas: use `dd/mm/aaaa` ou `aaaa-mm-dd`. O sistema trata em horário local para evitar deslocamento de fuso.
+## Compatibilidade
+- Funciona totalmente offline via `file://` (Windows, sem servidor e sem banco).
+- Pode opcionalmente sincronizar com rotas `/api/save_bulk` e `/api/load_all` se você hospedar.
 
-## Modelo Excel — Campos em Detalhe
-- Aba `Gerais`
-  - `Concurso`: nome do concurso. Exibido no topo do painel.
-  - `Orgao`: órgão responsável. Apenas informativo, também aparece nas exportações.
-  - `InicioCiclo`: data de início do ciclo. Aceita `dd/mm/aaaa` ou `aaaa-mm-dd` e é convertida para data local (ver conversão em `PainelCicloEstudo2.html:1986–1994`).
-  - `FimCiclo`: data de término do ciclo. Mesma regra de `InicioCiclo` (interpretada em horário local).
-  - `Seg` `Ter` `Qua` `Qui` `Sex` `Sab` `Dom`: horas planejadas por dia da semana. Use números inteiros (recomendado entre 0 e 12). Essas horas definem quantas tarefas/matérias serão alocadas por dia e compõem os “slots” semanais do ciclo (ver uso em `PainelCicloEstudo2.html:2078` e geração do cronograma em `PainelCicloEstudo2.html:2115–2183`).
-
-- Aba `Conteudo`
-  - `Categoria`: classificação da matéria. Valores comuns: `Basico/Básico` ou `Especifico/Específico`. O sistema normaliza para `Conhecimentos Básicos` e `Conhecimentos Específicos`. Se você passar outro texto (ex.: “Financeiro”), ele vira `Conhecimentos Financeiro` (normalização em `PainelCicloEstudo2.html:4071–4079`).
-  - `Materia`: nome da matéria (ex.: “Língua Portuguesa”, “Auditoria”).
-  - `Peso`: prioridade da matéria, de `1` a `3`. O peso é usado para decidir a frequência de repetição dessa matéria na semana (curva aplicada na geração em `PainelCicloEstudo2.html:2082–2095`; limites 1–3 garantidos em `PainelCicloEstudo2.html:4173–4179`).
-  - `Tickets`: quantidade de “tickets” ou itens de estudo associados à matéria. Se estiver em branco, o sistema usa o `Peso` como base (fallback em `PainelCicloEstudo2.html:4179–4181`). É útil para calibrar a granularidade ou a quantidade de blocos de estudo esperados para a matéria nas exportações.
-  - `Qtde PDF`: quantidade de PDFs/material por matéria. Informativo nas exportações; atualmente não influencia diretamente o cálculo, mas é útil para gestão de acervo (campo exportado em `PainelCicloEstudo2.html:4181–4183`).
-  - `Qtde Paginas`: quantidade total de páginas. Esse campo é considerado na geração do cronograma para ajustar a frequência de repetição baseada no volume de conteúdo (fator de páginas em `PainelCicloEstudo2.html:2087–2092`).
-  - `Topico`: tópico específico da matéria. Cada linha com `Topico` preenche o `syllabus` (conteúdo programático) daquela matéria (construção do mapa de tópicos em `PainelCicloEstudo2.html:4182–4186` e agrupamento final em `PainelCicloEstudo2.html:4190–4196`). Se não houver `Topico`, a linha cria apenas o cadastro da matéria/categoria.
-
-### Dicas de Preenchimento
-- Em `Gerais`, coloque o total de horas por dia segundo sua realidade; o sistema distribuirá as matérias conforme `Peso`, `Qtde Paginas` e parâmetros de calibração.
-- Em `Conteudo`, crie uma linha base por matéria (sem `Topico`) e, abaixo, adicione quantas linhas de `Topico` forem necessárias para detalhar o conteúdo.
-- Use `Peso` como 1, 2 ou 3. Se `Tickets` ficar em branco, o sistema assume o `Peso`.
-- Use datas no padrão brasileiro `dd/mm/aaaa` quando editar manualmente no Excel; o sistema também aceita `aaaa-mm-dd`.
-- Após importar, clique em `Gerar Ciclo de Estudo` se o cronograma ainda não estiver marcado como gerado/sucesso.
-
-### Observações de Importação
-- A importação aceita:
-  - Excel com abas `Gerais` e `Conteudo` (preferencial).
-  - Planilhas simples/CSV compatíveis, via rotina alternativa (`buildModelFromCSV` em `PainelCicloEstudo2.html:4090–4127`).
-- A leitura das abas e montagem do modelo seguem `PainelCicloEstudo2.html:4153–4198`. Depois o modelo é aplicado e o cronograma gerado em `PainelCicloEstudo2.html:4203–4222`.
-
-## Dicas de Compatibilidade
-- Abrir como `file://` funciona totalmente offline. Sem servidor, sem banco.
-- Se preferir sincronização/backup em servidor, é possível acoplar as rotas `/api/save_bulk` e `/api/load_all`.
-- Quando usar servidor, o login é exibido e pode ser exigido.
-
-## Perguntas Frequentes
-- “Perco meu progresso ao fechar o navegador?”
-  - Use `Salvar Progresso` para baixar um HTML auto-contido com tudo dentro. Depois, abra esse arquivo para continuar.
+## FAQ
+- “Perco meu progresso ao fechar?”
+  - Use `Salvar Progresso` e depois abra o HTML salvo para continuar exatamente de onde parou.
 - “Consigo importar meu modelo do Excel?”
-  - Sim. Use `Importar Modelo Excel`. Se o arquivo tiver as abas `Gerais` e `Conteudo`, a importação é automática.
-- “Como recomeço o ciclo?”
-  - Clique em `Regerar Cronograma`. Isso zera as marcações do calendário, mas não apaga histórico e syllabus.
+  - Sim. Estruture com `Gerais` e `Conteudo` e importe pelo painel.
+- “Como recomeço o ciclo com novas regras?”
+  - Clique em `Limpar` e depois `Gerar Ciclo de Estudo` após ajustar a calibração.

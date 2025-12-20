@@ -3096,6 +3096,18 @@
 
         function barKeyHandler(e) {
             if(!activeSession) return;
+            const target = e.target;
+            if (
+                target &&
+                (
+                    target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.tagName === 'SELECT' ||
+                    target.isContentEditable
+                )
+            ) {
+                return;
+            }
             if(e.key === ' ') {
                 e.preventDefault();
                 togglePauseResume();

@@ -2148,9 +2148,24 @@
                             return {
                                 ...day,
                                 date: local,
-                                tasks: day.tasks.map(t => ({...t}))
+                                tasks: day.tasks.map(t => {
+                                    const task = { ...t };
+                                    delete task._inProgress;
+                                    delete task._timerStart;
+                                    return task;
+                                })
                             };
                         });
+                        let dirty = false;
+                        fullSchedule.forEach(day => {
+                            (day.tasks || []).forEach(t => {
+                                if (t && Object.prototype.hasOwnProperty.call(t, '_inProgress')) { delete t._inProgress; dirty = true; }
+                                if (t && Object.prototype.hasOwnProperty.call(t, '_timerStart')) { delete t._timerStart; dirty = true; }
+                            });
+                        });
+                        if (dirty) {
+                            localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                        }
                     } catch(e) {
                         console.error('Falha ao reidratar cronograma salvo:', e);
                         fullSchedule = [];
@@ -2197,9 +2212,24 @@
                     return {
                         ...day,
                         date: local,
-                        tasks: day.tasks.map(t => ({...t})) // clone tasks
+                        tasks: day.tasks.map(t => {
+                            const task = { ...t };
+                            delete task._inProgress;
+                            delete task._timerStart;
+                            return task;
+                        }) // clone tasks
                     };
                 });
+                let dirty = false;
+                fullSchedule.forEach(day => {
+                    (day.tasks || []).forEach(t => {
+                        if (t && Object.prototype.hasOwnProperty.call(t, '_inProgress')) { delete t._inProgress; dirty = true; }
+                        if (t && Object.prototype.hasOwnProperty.call(t, '_timerStart')) { delete t._timerStart; dirty = true; }
+                    });
+                });
+                if (dirty) {
+                    localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                }
                 
                 // If saved schedule ends before current endDate, we might need to extend it?
                 // For now, let's assume the user wants to keep the saved structure.
@@ -3053,6 +3083,7 @@
             if(dayObj) {
                 const task = dayObj.tasks[activeSession.taskIndex];
                 task.timeSpent = (task.timeSpent || 0) + activeSession.elapsedSession;
+                delete task._inProgress;
                 
                 // Determine Status based on Target
                 // Default target is 3600s (1h) if not set.

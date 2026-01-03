@@ -2121,7 +2121,7 @@
                     subjectsConfig = model.materias.map(m => ({
                         name: m.nome,
                         type: m.tipo || 'Básico',
-                        weight: Number(m.peso || 1),
+                        weight: m.peso !== undefined ? Number(m.peso) : 1,
                         tickets: Number(m.tickets || 1),
                         qtdePdf: Number(m.qtdePdf || 0),
                         qtdePaginas: Number(m.qtdePaginas || 0)
@@ -2186,18 +2186,10 @@
         let fullSchedule = []; // Array of objects: { date, tasks: [] }
         
         /**
-         * Gera a estrutura do cronograma com alocação semanal proporcional aos pesos.
-         * Parâmetros de calibração:
-         * - beta: curva do Peso (1 linear, >1 amplifica, <1 suaviza)
-         * - dispersion: preferência por espaçar ocorrências na semana (0 a 1)
-         * - minRep/maxRep: limites de ocorrências semanais por matéria
-         * - normalizeWeekly: ajusta proporcionalmente para caber nos slots semanais
-         * - minCoverage: tenta garantir ao menos 1 ocorrência por matéria na semana (se houver capacidade)
-         * - avoidConsecutive: evita agendar a mesma matéria em dias consecutivos quando possível
-         * Regras:
-         * - Cobertura semanal: cada matéria é alocada ao menos 1x na semana (se houver capacidade)
-         * - Frequência ponderada: matérias com maior peso aparecem mais vezes
-         * - Dispersão: preferência por distribuir ao longo da semana, reduzindo concentração
+         * Gera o cronograma usando o método de Ciclo de Estudos Contínuo (Alexandre Meirelles).
+         * - Cria uma lista mestre intercalada baseada nos pesos (Peso 3 = 3 aparições no ciclo).
+         * - Preenche os dias sequencialmente consumindo essa lista.
+         * - O ciclo roda indefinidamente (loop), ignorando a quebra de semanas.
          */
         function generateSchedule() {
             // Check if we have a saved schedule structure
@@ -2217,7 +2209,7 @@
                             delete task._inProgress;
                             delete task._timerStart;
                             return task;
-                        }) // clone tasks
+                        })
                     };
                 });
                 let dirty = false;
@@ -2230,154 +2222,147 @@
                 if (dirty) {
                     localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
                 }
-                
-                // If saved schedule ends before current endDate, we might need to extend it?
-                // For now, let's assume the user wants to keep the saved structure.
-                // If they change config, they might need to clear storage or we implement a 'Regenerate' button.
                 console.log("Loaded saved schedule structure.");
                 return;
             }
 
-            console.log("Generating new schedule structure...");
+            console.log("Generating new schedule structure (Method: Master Cycle)...");
 
-            const defaults = { beta: 1.1, weightBias: 0.7, dispersion: 0.6, minRep: 1, maxRep: 8, normalizeWeekly: true, minCoverage: true, avoidConsecutive: true };
-            const savedParams = JSON.parse(localStorage.getItem('estudoFiscalGenParams') || 'null');
-            const params = Object.assign({}, defaults, savedParams || {});
-
-            const weeklySlots = (Array.isArray(slotsPorDia) ? slotsPorDia.reduce((a,b)=>a+b,0) : 0) || 1;
-            const numSubjects = subjectsConfig.length || 1;
-            const rawList = subjectsConfig.map(sub => {
-                const w = Math.pow(Math.max(0, Number(sub.weight || 1)), params.beta);
-                const raw = numSubjects * w;
-                return { sub, weight: w, raw };
-            });
-            const sumRaw = rawList.reduce((a,b)=>a+b.raw,0) || 1;
-            const targets = rawList.map(r => ({
-                sub: r.sub,
-                weight: r.weight,
-                target: (r.raw * weeklySlots) / sumRaw
-            }));
-            const ensureCoverage = params.minCoverage && (weeklySlots >= numSubjects);
-            const repsMap = {};
-            if (ensureCoverage) {
-                subjectsConfig.forEach(s => repsMap[s.name] = 1);
-                let remaining = weeklySlots - numSubjects;
-                const fracs = targets
-                    .map(t => ({
-                        name: t.sub.name,
-                        frac: Math.max(0, t.target - 1),
-                        weight: t.weight,
-                        type: t.sub.type
-                    }))
-                    .sort((a,b) => (b.frac - a.frac) || (b.weight - a.weight));
-                let idx = 0;
-                while (remaining > 0 && fracs.length > 0) {
-                    const item = fracs[idx % fracs.length];
-                    repsMap[item.name] = (repsMap[item.name] || 0) + 1;
-                    remaining--;
-                    idx++;
-                }
-            } else {
-                const floors = targets.map(t => {
-                    const base = Math.floor(t.target);
-                    return {
-                        name: t.sub.name,
-                        base,
-                        frac: t.target - base,
-                        weight: t.weight,
-                        type: t.sub.type
-                    };
-                });
-                let assigned = floors.reduce((a,b)=>a+b.base,0);
-                let remaining = weeklySlots - assigned;
-                floors.forEach(f => { repsMap[f.name] = f.base; });
-                const sortedFracs = floors.slice().sort((a,b) => (b.frac - a.frac) || (b.weight - a.weight));
-                let i = 0;
-                while (remaining > 0 && sortedFracs.length > 0) {
-                    const item = sortedFracs[i % sortedFracs.length];
-                    repsMap[item.name] = (repsMap[item.name] || 0) + 1;
-                    remaining--;
-                    i++;
-                }
+            // 1. Validar e Limpar Configuração
+            if (!subjectsConfig || subjectsConfig.length === 0) {
+                alert("Nenhuma matéria configurada. Importe um Excel ou configure as matérias.");
+                return;
             }
-            subjectsConfig.forEach(s => {
-                repsMap[s.name] = Math.max(params.minRep, Math.min(params.maxRep, repsMap[s.name] || 0));
-            });
-            const entries = subjectsConfig.map(sub => ({ sub, reps: Math.max(0, Number(repsMap[sub.name] || 0)) }));
-            let currentDate = new Date(startDate);
-            let dayCounter = 0;
-            let weeklyCounters = null;
-            let lastAssigned = null; // track last day index per subject within the current week
-            const buildWeeklyCounters = () => {
-                const counters = {};
-                entries.forEach(e => {
-                    const name = e.sub.name;
-                    const reps = Math.max(0, Number(e.reps || 0));
-                    counters[name] = reps;
-                });
-                return counters;
+
+            // 2. Construir o "Ciclo Mestre" (Lista ordenada de matérias)
+            // Regra: Quantidade de blocos = Peso.
+            
+            let counts = {};
+            let initialCounts = {};
+            let totalBlocks = 0;
+            
+            // Debug Info Accumulator
+            let debugInfo = {
+                peso3: { count: 0, blocks: 0, subjects: [] },
+                peso2: { count: 0, blocks: 0, subjects: [] },
+                peso1: { count: 0, blocks: 0, subjects: [] },
+                totalSubjects: 0,
+                totalBlocks: 0
             };
+
+            subjectsConfig.forEach(s => {
+                // Se peso for 0 ou menor, ignora a matéria (não entra no ciclo)
+                const wRaw = Math.round(s.weight || 0);
+                if (wRaw <= 0) return;
+
+                const w = Math.max(1, wRaw); 
+                counts[s.name] = w;
+                initialCounts[s.name] = w;
+                totalBlocks += w;
+
+                // Stats
+                debugInfo.totalSubjects++;
+                if (w >= 3) {
+                    debugInfo.peso3.count++;
+                    debugInfo.peso3.blocks += w;
+                    debugInfo.peso3.subjects.push(s.name);
+                } else if (w === 2) {
+                    debugInfo.peso2.count++;
+                    debugInfo.peso2.blocks += w;
+                    debugInfo.peso2.subjects.push(s.name);
+                } else {
+                    debugInfo.peso1.count++;
+                    debugInfo.peso1.blocks += w;
+                    debugInfo.peso1.subjects.push(s.name);
+                }
+            });
+            debugInfo.totalBlocks = totalBlocks;
+
+            let masterCycle = [];
+            let lastSub = null;
+
+            // Algoritmo de Preenchimento Intercalado
+            for (let i = 0; i < totalBlocks; i++) {
+                // Candidatos: matérias que ainda têm blocos a distribuir
+                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
+                
+                if (candidates.length === 0) break; 
+
+                // Tenta evitar a matéria anterior (lastSub)
+                let valid = candidates.filter(s => s.name !== lastSub);
+                
+                // Se não tiver opção (só sobrou a mesma), usa ela mesma
+                if (valid.length === 0) valid = candidates;
+
+                // Critério de escolha: Prioriza quem tem MAIS blocos restantes
+                valid.sort((a, b) => counts[b.name] - counts[a.name]);
+
+                const pick = valid[0];
+                masterCycle.push(pick);
+                counts[pick.name]--;
+                lastSub = pick.name;
+            }
+
+            // Fallback
+            if (masterCycle.length === 0) {
+                fullSchedule = [];
+                return;
+            }
+
+            // Validação Pós-Geração
+            const generatedCounts = {};
+            masterCycle.forEach(m => { generatedCounts[m.name] = (generatedCounts[m.name] || 0) + 1; });
+            // Missing: matérias com peso > 0 que não entraram (impossível pela lógica atual, mas bom validar)
+            const activeSubjects = subjectsConfig.filter(s => (s.weight || 0) > 0);
+            const missing = activeSubjects.filter(s => !generatedCounts[s.name]);
+            
+            let validationMsg = `Ciclo Contínuo Gerado!\n\n` +
+                `Matérias Ativas: ${activeSubjects.length}\n` +
+                `Tamanho do Ciclo Mestre: ${masterCycle.length} blocos\n\n` +
+                `Distribuição (Peso = Frequência):\n` +
+                `- Peso 3 (3x): ${debugInfo.peso3.count} matérias = ${debugInfo.peso3.blocks} blocos\n` +
+                `- Peso 2 (2x): ${debugInfo.peso2.count} matérias = ${debugInfo.peso2.blocks} blocos\n` +
+                `- Peso 1 (1x): ${debugInfo.peso1.count} matérias = ${debugInfo.peso1.blocks} blocos\n`;
+            
+            if (missing.length > 0) {
+                validationMsg += `\n⚠️ ALERTA: ${missing.length} matérias ativas não entraram no ciclo: ${missing.map(m=>m.name).join(', ')}`;
+            } else {
+                validationMsg += `\n✅ Validação OK: Todas as matérias ativas foram incluídas conforme o peso.`;
+            }
+
+            // Show summary (User request: "Validar cálculo de blocos")
+            alert(validationMsg);
+
+            // 3. Preencher o Calendário
+            let currentDate = new Date(startDate);
+            let cycleIndex = 0;
+            let dayCounter = 0;
+
+            // Reset fullSchedule
+            fullSchedule = [];
+
             while (currentDate <= endDate) {
-                const dayOfWeek = currentDate.getDay();
-                const dayIdxMonFirst = (dayOfWeek + 6) % 7;
+                const dayOfWeek = currentDate.getDay(); // 0=Dom
+                const dayIdxMonFirst = (dayOfWeek + 6) % 7; // 0=Seg
                 const hours = slotsPorDia[dayIdxMonFirst] || 0;
-                if (dayIdxMonFirst === 0 || !weeklyCounters) {
-                    weeklyCounters = buildWeeklyCounters();
-                    lastAssigned = {};
-                }
+                
                 let dayTasks = [];
-                let didGuaranteeW3 = false;
-                if (hours > 0) {
-                    const w3Candidates = subjectsConfig
-                        .filter(s => Number(s.weight) >= 3 && (weeklyCounters[s.name] || 0) > 0 && !dayTasks.some(t => t.subject === s.name));
-                    if (w3Candidates.length > 0) {
-                        let bestW3 = null;
-                        let bestW3Score = -Infinity;
-                        w3Candidates.forEach(c => {
-                            const remaining = weeklyCounters[c.name] || 0;
-                            const lastIdx = (lastAssigned && (c.name in lastAssigned)) ? lastAssigned[c.name] : null;
-                            const gap = (lastIdx === null) ? 7 : Math.max(0, dayIdxMonFirst - lastIdx);
-                            let penalize = 0;
-                            if (params.avoidConsecutive && lastIdx !== null && gap === 1) penalize = 0.5;
-                            const weightBoost = (params.weightBias || 0) * (Number(c.weight || 1) - 1);
-                            const score = remaining + (params.dispersion || 0) * gap - penalize + weightBoost;
-                            if (score > bestW3Score) { bestW3Score = score; bestW3 = c; }
-                        });
-                        if (bestW3) {
-                            const taskId = `task-${currentDate.getTime()}-${dayTasks.length}`;
-                            dayTasks.push({ id: taskId, subject: bestW3.name, type: bestW3.type, weight: bestW3.weight, completed: false });
-                            weeklyCounters[bestW3.name] = Math.max(0, (weeklyCounters[bestW3.name] || 0) - 1);
-                            lastAssigned[bestW3.name] = dayIdxMonFirst;
-                            didGuaranteeW3 = true;
-                        }
-                    }
-                }
-                let attempts = 0;
-                while (dayTasks.length < hours && attempts < 500) {
-                    const totalRemaining = Object.values(weeklyCounters).reduce((a,b)=>a+b,0);
-                    if (totalRemaining <= 0) break;
-                    const candidates = subjectsConfig
-                        .filter(s => (weeklyCounters[s.name] || 0) > 0 && !dayTasks.some(t => t.subject === s.name));
-                    if (candidates.length === 0) break;
-                    let best = null;
-                    let bestScore = -Infinity;
-                    candidates.forEach(c => {
-                        const remaining = weeklyCounters[c.name] || 0;
-                        const lastIdx = (lastAssigned && (c.name in lastAssigned)) ? lastAssigned[c.name] : null;
-                        const gap = (lastIdx === null) ? 7 : Math.max(0, dayIdxMonFirst - lastIdx);
-                        let penalize = 0;
-                        if (params.avoidConsecutive && lastIdx !== null && gap === 1) penalize = 0.5; // small penalty to prefer spacing
-                        const weightBoost = (params.weightBias || 0) * (Number(c.weight || 1) - 1);
-                        const score = remaining + (params.dispersion || 0) * gap - penalize + weightBoost;
-                        if (score > bestScore) { bestScore = score; best = c; }
+                
+                for (let h = 0; h < hours; h++) {
+                    const sub = masterCycle[cycleIndex % masterCycle.length];
+                    const taskId = `task-${currentDate.getTime()}-${h}`;
+                    
+                    dayTasks.push({
+                        id: taskId,
+                        subject: sub.name,
+                        type: sub.type,
+                        weight: sub.weight,
+                        completed: false
                     });
-                    if (!best) break;
-                    const taskId = `task-${currentDate.getTime()}-${dayTasks.length}`;
-                    dayTasks.push({ id: taskId, subject: best.name, type: best.type, weight: best.weight, completed: false });
-                    weeklyCounters[best.name] = Math.max(0, (weeklyCounters[best.name] || 0) - 1);
-                    lastAssigned[best.name] = dayIdxMonFirst;
-                    attempts++;
+
+                    cycleIndex++;
                 }
+
                 fullSchedule.push({ date: new Date(currentDate), tasks: dayTasks });
                 currentDate.setDate(currentDate.getDate() + 1);
                 dayCounter++;
@@ -2385,7 +2370,7 @@
             
             // Save the generated structure
             localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
-            // Persist ciclo dedicado e log
+            
             if (ENABLE_API) {
                 try {
                     fetch('/api/cycle', {
@@ -3716,57 +3701,35 @@
          * Inicializa painel de calibração e sincroniza campos.
          */
         function initCalibrationPanel() {
-            const defaults = { beta: 1.1, weightBias: 0.7, dispersion: 0.6, minRep: 1, maxRep: 8, normalizeWeekly: true, minCoverage: true, avoidConsecutive: true };
-            const saved = JSON.parse(localStorage.getItem('estudoFiscalGenParams') || 'null') || defaults;
-            const betaR = document.getElementById('beta-range');
-            const betaN = document.getElementById('beta-num');
-            const wbR = document.getElementById('weightBias-range');
-            const wbN = document.getElementById('weightBias-num');
-            const dispR = document.getElementById('dispersion-range');
-            const dispN = document.getElementById('dispersion-num');
-            const minN = document.getElementById('minRep-num');
-            const maxN = document.getElementById('maxRep-num');
-            const normC = document.getElementById('normalizeWeekly-check');
-            const minCovC = document.getElementById('minCoverage-check');
-            const avoidConsC = document.getElementById('avoidConsecutive-check');
-            if (!betaR) return;
-            betaR.value = saved.beta; betaN.value = saved.beta;
-            wbR.value = saved.weightBias; wbN.value = saved.weightBias;
-            dispR.value = saved.dispersion; dispN.value = saved.dispersion;
-            minN.value = saved.minRep; maxN.value = saved.maxRep;
-            normC.checked = !!saved.normalizeWeekly;
-            minCovC.checked = !!saved.minCoverage;
-            avoidConsC.checked = !!saved.avoidConsecutive;
-            betaR.oninput = () => { betaN.value = betaR.value; setGenerateButtonState('pending'); };
-            betaN.oninput = () => { betaR.value = betaN.value; setGenerateButtonState('pending'); };
-            wbR.oninput = () => { wbN.value = wbR.value; setGenerateButtonState('pending'); };
-            wbN.oninput = () => { wbR.value = wbN.value; setGenerateButtonState('pending'); };
-            dispR.oninput = () => { dispN.value = dispR.value; setGenerateButtonState('pending'); };
-            dispN.oninput = () => { dispR.value = dispN.value; setGenerateButtonState('pending'); };
-            minN.oninput = () => { setGenerateButtonState('pending'); };
-            maxN.oninput = () => { setGenerateButtonState('pending'); };
-            normC.onchange = () => { setGenerateButtonState('pending'); };
-            minCovC.onchange = () => { setGenerateButtonState('pending'); };
-            avoidConsC.onchange = () => { setGenerateButtonState('pending'); };
+            // Nova lógica: Parâmetros fixos baseados no Peso.
+            // Desabilitar controles legados para evitar confusão.
+            const ids = [
+                'beta-range', 'beta-num', 
+                'weightBias-range', 'weightBias-num',
+                'dispersion-range', 'dispersion-num',
+                'minRep-num', 'maxRep-num',
+                'normalizeWeekly-check', 'minCoverage-check', 'avoidConsecutive-check'
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.disabled = true;
+                    el.title = "Gerenciado automaticamente pelo Ciclo Mestre (Peso = Frequência)";
+                    if(el.parentElement) el.parentElement.style.opacity = '0.5';
+                }
+            });
+            
+            // Renderiza o preview inicial
+            renderCalibrationPreview();
         }
 
         /**
          * Salva parâmetros de calibração.
+         * (Mantido para compatibilidade, mas agora apenas confirma a ação)
          */
         function saveCalibrationParams() {
-            const params = {
-                beta: parseFloat(document.getElementById('beta-num').value),
-                weightBias: parseFloat(document.getElementById('weightBias-num').value),
-                dispersion: parseFloat(document.getElementById('dispersion-num').value),
-                minRep: parseInt(document.getElementById('minRep-num').value) || 1,
-                maxRep: parseInt(document.getElementById('maxRep-num').value) || 8,
-                normalizeWeekly: !!document.getElementById('normalizeWeekly-check').checked,
-                minCoverage: !!document.getElementById('minCoverage-check').checked,
-                avoidConsecutive: !!document.getElementById('avoidConsecutive-check').checked
-            };
-            localStorage.setItem('estudoFiscalGenParams', JSON.stringify(params));
             setGenerateButtonState('pending');
-            alert('Parâmetros aplicados. Gere o ciclo para efetivar no cronograma.');
+            alert('Configuração de Ciclo Mestre ativa. A frequência é definida exclusivamente pelo PESO da matéria na aba Matérias.');
         }
 
         /**
@@ -3775,71 +3738,30 @@
         function renderCalibrationPreview() {
             const container = document.getElementById('calibration-preview');
             if (!container) return;
-            const defaults = { beta: 1.1, dispersion: 0.6, minRep: 1, maxRep: 8, normalizeWeekly: true, minCoverage: true, avoidConsecutive: true };
-            const params = {
-                beta: parseFloat(document.getElementById('beta-num').value) || defaults.beta,
-                dispersion: parseFloat(document.getElementById('dispersion-num').value) || defaults.dispersion,
-                minRep: parseInt(document.getElementById('minRep-num').value) || defaults.minRep,
-                maxRep: parseInt(document.getElementById('maxRep-num').value) || defaults.maxRep,
-                normalizeWeekly: !!document.getElementById('normalizeWeekly-check').checked,
-                minCoverage: !!document.getElementById('minCoverage-check').checked,
-                avoidConsecutive: !!document.getElementById('avoidConsecutive-check').checked
-            };
-            const weeklySlots = (Array.isArray(slotsPorDia) ? slotsPorDia.reduce((a,b)=>a+b,0) : 0) || 1;
-            const numSubjects = subjectsConfig.length || 1;
-            const rawList = subjectsConfig.map(sub => {
-                const w = Math.pow(Math.max(0, Number(sub.weight || 1)), params.beta);
-                const raw = numSubjects * w;
-                return { name: sub.name, raw, weight: w };
+            
+            // New logic: Reps = Weight (Master Cycle Method)
+            const entries = subjectsConfig.map(s => {
+                const wRaw = Math.round(s.weight || 0);
+                // If <= 0, it should be 0.
+                const w = wRaw <= 0 ? 0 : Math.max(1, wRaw);
+                return { name: s.name, reps: w };
             });
-            const sumRaw = rawList.reduce((a,b)=>a+b.raw,0) || 1;
-            let targetMap = {};
-            rawList.forEach(r => {
-                targetMap[r.name] = (r.raw * weeklySlots) / sumRaw;
-            });
-            const repsMap = {};
-            if (params.minCoverage && weeklySlots >= numSubjects) {
-                subjectsConfig.forEach(s => { repsMap[s.name] = 1; });
-                let remaining = weeklySlots - numSubjects;
-                const fracs = subjectsConfig.map(s => {
-                    const target = Math.max(0, (targetMap[s.name] || 0) - 1);
-                    const w = Math.pow(Math.max(0, Number(s.weight || 1)), params.beta);
-                    return { name: s.name, frac: target, weight: w };
-                }).sort((a,b) => (b.frac - a.frac) || (b.weight - a.weight));
-                let idx = 0;
-                while (remaining > 0 && fracs.length > 0) {
-                    repsMap[fracs[idx % fracs.length].name] = (repsMap[fracs[idx % fracs.length].name] || 0) + 1;
-                    remaining--;
-                    idx++;
-                }
-            } else {
-                const floors = subjectsConfig.map(s => {
-                    const t = targetMap[s.name] || 0;
-                    const base = Math.floor(t);
-                    const frac = t - base;
-                    const w = Math.pow(Math.max(0, Number(s.weight || 1)), params.beta);
-                    return { name: s.name, base, frac, weight: w };
-                });
-                let assigned = floors.reduce((a,b)=>a+b.base,0);
-                let remaining = weeklySlots - assigned;
-                floors.forEach(f => { repsMap[f.name] = f.base; });
-                const sortedFracs = floors.slice().sort((a,b) => (b.frac - a.frac) || (b.weight - a.weight));
-                let i = 0;
-                while (remaining > 0 && sortedFracs.length > 0) {
-                    const item = sortedFracs[i % sortedFracs.length];
-                    repsMap[item.name] = (repsMap[item.name] || 0) + 1;
-                    remaining--;
-                    i++;
-                }
-            }
-            subjectsConfig.forEach(s => {
-                repsMap[s.name] = Math.max(params.minRep, Math.min(params.maxRep, repsMap[s.name] || 0));
-            });
-            const entries = subjectsConfig.map(s => ({ name: s.name, reps: repsMap[s.name] || 0 }));
+
             const maxRep = entries.reduce((m,e)=>Math.max(m,e.reps), 0);
+            
             container.innerHTML = entries.map(e => {
                 const pct = maxRep > 0 ? Math.round((e.reps / maxRep) * 100) : 0;
-                return `<div style="display:flex; align-items:center; gap:10px;"><span style="width:200px;">${e.name}</span><div style="flex:1; height:8px; background:#333; border-radius:4px; overflow:hidden;"><div style="width:${pct}%; height:100%; background: var(--accent-color);"></div></div><span style="width:40px; text-align:right;">${e.reps}</span></div>`;
+                // If reps is 0, show a different style or just 0x
+                const barColor = e.reps === 0 ? '#444' : 'var(--accent-color)';
+                const text = e.reps === 0 ? '<span style="color:#666;">(Excluído)</span>' : `${e.reps}x / ciclo`;
+                
+                return `<div style="display:flex; align-items:center; gap:10px;">
+                    <span style="width:200px; ${e.reps===0?'color:#666; text-decoration:line-through;':''}">${e.name}</span>
+                    <div style="flex:1; height:8px; background:#333; border-radius:4px; overflow:hidden;">
+                        <div style="width:${pct}%; height:100%; background: ${barColor};"></div>
+                    </div>
+                    <span style="width:100px; text-align:right; font-size:0.9em;">${text}</span>
+                </div>`;
             }).join('');
         }
 
@@ -4411,9 +4333,9 @@
                         <option value="Especifico" ${String(d.categoria).toLowerCase().includes('esp') ? 'selected' : ''}>Especifico</option>
                     </select>
                 </td>
-                <td><input name="materia" type="text" value="${d.materia || ''}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
-                <td><input name="peso" type="number" min="1" max="3" value="${Number(d.peso)||1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
-                <td><input name="tickets" type="number" min="1" value="${Number(d.tickets)||1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
+                <td><input name="materia" type="text" value="${d.materia || ''}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;" placeholder="Nome da Matéria"></td>
+                <td><input name="peso" type="number" min="0" max="3" value="${d.peso !== undefined ? Number(d.peso) : 1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;" title="0=Excluir do Ciclo, 1=1x, 2=2x, 3=3x"></td>
+                <td><input name="tickets" type="number" min="0" value="${d.tickets !== undefined ? Number(d.tickets) : 1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;" title="Legado (ignorado)"></td>
                 <td><input name="qtdePdf" type="number" min="0" value="${Number(d.qtdePdf)||0}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
                 <td><input name="qtdePaginas" type="number" min="0" value="${Number(d.qtdePaginas)||0}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
                 <td><input name="topico" type="text" value="${d.topico || ''}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
@@ -4473,8 +4395,8 @@
                     addContentRow({
                         categoria: catShort,
                         materia: m.nome,
-                        peso: m.peso || 1,
-                        tickets: m.tickets || m.peso || 1,
+                        peso: m.peso !== undefined ? m.peso : 1,
+                        tickets: m.tickets || (m.peso !== undefined ? m.peso : 1),
                         qtdePdf: m.qtdePdf || 0,
                         qtdePaginas: m.qtdePaginas || 0,
                         topico: ''
@@ -4485,8 +4407,8 @@
                         subj.topics.forEach(t => addContentRow({
                             categoria: catShort,
                             materia: m.nome,
-                            peso: m.peso || 1,
-                            tickets: m.tickets || m.peso || 1,
+                            peso: m.peso !== undefined ? m.peso : 1,
+                            tickets: m.tickets || (m.peso !== undefined ? m.peso : 1),
                             qtdePdf: m.qtdePdf || 0,
                             qtdePaginas: m.qtdePaginas || 0,
                             topico: t
@@ -4514,8 +4436,8 @@
                 addContentRow({
                     categoria: catShort,
                     materia: m.name,
-                    peso: m.weight || 1,
-                    tickets: m.tickets || (m.weight || 1),
+                    peso: m.weight !== undefined ? m.weight : 1,
+                    tickets: m.tickets || (m.weight !== undefined ? m.weight : 1),
                     qtdePdf: m.qtdePdf || 0,
                     qtdePaginas: m.qtdePaginas || 0,
                     topico: ''
@@ -4577,10 +4499,11 @@
                     const categoriaRaw = tr.querySelector('[name="categoria"]')?.value || 'Basico';
                     const materia = tr.querySelector('[name="materia"]')?.value?.trim();
                     if (!materia) return;
-                    let peso = Number(tr.querySelector('[name="peso"]')?.value || 1);
-                    peso = Math.min(3, Math.max(1, isNaN(peso) ? 1 : peso));
+                    let peso = Number(tr.querySelector('[name="peso"]')?.value);
+                    if (isNaN(peso)) peso = 1;
+                    peso = Math.min(3, Math.max(0, peso)); // Allow 0
                     let tickets = Number(tr.querySelector('[name="tickets"]')?.value);
-                    tickets = Math.max(1, isNaN(tickets) ? peso : tickets);
+                    tickets = Math.max(0, isNaN(tickets) ? peso : tickets);
                     let qtdePdf = Number(tr.querySelector('[name="qtdePdf"]')?.value || 0);
                     let qtdePaginas = Number(tr.querySelector('[name="qtdePaginas"]')?.value || 0);
                     const topico = tr.querySelector('[name="topico"]')?.value?.trim() || '';
@@ -4672,10 +4595,11 @@
                     const categoriaRaw = tr.querySelector('[name="categoria"]')?.value || 'Basico';
                     const materia = tr.querySelector('[name="materia"]')?.value?.trim();
                     if (!materia) return;
-                    let peso = Number(tr.querySelector('[name="peso"]')?.value || 1);
-                    peso = Math.min(3, Math.max(1, isNaN(peso) ? 1 : peso));
+                    let peso = Number(tr.querySelector('[name="peso"]')?.value);
+                    if (isNaN(peso)) peso = 1;
+                    peso = Math.min(3, Math.max(0, peso)); // Allow 0
                     let tickets = Number(tr.querySelector('[name="tickets"]')?.value);
-                    tickets = Math.max(1, isNaN(tickets) ? peso : tickets);
+                    tickets = Math.max(0, isNaN(tickets) ? peso : tickets);
                     let qtdePdf = Number(tr.querySelector('[name="qtdePdf"]')?.value || 0);
                     let qtdePaginas = Number(tr.querySelector('[name="qtdePaginas"]')?.value || 0);
                     const topico = tr.querySelector('[name="topico"]')?.value?.trim() || '';

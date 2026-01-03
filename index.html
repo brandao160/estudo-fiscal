@@ -2689,7 +2689,16 @@
                             </div>
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <span style="color: #888;">Estudado:</span>
-                                <span style="color: white; font-family: monospace;">${formattedTime}</span>
+                                <div class="meta-chip" style="border-color: rgba(255,255,255,0.2);">
+                                    <button class="step-btn" onclick="adjustTimeSpent(${index}, 'hours', -1)">-</button>
+                                    <div class="chip-seg"><span>Horas</span><b>${Math.floor(timeSpent / 3600)}</b></div>
+                                    <button class="step-btn" onclick="adjustTimeSpent(${index}, 'hours', 1)">+</button>
+                                    <div class="divider"></div>
+                                    <button class="step-btn" onclick="adjustTimeSpent(${index}, 'minutes', -5)">-</button>
+                                    <div class="chip-seg"><span>Min</span><b>${Math.floor((timeSpent % 3600) / 60)}</b></div>
+                                    <button class="step-btn" onclick="adjustTimeSpent(${index}, 'minutes', 5)">+</button>
+                                </div>
+                                <span style="color: white; font-family: monospace; margin-left:5px;">${formattedTime}</span>
                             </div>
                         </div>
                     </div>
@@ -2735,6 +2744,24 @@
                 m = Math.max(0, Math.min(59, m + delta));
             }
             task.durationTarget = (h * 3600) + (m * 60);
+            renderModalTasks();
+            commitDraft();
+        }
+
+        /**
+         * Ajusta tempo estudado manualmente via botões incrementais.
+         */
+        window.adjustTimeSpent = function(index, type, delta) {
+            const task = currentDayTasksDraft[index];
+            let current = task.timeSpent || 0;
+            
+            if (type === 'hours') {
+                current += delta * 3600;
+            } else if (type === 'minutes') {
+                current += delta * 60;
+            }
+            
+            task.timeSpent = Math.max(0, current);
             renderModalTasks();
             commitDraft();
         }

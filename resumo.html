@@ -431,28 +431,55 @@
         /* --- RICH EDITOR --- */
         .editor-toolbar-rich {
             padding: 10px 40px;
-            background: #f1f5f9;
+            background: #f8fafc;
             border-bottom: 1px solid #e2e8f0;
             display: flex;
-            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0 8px;
+            border-right: 1px solid #e2e8f0;
+        }
+        .toolbar-group:last-child { border-right: none; }
+
         .toolbar-btn {
-            width: 35px;
-            height: 35px;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid #cbd5e1;
-            background: white;
+            border: 1px solid transparent;
+            background: transparent;
             border-radius: 6px;
             cursor: pointer;
             color: #475569;
             font-size: 0.9rem;
+            transition: all 0.2s;
         }
 
-        .toolbar-btn:hover { background: #f8fafc; border-color: #94a3b8; }
-        .toolbar-btn.active { background: #e2e8f0; color: #0f172a; }
+        .toolbar-btn:hover { 
+            background: #f1f5f9; 
+            color: var(--accent-color);
+        }
+        
+        .toolbar-btn.active { 
+            background: #e2e8f0; 
+            color: #0f172a; 
+            border-color: #cbd5e1;
+        }
+
+        .color-circle {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
 
         .word-content-editable {
             width: 100%;
@@ -780,16 +807,63 @@
 
         <!-- Rich Text Toolbar -->
         <div class="editor-toolbar-rich">
-            <button class="toolbar-btn" onclick="execCommand('bold')" title="Negrito">
-                <i class="fas fa-bold"></i>
-            </button>
-            <div style="width: 1px; height: 25px; background: #e2e8f0; margin: 0 5px;"></div>
-            <button class="toolbar-btn" onclick="execCommand('foreColor', '#ef4444')" title="Cor Vermelha">
-                <i class="fas fa-font" style="color: #ef4444;"></i>
-            </button>
-            <button class="toolbar-btn" onclick="execCommand('foreColor', '#0f172a')" title="Cor Preta">
-                <i class="fas fa-font" style="color: #0f172a;"></i>
-            </button>
+            <!-- Texto -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="execCommand('bold')" title="Negrito">
+                    <i class="fas fa-bold"></i>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('italic')" title="Itálico">
+                    <i class="fas fa-italic"></i>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('underline')" title="Sublinhado">
+                    <i class="fas fa-underline"></i>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('strikeThrough')" title="Tachado">
+                    <i class="fas fa-strikethrough"></i>
+                </button>
+            </div>
+
+            <!-- Cores -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="execCommand('foreColor', '#ef4444')" title="Vermelho">
+                    <div class="color-circle" style="background: #ef4444;"></div>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('foreColor', '#0f172a')" title="Preto">
+                    <div class="color-circle" style="background: #0f172a;"></div>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('foreColor', '#3b82f6')" title="Azul">
+                    <div class="color-circle" style="background: #3b82f6;"></div>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('hiliteColor', '#fef08a')" title="Destacar (Amarelo)">
+                    <i class="fas fa-highlighter" style="color: #eab308;"></i>
+                </button>
+            </div>
+
+            <!-- Listas e Alinhamento -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="execCommand('insertUnorderedList')" title="Lista com Marcadores">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('insertOrderedList')" title="Lista Numerada">
+                    <i class="fas fa-list-ol"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="execCommand('justifyLeft')" title="Alinhar à Esquerda">
+                    <i class="fas fa-align-left"></i>
+                </button>
+                <button class="toolbar-btn" onclick="execCommand('justifyCenter')" title="Centralizar">
+                    <i class="fas fa-align-center"></i>
+                </button>
+            </div>
+
+            <!-- Limpar -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="execCommand('removeFormat')" title="Limpar Formatação">
+                    <i class="fas fa-eraser"></i>
+                </button>
+            </div>
         </div>
         
         <div class="editor-body">
@@ -1175,7 +1249,14 @@
      */
     function execCommand(command, value = null) {
         document.execCommand(command, false, value);
-        document.getElementById('conteudo').focus();
+        const editor = document.getElementById('conteudo');
+        editor.focus();
+        
+        // Sincronizar dados imediatamente
+        if (indiceAtual !== null) {
+            cards[indiceAtual].conteudo = editor.innerHTML;
+            localStorage.setItem('ciclo_cards_v3', JSON.stringify(cards));
+        }
     }
 
     // Auto-save typing

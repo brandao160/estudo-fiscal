@@ -809,58 +809,58 @@
         <div class="editor-toolbar-rich">
             <!-- Texto -->
             <div class="toolbar-group">
-                <button class="toolbar-btn" onclick="execCommand('bold')" title="Negrito">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('bold')" title="Negrito">
                     <i class="fas fa-bold"></i>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('italic')" title="Itálico">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('italic')" title="Itálico">
                     <i class="fas fa-italic"></i>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('underline')" title="Sublinhado">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('underline')" title="Sublinhado">
                     <i class="fas fa-underline"></i>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('strikeThrough')" title="Tachado">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('strikeThrough')" title="Tachado">
                     <i class="fas fa-strikethrough"></i>
                 </button>
             </div>
 
             <!-- Cores -->
             <div class="toolbar-group">
-                <button class="toolbar-btn" onclick="execCommand('foreColor', '#ef4444')" title="Vermelho">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('foreColor', '#ef4444')" title="Vermelho">
                     <div class="color-circle" style="background: #ef4444;"></div>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('foreColor', '#0f172a')" title="Preto">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('foreColor', '#0f172a')" title="Preto">
                     <div class="color-circle" style="background: #0f172a;"></div>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('foreColor', '#3b82f6')" title="Azul">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('foreColor', '#3b82f6')" title="Azul">
                     <div class="color-circle" style="background: #3b82f6;"></div>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('hiliteColor', '#fef08a')" title="Destacar (Amarelo)">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('hiliteColor', '#fef08a')" title="Destacar (Amarelo)">
                     <i class="fas fa-highlighter" style="color: #eab308;"></i>
                 </button>
             </div>
 
             <!-- Listas e Alinhamento -->
             <div class="toolbar-group">
-                <button class="toolbar-btn" onclick="execCommand('insertUnorderedList')" title="Lista com Marcadores">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('insertUnorderedList')" title="Lista com Marcadores">
                     <i class="fas fa-list-ul"></i>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('insertOrderedList')" title="Lista Numerada">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('insertOrderedList')" title="Lista Numerada">
                     <i class="fas fa-list-ol"></i>
                 </button>
             </div>
 
             <div class="toolbar-group">
-                <button class="toolbar-btn" onclick="execCommand('justifyLeft')" title="Alinhar à Esquerda">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('justifyLeft')" title="Alinhar à Esquerda">
                     <i class="fas fa-align-left"></i>
                 </button>
-                <button class="toolbar-btn" onclick="execCommand('justifyCenter')" title="Centralizar">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('justifyCenter')" title="Centralizar">
                     <i class="fas fa-align-center"></i>
                 </button>
             </div>
 
             <!-- Limpar -->
             <div class="toolbar-group">
-                <button class="toolbar-btn" onclick="execCommand('removeFormat')" title="Limpar Formatação">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('removeFormat')" title="Limpar Formatação">
                     <i class="fas fa-eraser"></i>
                 </button>
             </div>
@@ -969,6 +969,11 @@
     function renderSyllabus() {
         const container = document.getElementById('view-syllabus');
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        
+        // --- NOVIDADE: Salvar quais matérias estão abertas antes de limpar ---
+        const openSubjects = Array.from(document.querySelectorAll('.syllabus-content.open'))
+            .map(el => el.previousElementSibling.querySelector('.subject-name-text').textContent);
+
         container.innerHTML = '';
 
         let totalTópicos = 0;
@@ -1003,14 +1008,15 @@
                 const card = document.createElement('div');
                 card.className = 'syllabus-category';
                 
-                // Se houver termo de busca, abrir o acordeão por padrão
-                const isOpen = searchTerm.length > 0;
+                // --- LÓGICA DE ABERTURA: Se houver busca OU se já estava aberto antes ---
+                const isExplicitlyOpen = openSubjects.includes(sub.name);
+                const isOpen = searchTerm.length > 0 || isExplicitlyOpen;
 
                 card.innerHTML = `
                     <div class="syllabus-header" onclick="this.nextElementSibling.classList.toggle('open')">
                         <div style="display: flex; align-items: center; gap: 15px;">
                             <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--accent-color);"></i>
-                            <span style="font-weight: 700; font-size: 1.1rem;">${sub.name}</span>
+                            <span class="subject-name-text" style="font-weight: 700; font-size: 1.1rem;">${sub.name}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 15px;">
                             <span style="font-size: 0.85rem; color: var(--text-muted);">${completedCount}/${sub.topics.length} tópicos (${percent}%)</span>
@@ -1267,61 +1273,6 @@
         }
     });
 
-    /**
-     * GRID RENDER
-     */
-    function renderizar() {
-        const grid = document.getElementById('grid');
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        
-        grid.innerHTML = '';
-
-        const filteredCards = cards.filter(card => {
-            const matchesSearch = card.titulo.toLowerCase().includes(searchTerm) || 
-                                 (card.conteudo && card.conteudo.toLowerCase().includes(searchTerm));
-            const matchesSubject = materiaFiltro === 'Todas' || card.materia === materiaFiltro;
-            return matchesSearch && matchesSubject;
-        });
-
-        document.getElementById('stats-text').innerText = `${filteredCards.length} temas cadastrados em ${materiaFiltro}`;
-
-        if (filteredCards.length === 0) {
-            grid.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-search fa-4x" style="opacity: 0.1; margin-bottom: 25px;"></i>
-                    <p>Nenhum resumo encontrado para "${searchTerm}".</p>
-                </div>
-            `;
-        } else {
-            filteredCards.forEach((card) => {
-                const realIndex = cards.findIndex(c => c === card);
-                
-                const div = document.createElement('div');
-                div.className = 'card';
-                div.onclick = () => abrir(realIndex);
-                
-                div.innerHTML = `
-                    <div class="card-content">
-                        <span class="card-subject">${card.materia || 'Geral'}</span>
-                        <h3>${card.titulo}</h3>
-                    </div>
-                    <div class="card-footer">
-                        <div class="card-info">
-                            <i class="fas fa-align-left"></i>
-                            <span>${card.conteudo ? card.conteudo.replace(/<[^>]*>/g, '').split(/\s+/).length + ' palavras' : 'Sem conteúdo'}</span>
-                        </div>
-                        <div class="card-actions">
-                            <button class="btn-icon-card" onclick="deletarCard(event, ${realIndex})" title="Excluir">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
-        }
-    }
-
     function criarCard() {
         const tituloInput = document.getElementById('novoTitulo');
         const materiaSelect = document.getElementById('selectMateria');
@@ -1339,9 +1290,7 @@
 
         tituloInput.value = '';
         salvarNoStorage();
-        renderizar();
-        // Não chamamos mais renderizarMaterias pois não há lista na sidebar, 
-        // mas o select já está atualizado.
+        renderSyllabus(); // Atualizado para a nova lógica
         
         // Abre o editor imediatamente para o novo card
         abrir(0);
@@ -1364,7 +1313,8 @@
             cards[indiceAtual].conteudo = document.getElementById('conteudo').innerHTML;
             salvarNoStorage();
             mostrarToast();
-            renderizar();
+            fecharEditor(); // Fecha o editor automaticamente
+            renderSyllabus(); // Atualiza a tela principal
         }
     }
 
@@ -1380,7 +1330,7 @@
         if (confirm('Tem certeza que deseja excluir este resumo? Esta ação não pode ser desfeita.')) {
             cards.splice(index, 1);
             salvarNoStorage();
-            renderizar();
+            renderSyllabus(); // Atualizado
         }
     }
 

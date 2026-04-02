@@ -658,15 +658,6 @@
             <span><i class="fas fa-list-check"></i> Conteúdo Programático</span>
         </div>
 
-        <div class="menu-title" style="margin-top: 20px;">Minhas Matérias</div>
-        <div id="subject-list">
-            <!-- Renderizado via JS -->
-        </div>
-        
-        <button class="btn btn-add-subject" onclick="adicionarMateria()">
-            <i class="fas fa-plus-circle"></i> Criar Matéria
-        </button>
-
         <div class="menu-title" style="margin-top: 30px;">Dados & Backup</div>
         <div style="display: grid; gap: 8px; margin-top: 10px;">
             <button class="btn btn-data-action" onclick="baixarModeloExcel()" style="width: 100%; padding: 12px; background: var(--card-bg); border: 1px solid var(--border-color); color: #fff; border-radius: 12px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 10px;">
@@ -781,78 +772,57 @@
      * DATA STORAGE
      */
     let cards = [];
-    let subjects = [
-        { name: "Geral" },
-        { name: "Língua Portuguesa" },
-        { name: "Exatas" },
-        { name: "Direito Constitucional" },
-        { name: "Direito Administrativo" },
-        { name: "Direito Financeiro" },
-        { name: "Direito Civil" },
-        { name: "Empresarial" },
-        { name: "Penal" },
-        { name: "Economia" },
-        { name: "Contabilidade Geral" },
-        { name: "Realidade do Estado" },
-        { name: "Tecnologia da Informação" },
-        { name: "Auditoria" },
-        { name: "Contabilidade Geral e Avançada" },
-        { name: "Contabilidade Pública" },
-        { name: "Contabilidade de Custos" },
-        { name: "Direito Tributário I" },
-        { name: "Direito Tributário II – Reforma Tributária" },
-        { name: "Legislação Tributária Estadual" }
-    ];
-
-    let syllabusData = [
-        {
-            category: "Conhecimentos Básicos",
-            subjects: [
-                { name: "Língua Portuguesa", topics: ["Interpretação de textos", "Ortografia oficial", "Acentuação gráfica", "Classes de palavras", "Sintaxe da oração e do período", "Pontuação", "Concordância nominal e verbal", "Regência nominal e verbal", "Crase", "Significação das palavras"] },
-                { name: "Exatas", topics: ["Lógica proposicional", "Argumentação lógica", "Juros simples e compostos", "Descontos", "Sistemas de amortização", "Estatística descritiva (média, moda, mediana)", "Probabilidade", "Distribuições de probabilidade", "Amostragem", "Inferência estatística"] },
-                { name: "Direito Constitucional", topics: ["Direitos e garantias fundamentais", "Organização do Estado", "Administração Pública", "Organização dos Poderes", "Sistema Tributário Nacional", "Finanças Públicas", "Ordem Econômica e Financeira"] },
-                { name: "Direito Administrativo", topics: ["Princípios da Adm. Pública", "Organização administrativa", "Atos administrativos", "Poderes administrativos", "Licitações e Contratos (Lei 14.133/2021)", "Serviços públicos", "Responsabilidade civil do Estado", "Improbidade Administrativa", "Processo Administrativo"] },
-                { name: "Direito Financeiro", topics: ["Atividade financeira do Estado", "Lei 4.320/1964", "Lei de Responsabilidade Fiscal", "Orçamento Público (PPA, LDO, LOA)", "Receita Pública", "Despesa Pública", "Dívida Pública"] },
-                { name: "Direito Civil", topics: ["LINDB", "Pessoas naturais e jurídicas", "Bens", "Fatos jurídicos", "Negócio jurídico", "Prescrição e decadência", "Obrigações", "Contratos"] },
-                { name: "Empresarial", topics: ["Direito de Empresa", "Empresário", "Estabelecimento empresarial", "Nome empresarial", "Sociedades", "Títulos de crédito", "Falência e recuperação de empresas"] },
-                { name: "Penal", topics: ["Aplicação da lei penal", "Teoria do crime", "Crimes contra a pessoa", "Crimes contra o patrimônio", "Crimes contra a fé pública", "Crimes contra a Administração Pública", "Crimes contra a ordem tributária"] },
-                { name: "Economia", topics: ["Microeconomia (Demanda, Oferta, Mercado)", "Macroeconomia (Contas Nacionais, Moeda, Inflação)"] },
-                { name: "Contabilidade Geral", topics: ["Estrutura Conceitual (CPC 00)", "Patrimônio", "Escrituração", "Demonstrações Contábeis (Balanço, DRE, DMPL, DFC)", "Ativo Circulante e Não Circulante", "Passivo e PL"] },
-                { name: "Realidade do Estado", topics: ["Aspectos históricos, geográficos, econômicos, sociais e culturais do Estado"] }
-            ]
-        },
-        {
-            category: "Conhecimentos Específicos",
-            subjects: [
-                { name: "Tecnologia da Informação", topics: ["Banco de Dados (Conceitos, SQL)", "Segurança da Informação", "Governança de TI (COBIT, ITIL)", "Análise de Dados (Big Data, BI)", "Lei Geral de Proteção de Dados (LGPD)"] },
-                { name: "Auditoria", topics: ["Normas Brasileiras de Contabilidade (NBC TA)", "Planejamento da auditoria", "Evidência de auditoria", "Procedimentos de auditoria", "Amostragem", "Relatórios de auditoria", "Auditoria interna x externa"] },
-                { name: "Contabilidade Geral e Avançada", topics: ["Consolidação de Demonstrações", "Investimentos (MEP)", "Combinação de Negócios", "CPC 01 (Redução ao Valor Recuperável)", "CPC 06 (Arrendamentos)", "CPC 27 (Imobilizado)"] },
-                { name: "Contabilidade Pública", topics: ["PCASP", "Demonstrações Contábeis Aplicadas ao Setor Público", "Receitas e Despesas sob o enfoque patrimonial", "MCASP"] },
-                { name: "Contabilidade de Custos", topics: ["Terminologia de Custos", "Custeio por Absorção e Variável", "Custeio Baseado em Atividades (ABC)", "Análise Custo-Volume-Lucro", "Margem de Contribuição"] },
-                { name: "Direito Tributário I", topics: ["Sistema Tributário Nacional (CF/88)", "Código Tributário Nacional (CTN)", "Obrigação tributária", "Crédito tributário", "Suspensão, Extinção e Exclusão do Crédito"] },
-                { name: "Direito Tributário II – Reforma Tributária", topics: ["Reforma Tributária (EC 132/2023)", "IBS e CBS", "Imposto Seletivo", "Regras de Transição", "Impactos na legislação vigente"] },
-                { name: "Legislação Tributária Estadual", topics: ["Código Tributário Estadual", "ICMS (Regras Estaduais)", "IPVA", "ITCD", "Processo Administrativo Tributário"] }
-            ]
-        }
-    ];
-
+    let subjects = []; 
+    let syllabusData = []; // Será preenchido dinamicamente
     let syllabusProgress = JSON.parse(localStorage.getItem('estudoFiscalSyllabus')) || {};
+
+    // Tentar carregar conteúdo programático da index.html se disponível no localStorage
+    function getDynamicSubjects() {
+        // Prioridade 1: Dados do syllabusData importado/local
+        let dynamicSubjects = [];
+        if (syllabusData && syllabusData.length > 0) {
+            syllabusData.forEach(section => {
+                section.subjects.forEach(sub => {
+                    if (!dynamicSubjects.includes(sub.name)) dynamicSubjects.push(sub.name);
+                });
+            });
+        }
+        
+        // Prioridade 2: Matérias que já possuem cards (para não perder nada)
+        cards.forEach(card => {
+            if (card.materia && !dynamicSubjects.includes(card.materia)) {
+                dynamicSubjects.push(card.materia);
+            }
+        });
+
+        // Garantir "Geral"
+        if (!dynamicSubjects.includes("Geral")) dynamicSubjects.push("Geral");
+        
+        return dynamicSubjects.sort();
+    }
 
     // Carregar dados iniciais
     function carregarDados() {
         const savedCards = localStorage.getItem('ciclo_cards_v3');
-        const savedSubjects = localStorage.getItem('ciclo_subjects_v3');
+        const savedSyllabus = localStorage.getItem('estudoFiscalModel'); // Pegando o modelo da index
         
         if (savedCards) cards = JSON.parse(savedCards);
-        if (savedSubjects) {
-            const parsed = JSON.parse(savedSubjects);
-            // Migração: se for array de strings, converter para objetos
-            if (parsed.length > 0 && typeof parsed[0] === 'string') {
-                subjects = parsed.map(s => ({ name: s, subcategories: [] }));
-            } else {
-                subjects = parsed;
-            }
+        
+        if (savedSyllabus) {
+            try {
+                const model = JSON.parse(savedSyllabus);
+                if (model.syllabus) syllabusData = model.syllabus;
+            } catch(e) {}
         }
+
+        // Se não houver syllabus, carregar um padrão básico ou vazio
+        if (syllabusData.length === 0) {
+            // Padrão caso não encontre nada (opcional)
+            syllabusData = []; 
+        }
+
+        // Inicializar matérias dinâmicas
+        subjects = getDynamicSubjects().map(name => ({ name }));
     }
 
     let indiceAtual = null;
@@ -961,52 +931,14 @@
      * SIDEBAR RENDER
      */
     function renderizarMaterias() {
-        const list = document.getElementById('subject-list');
         const select = document.getElementById('selectMateria');
-        
-        list.innerHTML = `
-            <div class="menu-item ${materiaFiltro === 'Todas' ? 'active' : ''}" onclick="filtrarMateria('Todas')">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-layer-group"></i>
-                    <span>Todas</span>
-                </div>
-                <span class="subject-count">${cards.length}</span>
-            </div>
-        `;
-
         select.innerHTML = '';
 
-        subjects.sort((a, b) => a.name.localeCompare(b.name)).forEach(sub => {
-            const count = cards.filter(c => c.materia === sub.name).length;
-            
-            const item = document.createElement('div');
-            item.className = 'subject-container';
-            
-            const mainItem = document.createElement('div');
-            mainItem.className = `menu-item ${materiaFiltro === sub.name ? 'active' : ''}`;
-            
-            const deleteBtn = (sub.name !== 'Geral' && !syllabusData.some(sec => sec.subjects.some(s => s.name === sub.name))) ? `
-                <button class="btn-delete-subject" onclick="excluirMateria(event, '${sub.name}')" title="Excluir Matéria">
-                    <i class="fas fa-times-circle"></i>
-                </button>
-            ` : '';
-
-            mainItem.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;" onclick="filtrarMateria('${sub.name}')">
-                    <i class="fas fa-folder"></i>
-                    <span>${sub.name}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="subject-count">${count}</span>
-                    ${deleteBtn}
-                </div>
-            `;
-            item.appendChild(mainItem);
-            list.appendChild(item);
-
+        const dynamicSubjects = getDynamicSubjects();
+        dynamicSubjects.forEach(subName => {
             const opt = document.createElement('option');
-            opt.value = sub.name;
-            opt.textContent = sub.name;
+            opt.value = subName;
+            opt.textContent = subName;
             select.appendChild(opt);
         });
     }
@@ -1016,7 +948,6 @@
         switchMainView('resumos');
         document.getElementById('current-subject-title').innerText = sub === 'Todas' ? 'Meus Resumos' : sub;
         renderizar();
-        renderizarMaterias();
     }
 
     function adicionarMateria() {
@@ -1232,7 +1163,8 @@
         tituloInput.value = '';
         salvarNoStorage();
         renderizar();
-        renderizarMaterias();
+        // Não chamamos mais renderizarMaterias pois não há lista na sidebar, 
+        // mas o select já está atualizado.
         
         // Abre o editor imediatamente para o novo card
         abrir(0);
@@ -1272,13 +1204,12 @@
             cards.splice(index, 1);
             salvarNoStorage();
             renderizar();
-            renderizarMaterias();
         }
     }
 
     function salvarNoStorage() {
         localStorage.setItem('ciclo_cards_v3', JSON.stringify(cards));
-        localStorage.setItem('ciclo_subjects_v3', JSON.stringify(subjects));
+        // Não salvamos mais subjects separadamente pois são dinâmicos
     }
 
     function mostrarToast() {
@@ -1294,15 +1225,11 @@
         const currentHtml = document.documentElement.outerHTML;
         
         const cardsRegex = /let cards = \[[\s\S]*?\];/;
-        const subjectsRegex = /let subjects = \[[\s\S]*?\];/;
         
         let newHtml = currentHtml.replace(cardsRegex, `let cards = ${JSON.stringify(cards, null, 4)};`);
-        newHtml = newHtml.replace(subjectsRegex, `let subjects = ${JSON.stringify(subjects, null, 4)};`);
         
         // Manter dados sincronizados no arquivo baixado
         newHtml = newHtml.replace(/carregarDados\(\);/, "// Dados embutidos\n        // carregarDados();");
-
-        // Adicionar script de download de modelo CSV se não existir no arquivo final (já está lá)
 
         const blob = new Blob([newHtml], { type: 'text/html' });
         const a = document.createElement('a');

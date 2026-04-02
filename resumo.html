@@ -304,6 +304,117 @@
             padding: 12px;
         }
 
+        /* --- SYLLABUS STYLES --- */
+        .syllabus-container {
+            display: none; /* Hidden by default */
+        }
+        .syllabus-container.active { display: block; }
+
+        .syllabus-category {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .syllabus-header {
+            padding: 20px 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .syllabus-header:hover { background: rgba(255,255,255,0.05); }
+
+        .syllabus-content {
+            display: none;
+            padding: 10px 25px 25px;
+            border-top: 1px solid var(--border-color);
+        }
+        .syllabus-content.open { display: block; }
+
+        .topic-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .topic-left { display: flex; align-items: center; gap: 15px; }
+
+        .topic-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--success-color);
+        }
+
+        .topic-name { font-size: 0.95rem; color: var(--text-color); }
+        .topic-item.checked .topic-name { color: var(--text-muted); text-decoration: line-through; }
+
+        .btn-create-flashcard {
+            padding: 6px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-create-flashcard:hover {
+            background: var(--accent-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* --- RICH EDITOR --- */
+        .editor-toolbar-rich {
+            padding: 10px 40px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .toolbar-btn {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #cbd5e1;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .toolbar-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+        .toolbar-btn.active { background: #e2e8f0; color: #0f172a; }
+
+        .word-content-editable {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+            border: none;
+            outline: none;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #334155;
+            font-family: 'Inter', sans-serif;
+            background: transparent;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
         /* --- GRID --- */
         .grid {
             display: grid;
@@ -538,6 +649,14 @@
         <a href="https://cicloestudo.com.br/" class="menu-item" style="text-decoration: none;">
             <span><i class="fas fa-book-reader"></i> Ciclo de Estudo</span>
         </a>
+        
+        <div class="menu-item active" id="menu-resumos" onclick="switchMainView('resumos')">
+            <span><i class="fas fa-sticky-note"></i> Meus Resumos</span>
+        </div>
+        
+        <div class="menu-item" id="menu-syllabus" onclick="switchMainView('syllabus')">
+            <span><i class="fas fa-list-check"></i> Conteúdo Programático</span>
+        </div>
 
         <div class="menu-title" style="margin-top: 20px;">Minhas Matérias</div>
         <div id="subject-list">
@@ -546,10 +665,6 @@
         
         <button class="btn btn-add-subject" onclick="adicionarMateria()">
             <i class="fas fa-plus-circle"></i> Criar Matéria
-        </button>
-
-        <button id="btn-add-subcat" class="btn btn-add-subject" style="display: none; margin-top: 5px;" onclick="adicionarSubcategoria()">
-            <i class="fas fa-plus-circle"></i> Nova Subcategoria
         </button>
 
         <div class="menu-title" style="margin-top: 30px;">Dados & Backup</div>
@@ -585,28 +700,31 @@
         </div>
     </header>
 
-    <div class="actions-bar">
-        <div class="search-wrapper">
-            <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Pesquisar em tudo..." oninput="renderizar()">
+    <div id="view-resumos" class="main-view active">
+        <div class="actions-bar">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Pesquisar em tudo..." oninput="renderizar()">
+            </div>
+
+            <div class="input-group">
+                <select id="selectMateria">
+                    <!-- Opções de matérias -->
+                </select>
+                <input type="text" id="novoTitulo" class="input-tema" placeholder="Título do resumo (ex: Atos Administrativos)">
+                <button class="btn btn-primary" onclick="criarCard()">
+                    <i class="fas fa-pencil-alt"></i> Novo Flashcard
+                </button>
+            </div>
         </div>
 
-        <div class="input-group">
-            <select id="selectMateria" onchange="updateSubcatOptions()">
-                <!-- Opções de matérias -->
-            </select>
-            <select id="selectSubcategoria" style="display: none; min-width: 150px;">
-                <!-- Opções de subcategorias -->
-            </select>
-            <input type="text" id="novoTitulo" class="input-tema" placeholder="Título do resumo (ex: Atos Administrativos)">
-            <button class="btn btn-primary" onclick="criarCard()">
-                <i class="fas fa-pencil-alt"></i> Novo Flashcard
-            </button>
+        <div id="grid" class="grid">
+            <!-- Cards serão injetados aqui -->
         </div>
     </div>
 
-    <div id="grid" class="grid">
-        <!-- Cards serão injetados aqui -->
+    <div id="view-syllabus" class="main-view syllabus-container">
+        <!-- Syllabus Accordions will be injected here -->
     </div>
 </main>
 
@@ -627,10 +745,24 @@
                 </button>
             </div>
         </div>
+
+        <!-- Rich Text Toolbar -->
+        <div class="editor-toolbar-rich">
+            <button class="toolbar-btn" onclick="execCommand('bold')" title="Negrito">
+                <i class="fas fa-bold"></i>
+            </button>
+            <div style="width: 1px; height: 25px; background: #e2e8f0; margin: 0 5px;"></div>
+            <button class="toolbar-btn" onclick="execCommand('foreColor', '#ef4444')" title="Cor Vermelha">
+                <i class="fas fa-font" style="color: #ef4444;"></i>
+            </button>
+            <button class="toolbar-btn" onclick="execCommand('foreColor', '#0f172a')" title="Cor Preta">
+                <i class="fas fa-font" style="color: #0f172a;"></i>
+            </button>
+        </div>
         
         <div class="editor-body">
             <div class="word-page">
-                <textarea id="conteudo" class="word-textarea" placeholder="Comece a digitar seu resumo detalhado aqui, como se estivesse no Word..."></textarea>
+                <div id="conteudo" class="word-content-editable" contenteditable="true"></div>
             </div>
         </div>
 
@@ -650,12 +782,61 @@
      */
     let cards = [];
     let subjects = [
-        { name: "Geral", subcategories: [] },
-        { name: "Português", subcategories: [] },
-        { name: "Administrativo", subcategories: ["Atos Administrativos", "Poderes", "Organização Administrativa", "Centralização e Descentralização"] },
-        { name: "Constitucional", subcategories: [] },
-        { name: "Informática", subcategories: [] }
+        { name: "Geral" },
+        { name: "Língua Portuguesa" },
+        { name: "Exatas" },
+        { name: "Direito Constitucional" },
+        { name: "Direito Administrativo" },
+        { name: "Direito Financeiro" },
+        { name: "Direito Civil" },
+        { name: "Empresarial" },
+        { name: "Penal" },
+        { name: "Economia" },
+        { name: "Contabilidade Geral" },
+        { name: "Realidade do Estado" },
+        { name: "Tecnologia da Informação" },
+        { name: "Auditoria" },
+        { name: "Contabilidade Geral e Avançada" },
+        { name: "Contabilidade Pública" },
+        { name: "Contabilidade de Custos" },
+        { name: "Direito Tributário I" },
+        { name: "Direito Tributário II – Reforma Tributária" },
+        { name: "Legislação Tributária Estadual" }
     ];
+
+    let syllabusData = [
+        {
+            category: "Conhecimentos Básicos",
+            subjects: [
+                { name: "Língua Portuguesa", topics: ["Interpretação de textos", "Ortografia oficial", "Acentuação gráfica", "Classes de palavras", "Sintaxe da oração e do período", "Pontuação", "Concordância nominal e verbal", "Regência nominal e verbal", "Crase", "Significação das palavras"] },
+                { name: "Exatas", topics: ["Lógica proposicional", "Argumentação lógica", "Juros simples e compostos", "Descontos", "Sistemas de amortização", "Estatística descritiva (média, moda, mediana)", "Probabilidade", "Distribuições de probabilidade", "Amostragem", "Inferência estatística"] },
+                { name: "Direito Constitucional", topics: ["Direitos e garantias fundamentais", "Organização do Estado", "Administração Pública", "Organização dos Poderes", "Sistema Tributário Nacional", "Finanças Públicas", "Ordem Econômica e Financeira"] },
+                { name: "Direito Administrativo", topics: ["Princípios da Adm. Pública", "Organização administrativa", "Atos administrativos", "Poderes administrativos", "Licitações e Contratos (Lei 14.133/2021)", "Serviços públicos", "Responsabilidade civil do Estado", "Improbidade Administrativa", "Processo Administrativo"] },
+                { name: "Direito Financeiro", topics: ["Atividade financeira do Estado", "Lei 4.320/1964", "Lei de Responsabilidade Fiscal", "Orçamento Público (PPA, LDO, LOA)", "Receita Pública", "Despesa Pública", "Dívida Pública"] },
+                { name: "Direito Civil", topics: ["LINDB", "Pessoas naturais e jurídicas", "Bens", "Fatos jurídicos", "Negócio jurídico", "Prescrição e decadência", "Obrigações", "Contratos"] },
+                { name: "Empresarial", topics: ["Direito de Empresa", "Empresário", "Estabelecimento empresarial", "Nome empresarial", "Sociedades", "Títulos de crédito", "Falência e recuperação de empresas"] },
+                { name: "Penal", topics: ["Aplicação da lei penal", "Teoria do crime", "Crimes contra a pessoa", "Crimes contra o patrimônio", "Crimes contra a fé pública", "Crimes contra a Administração Pública", "Crimes contra a ordem tributária"] },
+                { name: "Economia", topics: ["Microeconomia (Demanda, Oferta, Mercado)", "Macroeconomia (Contas Nacionais, Moeda, Inflação)"] },
+                { name: "Contabilidade Geral", topics: ["Estrutura Conceitual (CPC 00)", "Patrimônio", "Escrituração", "Demonstrações Contábeis (Balanço, DRE, DMPL, DFC)", "Ativo Circulante e Não Circulante", "Passivo e PL"] },
+                { name: "Realidade do Estado", topics: ["Aspectos históricos, geográficos, econômicos, sociais e culturais do Estado"] }
+            ]
+        },
+        {
+            category: "Conhecimentos Específicos",
+            subjects: [
+                { name: "Tecnologia da Informação", topics: ["Banco de Dados (Conceitos, SQL)", "Segurança da Informação", "Governança de TI (COBIT, ITIL)", "Análise de Dados (Big Data, BI)", "Lei Geral de Proteção de Dados (LGPD)"] },
+                { name: "Auditoria", topics: ["Normas Brasileiras de Contabilidade (NBC TA)", "Planejamento da auditoria", "Evidência de auditoria", "Procedimentos de auditoria", "Amostragem", "Relatórios de auditoria", "Auditoria interna x externa"] },
+                { name: "Contabilidade Geral e Avançada", topics: ["Consolidação de Demonstrações", "Investimentos (MEP)", "Combinação de Negócios", "CPC 01 (Redução ao Valor Recuperável)", "CPC 06 (Arrendamentos)", "CPC 27 (Imobilizado)"] },
+                { name: "Contabilidade Pública", topics: ["PCASP", "Demonstrações Contábeis Aplicadas ao Setor Público", "Receitas e Despesas sob o enfoque patrimonial", "MCASP"] },
+                { name: "Contabilidade de Custos", topics: ["Terminologia de Custos", "Custeio por Absorção e Variável", "Custeio Baseado em Atividades (ABC)", "Análise Custo-Volume-Lucro", "Margem de Contribuição"] },
+                { name: "Direito Tributário I", topics: ["Sistema Tributário Nacional (CF/88)", "Código Tributário Nacional (CTN)", "Obrigação tributária", "Crédito tributário", "Suspensão, Extinção e Exclusão do Crédito"] },
+                { name: "Direito Tributário II – Reforma Tributária", topics: ["Reforma Tributária (EC 132/2023)", "IBS e CBS", "Imposto Seletivo", "Regras de Transição", "Impactos na legislação vigente"] },
+                { name: "Legislação Tributária Estadual", topics: ["Código Tributário Estadual", "ICMS (Regras Estaduais)", "IPVA", "ITCD", "Processo Administrativo Tributário"] }
+            ]
+        }
+    ];
+
+    let syllabusProgress = JSON.parse(localStorage.getItem('estudoFiscalSyllabus')) || {};
 
     // Carregar dados iniciais
     function carregarDados() {
@@ -676,7 +857,105 @@
 
     let indiceAtual = null;
     let materiaFiltro = "Todas";
-    let subcategoriaFiltro = null;
+
+    /**
+     * MAIN VIEW SWITCHER
+     */
+    function switchMainView(view) {
+        document.querySelectorAll('.main-view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.sidebar-menu .menu-item').forEach(m => m.classList.remove('active'));
+        
+        if (view === 'resumos') {
+            document.getElementById('view-resumos').classList.add('active');
+            document.getElementById('menu-resumos').classList.add('active');
+            document.getElementById('current-subject-title').innerText = "Meus Resumos";
+            renderizar();
+        } else if (view === 'syllabus') {
+            document.getElementById('view-syllabus').classList.add('active');
+            document.getElementById('menu-syllabus').classList.add('active');
+            document.getElementById('current-subject-title').innerText = "Conteúdo Programático";
+            renderSyllabus();
+        }
+    }
+
+    /**
+     * SYLLABUS RENDER
+     */
+    function renderSyllabus() {
+        const container = document.getElementById('view-syllabus');
+        container.innerHTML = '';
+
+        syllabusData.forEach(section => {
+            const secTitle = document.createElement('div');
+            secTitle.className = 'menu-title';
+            secTitle.style.marginTop = '30px';
+            secTitle.textContent = section.category;
+            container.appendChild(secTitle);
+
+            section.subjects.forEach(sub => {
+                const savedTopics = syllabusProgress[sub.name] || [];
+                let completedCount = 0;
+                sub.topics.forEach((_, idx) => { if (savedTopics[idx]) completedCount++; });
+                const percent = Math.round((completedCount / sub.topics.length) * 100);
+
+                const card = document.createElement('div');
+                card.className = 'syllabus-category';
+                
+                card.innerHTML = `
+                    <div class="syllabus-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <i class="fas fa-chevron-right" style="font-size: 0.8rem; color: var(--accent-color);"></i>
+                            <span style="font-weight: 700; font-size: 1.1rem;">${sub.name}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">${completedCount}/${sub.topics.length} tópicos (${percent}%)</span>
+                            <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                                <div style="width: ${percent}%; height: 100%; background: var(--success-color);"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="syllabus-content">
+                        ${sub.topics.map((topic, idx) => `
+                            <div class="topic-item ${savedTopics[idx] ? 'checked' : ''}">
+                                <div class="topic-left">
+                                    <input type="checkbox" class="topic-checkbox" ${savedTopics[idx] ? 'checked' : ''} 
+                                        onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
+                                    <span class="topic-name">${topic}</span>
+                                </div>
+                                <button class="btn-create-flashcard" onclick="criarFlashcardDeTopico('${sub.name}', '${topic}')">
+                                    <i class="fas fa-plus"></i> Flashcard
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        });
+    }
+
+    function toggleSyllabusItem(subjectName, topicIndex, checked) {
+        if (!syllabusProgress[subjectName]) syllabusProgress[subjectName] = [];
+        syllabusProgress[subjectName][topicIndex] = checked;
+        localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(syllabusProgress));
+        renderSyllabus(); // Refresh to update progress bars
+    }
+
+    function criarFlashcardDeTopico(materia, topico) {
+        switchMainView('resumos');
+        document.getElementById('selectMateria').value = materia;
+        document.getElementById('novoTitulo').value = topico;
+        document.getElementById('novoTitulo').focus();
+        
+        // Efeito de destaque no input
+        const input = document.getElementById('novoTitulo');
+        input.style.borderColor = 'var(--success-color)';
+        input.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.3)';
+        setTimeout(() => {
+            input.style.borderColor = '';
+            input.style.boxShadow = '';
+        }, 2000);
+    }
 
     /**
      * SIDEBAR RENDER
@@ -699,26 +978,21 @@
 
         subjects.sort((a, b) => a.name.localeCompare(b.name)).forEach(sub => {
             const count = cards.filter(c => c.materia === sub.name).length;
-            const hasSub = sub.subcategories && sub.subcategories.length > 0;
             
             const item = document.createElement('div');
             item.className = 'subject-container';
             
-            // Item principal da matéria
             const mainItem = document.createElement('div');
-            mainItem.className = `menu-item ${materiaFiltro === sub.name && !subcategoriaFiltro ? 'active' : ''}`;
+            mainItem.className = `menu-item ${materiaFiltro === sub.name ? 'active' : ''}`;
             
-            const deleteBtn = sub.name !== 'Geral' ? `
+            const deleteBtn = (sub.name !== 'Geral' && !syllabusData.some(sec => sec.subjects.some(s => s.name === sub.name))) ? `
                 <button class="btn-delete-subject" onclick="excluirMateria(event, '${sub.name}')" title="Excluir Matéria">
                     <i class="fas fa-times-circle"></i>
                 </button>
             ` : '';
 
-            const arrowIcon = hasSub ? `<i class="fas fa-chevron-down sub-arrow" style="font-size: 0.7rem; margin-right: 5px;"></i>` : '';
-
             mainItem.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 10px;" onclick="filtrarMateria('${sub.name}')">
-                    ${arrowIcon}
                     <i class="fas fa-folder"></i>
                     <span>${sub.name}</span>
                 </div>
@@ -728,77 +1002,27 @@
                 </div>
             `;
             item.appendChild(mainItem);
-
-            // Renderizar subcategorias
-            if (hasSub) {
-                const subList = document.createElement('div');
-                subList.className = 'subcategory-list';
-                
-                sub.subcategories.forEach(subcat => {
-                    const subCount = cards.filter(c => c.materia === sub.name && c.subcategoria === subcat).length;
-                    const subItem = document.createElement('div');
-                    subItem.className = `subcategory-item ${subcategoriaFiltro === subcat && materiaFiltro === sub.name ? 'active' : ''}`;
-                    subItem.onclick = () => filtrarMateria(sub.name, subcat);
-                    subItem.innerHTML = `
-                        <span>${subcat}</span>
-                        <span class="subject-count">${subCount}</span>
-                    `;
-                    subList.appendChild(subItem);
-                });
-                item.appendChild(subList);
-            }
-
             list.appendChild(item);
 
-            // Opções do Select
             const opt = document.createElement('option');
             opt.value = sub.name;
             opt.textContent = sub.name;
             select.appendChild(opt);
         });
-        
-        updateSubcatOptions();
     }
 
-    function filtrarMateria(sub, subcat = null) {
+    function filtrarMateria(sub) {
         materiaFiltro = sub;
-        subcategoriaFiltro = subcat;
-        
-        // Mostrar/ocultar botão de nova subcategoria
-        const btnSub = document.getElementById('btn-add-subcat');
-        if (sub !== 'Todas' && sub !== 'Geral') {
-            btnSub.style.display = 'block';
-            btnSub.innerHTML = `<i class="fas fa-plus-circle"></i> Subcategoria em ${sub}`;
-        } else {
-            btnSub.style.display = 'none';
-        }
-
-        let displayTitle = sub === 'Todas' ? 'Meus Resumos' : sub;
-        if (subcat) displayTitle += ` > ${subcat}`;
-        
-        document.getElementById('current-subject-title').innerText = displayTitle;
+        switchMainView('resumos');
+        document.getElementById('current-subject-title').innerText = sub === 'Todas' ? 'Meus Resumos' : sub;
         renderizar();
         renderizarMaterias();
-    }
-
-    function adicionarSubcategoria() {
-        if (materiaFiltro === 'Todas' || materiaFiltro === 'Geral') return;
-        
-        const sub = subjects.find(s => s.name === materiaFiltro);
-        if (!sub) return;
-
-        const nome = prompt(`Qual o nome da nova subcategoria para ${materiaFiltro}?`);
-        if (nome && !sub.subcategories.includes(nome)) {
-            sub.subcategories.push(nome);
-            salvarNoStorage();
-            renderizarMaterias();
-        }
     }
 
     function adicionarMateria() {
         const nome = prompt("Qual o nome da nova matéria?");
         if (nome && !subjects.find(s => s.name === nome)) {
-            subjects.push({ name: nome, subcategories: [] });
+            subjects.push({ name: nome });
             salvarNoStorage();
             renderizarMaterias();
         }
@@ -920,7 +1144,23 @@
     }
 
     /**
-     * GRID RENDER (FLASHCARDS)
+     * RICH TEXT EDITOR LOGIC
+     */
+    function execCommand(command, value = null) {
+        document.execCommand(command, false, value);
+        document.getElementById('conteudo').focus();
+    }
+
+    // Auto-save typing
+    document.getElementById('conteudo').addEventListener('input', () => {
+        if (indiceAtual !== null) {
+            cards[indiceAtual].conteudo = document.getElementById('conteudo').innerHTML;
+            localStorage.setItem('ciclo_cards_v3', JSON.stringify(cards));
+        }
+    });
+
+    /**
+     * GRID RENDER
      */
     function renderizar() {
         const grid = document.getElementById('grid');
@@ -932,12 +1172,10 @@
             const matchesSearch = card.titulo.toLowerCase().includes(searchTerm) || 
                                  (card.conteudo && card.conteudo.toLowerCase().includes(searchTerm));
             const matchesSubject = materiaFiltro === 'Todas' || card.materia === materiaFiltro;
-            const matchesSubcat = !subcategoriaFiltro || card.subcategoria === subcategoriaFiltro;
-            return matchesSearch && matchesSubject && matchesSubcat;
+            return matchesSearch && matchesSubject;
         });
 
-        const contextText = subcategoriaFiltro ? `${materiaFiltro} > ${subcategoriaFiltro}` : materiaFiltro;
-        document.getElementById('stats-text').innerText = `${filteredCards.length} temas cadastrados em ${contextText}`;
+        document.getElementById('stats-text').innerText = `${filteredCards.length} temas cadastrados em ${materiaFiltro}`;
 
         if (filteredCards.length === 0) {
             grid.innerHTML = `
@@ -954,17 +1192,15 @@
                 div.className = 'card';
                 div.onclick = () => abrir(realIndex);
                 
-                const badgeText = card.subcategoria ? `${card.materia} > ${card.subcategoria}` : (card.materia || 'Geral');
-
                 div.innerHTML = `
                     <div class="card-content">
-                        <span class="card-subject">${badgeText}</span>
+                        <span class="card-subject">${card.materia || 'Geral'}</span>
                         <h3>${card.titulo}</h3>
                     </div>
                     <div class="card-footer">
                         <div class="card-info">
                             <i class="fas fa-align-left"></i>
-                            <span>${card.conteudo ? card.conteudo.split(' ').length + ' palavras' : 'Sem conteúdo'}</span>
+                            <span>${card.conteudo ? card.conteudo.replace(/<[^>]*>/g, '').split(/\s+/).length + ' palavras' : 'Sem conteúdo'}</span>
                         </div>
                         <div class="card-actions">
                             <button class="btn-icon-card" onclick="deletarCard(event, ${realIndex})" title="Excluir">
@@ -978,58 +1214,27 @@
         }
     }
 
-    /**
-     * CORE FUNCTIONS
-     */
-    function updateSubcatOptions() {
-        const mat = document.getElementById('selectMateria').value;
-        const sub = subjects.find(s => s.name === mat);
-        const subcatSelect = document.getElementById('selectSubcategoria');
-        
-        if (sub && sub.subcategories && sub.subcategories.length > 0) {
-            subcatSelect.innerHTML = '<option value="">Sem subcategoria</option>';
-            sub.subcategories.forEach(sc => {
-                const opt = document.createElement('option');
-                opt.value = sc;
-                opt.textContent = sc;
-                subcatSelect.appendChild(opt);
-            });
-            subcatSelect.style.display = 'block';
-            
-            // Se estivermos filtrando por subcategoria, selecioná-la por padrão
-            if (materiaFiltro === mat && subcategoriaFiltro) {
-                subcatSelect.value = subcategoriaFiltro;
-            }
-        } else {
-            subcatSelect.style.display = 'none';
-            subcatSelect.innerHTML = '';
-        }
-    }
-
     function criarCard() {
         const tituloInput = document.getElementById('novoTitulo');
         const materiaSelect = document.getElementById('selectMateria');
-        const subcatSelect = document.getElementById('selectSubcategoria');
         const titulo = tituloInput.value.trim();
         const materia = materiaSelect.value;
-        const subcategoria = subcatSelect.style.display !== 'none' ? subcatSelect.value : null;
         
         if (!titulo) return;
 
         cards.unshift({ 
             titulo, 
             materia,
-            subcategoria,
             conteudo: '',
             data: new Date().toISOString()
         });
-        
+
         tituloInput.value = '';
         salvarNoStorage();
         renderizar();
         renderizarMaterias();
         
-        // Abrir o editor automaticamente para o novo card
+        // Abre o editor imediatamente para o novo card
         abrir(0);
     }
 
@@ -1039,27 +1244,26 @@
         
         document.getElementById('overlay').classList.add('active');
         document.getElementById('tituloEditor').innerText = card.titulo;
+        document.getElementById('editorBadge').innerText = card.materia || 'Geral';
+        document.getElementById('conteudo').innerHTML = card.conteudo || '';
         
-        const subText = card.subcategoria ? `${card.materia} > ${card.subcategoria}` : (card.materia || 'Geral');
-        document.getElementById('editorBadge').innerText = subText;
-        document.getElementById('conteudo').value = card.conteudo || '';
-        
-        // Bloquear scroll do body
         document.body.style.overflow = 'hidden';
     }
 
+    function salvar() {
+        if (indiceAtual !== null) {
+            cards[indiceAtual].conteudo = document.getElementById('conteudo').innerHTML;
+            salvarNoStorage();
+            mostrarToast();
+            renderizar();
+        }
+    }
+
     function fecharEditor(event) {
+        if (event && event.target.id !== 'overlay') return;
         document.getElementById('overlay').classList.remove('active');
         document.body.style.overflow = 'auto';
         indiceAtual = null;
-    }
-
-    function salvar() {
-        if (indiceAtual === null) return;
-        cards[indiceAtual].conteudo = document.getElementById('conteudo').value;
-        salvarNoStorage();
-        renderizar();
-        mostrarToast();
     }
 
     function deletarCard(event, index) {
@@ -1113,6 +1317,7 @@
     carregarDados();
     renderizarMaterias();
     renderizar();
+    switchMainView('resumos');
 </script>
 
 </body>

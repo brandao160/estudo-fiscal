@@ -95,6 +95,31 @@
             margin-bottom: 5px;
             font-weight: 500;
             color: var(--text-muted);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-delete-subject {
+            opacity: 0;
+            color: var(--danger-color);
+            padding: 5px;
+            border-radius: 5px;
+            transition: all 0.2s;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-item:hover .btn-delete-subject {
+            opacity: 1;
+        }
+
+        .btn-delete-subject:hover {
+            background: rgba(239, 68, 68, 0.1);
+            transform: scale(1.1);
         }
 
         .menu-item:hover {
@@ -588,9 +613,23 @@
             const item = document.createElement('div');
             item.className = `menu-item ${materiaFiltro === sub ? 'active' : ''}`;
             item.onclick = () => filtrarMateria(sub);
+            
+            // Adiciona o botão de excluir se não for a categoria 'Geral'
+            const deleteBtn = sub !== 'Geral' ? `
+                <button class="btn-delete-subject" onclick="excluirMateria(event, '${sub}')" title="Excluir Matéria">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+            ` : '';
+
             item.innerHTML = `
-                <span><i class="fas fa-folder"></i> ${sub}</span>
-                <span class="subject-count">${count}</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-folder"></i>
+                    <span>${sub}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="subject-count">${count}</span>
+                    ${deleteBtn}
+                </div>
             `;
             list.appendChild(item);
 
@@ -614,6 +653,53 @@
             subjects.push(nome);
             salvarNoStorage();
             renderizarMaterias();
+        }
+    }
+
+    /**
+     * Exclui uma matéria e move os cards para 'Geral'
+     */
+    function excluirMateria(event, nome) {
+        event.stopPropagation(); // Evita filtrar a matéria ao clicar no X
+        
+        if (nome === "Geral") return;
+
+        const confirmacao = confirm(`Tem certeza que deseja excluir a matéria "${nome}"?\n\nOs resumos desta matéria NÃO serão apagados, eles serão movidos para a categoria "Geral".`);
+        
+        if (confirmacao) {
+            // 1. Mover cards para 'Geral'
+            cards.forEach(card => {
+                if (card.materia === nome) {
+                    card.materia = "Geral";
+                }
+            });
+
+            // 2. Remover do array de matérias
+            subjects = subjects.filter(s => s !== nome);
+
+            // 3. Se o filtro atual era a matéria excluída, voltar para 'Todas'
+            if (materiaFiltro === nome) {
+                materiaFiltro = "Todas";
+                document.getElementById('current-subject-title').innerText = 'Meus Resumos';
+            }
+
+            // 4. Salvar e atualizar
+            salvarNoStorage();
+            renderizar();
+            renderizarMaterias();
+            
+            // Mostrar toast de feedback
+            const toast = document.getElementById('toast');
+            const originalText = toast.innerText;
+            toast.innerText = `Matéria "${nome}" removida. Resumos movidos para Geral.`;
+            toast.style.background = "var(--danger-color)";
+            mostrarToast();
+            
+            // Resetar toast após exibição
+            setTimeout(() => {
+                toast.innerText = originalText;
+                toast.style.background = "var(--success-color)";
+            }, 3500);
         }
     }
 

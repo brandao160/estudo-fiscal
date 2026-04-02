@@ -353,8 +353,62 @@
             accent-color: var(--success-color);
         }
 
-        .topic-name { font-size: 0.95rem; color: var(--text-color); }
+        .topic-name { font-size: 0.95rem; color: var(--text-color); font-weight: 600; }
         .topic-item.checked .topic-name { color: var(--text-muted); text-decoration: line-through; }
+
+        /* --- MINI CARDS UNDER TOPICS --- */
+        .topic-cards-container {
+            margin-left: 35px;
+            margin-top: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mini-flashcard {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 12px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mini-flashcard:hover {
+            background: rgba(59, 130, 246, 0.05);
+            border-color: var(--accent-color);
+            transform: translateX(5px);
+        }
+
+        .mini-card-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .mini-card-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-delete-mini {
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            opacity: 0.3;
+            transition: all 0.2s;
+        }
+
+        .mini-flashcard:hover .btn-delete-mini { opacity: 1; }
+        .btn-delete-mini:hover { color: var(--danger-color); }
 
         .btn-create-flashcard {
             padding: 6px 12px;
@@ -650,11 +704,7 @@
             <span><i class="fas fa-book-reader"></i> Ciclo de Estudo</span>
         </a>
         
-        <div class="menu-item active" id="menu-resumos" onclick="switchMainView('resumos')">
-            <span><i class="fas fa-sticky-note"></i> Meus Resumos</span>
-        </div>
-        
-        <div class="menu-item" id="menu-syllabus" onclick="switchMainView('syllabus')">
+        <div class="menu-item active" id="menu-syllabus" onclick="location.reload()">
             <span><i class="fas fa-list-check"></i> Conteúdo Programático</span>
         </div>
 
@@ -686,35 +736,26 @@
 <main class="main-content">
     <header>
         <div class="header-title">
-            <h1 id="current-subject-title">Meus Resumos</h1>
-            <p id="stats-text">Organizando seus estudos...</p>
+            <h1 id="current-subject-title">Conteúdo Programático</h1>
+            <p id="stats-text">Explore seu edital e acesse seus flashcards...</p>
         </div>
     </header>
 
-    <div id="view-resumos" class="main-view active">
-        <div class="actions-bar">
-            <div class="search-wrapper">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Pesquisar em tudo..." oninput="renderizar()">
-            </div>
-
-            <div class="input-group">
-                <select id="selectMateria">
-                    <!-- Opções de matérias -->
-                </select>
-                <input type="text" id="novoTitulo" class="input-tema" placeholder="Título do resumo (ex: Atos Administrativos)">
-                <button class="btn btn-primary" onclick="criarCard()">
-                    <i class="fas fa-pencil-alt"></i> Novo Flashcard
-                </button>
-            </div>
+    <div class="actions-bar">
+        <div class="search-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Pesquisar matéria ou tópico..." oninput="renderSyllabus()">
         </div>
 
-        <div id="grid" class="grid">
-            <!-- Cards serão injetados aqui -->
+        <div class="input-group" style="display: none;"> <!-- Hidden but kept for logic compatibility -->
+            <select id="selectMateria">
+                <!-- Opções de matérias -->
+            </select>
+            <input type="text" id="novoTitulo" class="input-tema">
         </div>
     </div>
 
-    <div id="view-syllabus" class="main-view syllabus-container">
+    <div id="view-syllabus" class="main-view active syllabus-container">
         <!-- Syllabus Accordions will be injected here -->
     </div>
 </main>
@@ -853,24 +894,44 @@
      */
     function renderSyllabus() {
         const container = document.getElementById('view-syllabus');
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         container.innerHTML = '';
 
+        let totalTópicos = 0;
+        let totalConcluidos = 0;
+
         syllabusData.forEach(section => {
+            // Filtrar matérias da seção que combinam com a busca (ou cujos tópicos combinam)
+            const filteredSubjects = section.subjects.filter(sub => {
+                const subMatch = sub.name.toLowerCase().includes(searchTerm);
+                const topicMatch = sub.topics.some(t => t.toLowerCase().includes(searchTerm));
+                return subMatch || topicMatch;
+            });
+
+            if (filteredSubjects.length === 0) return;
+
             const secTitle = document.createElement('div');
             secTitle.className = 'menu-title';
             secTitle.style.marginTop = '30px';
             secTitle.textContent = section.category;
             container.appendChild(secTitle);
 
-            section.subjects.forEach(sub => {
+            filteredSubjects.forEach(sub => {
                 const savedTopics = syllabusProgress[sub.name] || [];
                 let completedCount = 0;
                 sub.topics.forEach((_, idx) => { if (savedTopics[idx]) completedCount++; });
+                
+                totalTópicos += sub.topics.length;
+                totalConcluidos += completedCount;
+
                 const percent = Math.round((completedCount / sub.topics.length) * 100);
 
                 const card = document.createElement('div');
                 card.className = 'syllabus-category';
                 
+                // Se houver termo de busca, abrir o acordeão por padrão
+                const isOpen = searchTerm.length > 0;
+
                 card.innerHTML = `
                     <div class="syllabus-header" onclick="this.nextElementSibling.classList.toggle('open')">
                         <div style="display: flex; align-items: center; gap: 15px;">
@@ -884,47 +945,82 @@
                             </div>
                         </div>
                     </div>
-                    <div class="syllabus-content">
-                        ${sub.topics.map((topic, idx) => `
-                            <div class="topic-item ${savedTopics[idx] ? 'checked' : ''}">
-                                <div class="topic-left">
-                                    <input type="checkbox" class="topic-checkbox" ${savedTopics[idx] ? 'checked' : ''} 
-                                        onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
-                                    <span class="topic-name">${topic}</span>
+                    <div class="syllabus-content ${isOpen ? 'open' : ''}">
+                        ${sub.topics.map((topic, idx) => {
+                            // Filtrar tópicos individualmente se houver busca
+                            if (searchTerm && !sub.name.toLowerCase().includes(searchTerm) && !topic.toLowerCase().includes(searchTerm)) return '';
+
+                            // Buscar flashcards para este tópico
+                            const topicCards = cards.filter(c => c.materia === sub.name && c.titulo === topic);
+
+                            return `
+                                <div class="topic-group" style="margin-bottom: 15px;">
+                                    <div class="topic-item ${savedTopics[idx] ? 'checked' : ''}">
+                                        <div class="topic-left">
+                                            <input type="checkbox" class="topic-checkbox" ${savedTopics[idx] ? 'checked' : ''} 
+                                                onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
+                                            <span class="topic-name">${topic}</span>
+                                        </div>
+                                        <button class="btn-create-flashcard" onclick="criarFlashcardRapido('${sub.name}', '${topic}')">
+                                            <i class="fas fa-plus"></i> Flashcard
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="topic-cards-container">
+                                        ${topicCards.map(c => {
+                                            const realIndex = cards.indexOf(c);
+                                            const wordCount = c.conteudo ? c.conteudo.replace(/<[^>]*>/g, '').split(/\s+/).length : 0;
+                                            return `
+                                                <div class="mini-flashcard" onclick="abrir(${realIndex})">
+                                                    <div class="mini-card-title">
+                                                        <i class="fas fa-file-alt" style="margin-right: 8px; color: var(--accent-color);"></i>
+                                                        ${c.titulo}
+                                                    </div>
+                                                    <div class="mini-card-meta">
+                                                        <span><i class="fas fa-align-left"></i> ${wordCount} pal.</span>
+                                                        <button class="btn-delete-mini" onclick="deletarCard(event, ${realIndex})">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
                                 </div>
-                                <button class="btn-create-flashcard" onclick="criarFlashcardDeTopico('${sub.name}', '${topic}')">
-                                    <i class="fas fa-plus"></i> Flashcard
-                                </button>
-                            </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 `;
                 container.appendChild(card);
             });
         });
+
+        // Atualizar estatísticas no topo
+        const overallPercent = totalTópicos > 0 ? Math.round((totalConcluidos / totalTópicos) * 100) : 0;
+        document.getElementById('stats-text').innerText = `Progresso Edital: ${overallPercent}% concluído (${totalConcluidos}/${totalTópicos} tópicos)`;
     }
 
     function toggleSyllabusItem(subjectName, topicIndex, checked) {
         if (!syllabusProgress[subjectName]) syllabusProgress[subjectName] = [];
         syllabusProgress[subjectName][topicIndex] = checked;
         localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(syllabusProgress));
-        renderSyllabus(); // Refresh to update progress bars
+        renderSyllabus(); 
     }
 
-    function criarFlashcardDeTopico(materia, topico) {
-        switchMainView('resumos');
-        document.getElementById('selectMateria').value = materia;
-        document.getElementById('novoTitulo').value = topico;
-        document.getElementById('novoTitulo').focus();
+    function criarFlashcardRapido(materia, topico) {
+        // Criar card imediatamente
+        cards.unshift({ 
+            titulo: topico, 
+            materia: materia,
+            conteudo: '',
+            data: new Date().toISOString()
+        });
         
-        // Efeito de destaque no input
-        const input = document.getElementById('novoTitulo');
-        input.style.borderColor = 'var(--success-color)';
-        input.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.3)';
-        setTimeout(() => {
-            input.style.borderColor = '';
-            input.style.boxShadow = '';
-        }, 2000);
+        salvarNoStorage();
+        renderSyllabus(); // Re-renderizar para mostrar o mini-card abaixo do tópico
+        
+        // Abrir o editor
+        abrir(0);
     }
 
     /**
@@ -1242,9 +1338,7 @@
 
     // Init
     carregarDados();
-    renderizarMaterias();
-    renderizar();
-    switchMainView('resumos');
+    renderSyllabus();
 </script>
 
 </body>

@@ -246,10 +246,10 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             padding: 50px 40px;
-            border-radius: 20px;
+            border-radius: 24px;
             border: 1px solid rgba(59, 130, 246, 0.2);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            width: 400px;
+            width: 450px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -1370,23 +1370,23 @@
     <div id="login-overlay">
         <div class="login-box">
             <div class="login-header">
-                <div class="login-icon-circle">
-                    <i class="fas fa-book-reader"></i>
+                <div class="login-icon-circle" style="background: transparent; border: none; font-size: 3rem; margin-bottom: 5px;">
+                    📚
                 </div>
-                <div class="login-title">Escolha uma opção</div>
-                <div class="login-subtitle">Acesse o painel ou seus resumos</div>
+                <div class="login-title" style="font-size: 2.2rem;">Meu Sistema de Estudos</div>
+                <div class="login-subtitle">Escolha o que deseja acessar hoje</div>
             </div>
             
-            <a href="https://cicloestudo.com.br/" class="login-btn" style="display: block; text-decoration: none; margin-bottom: 15px;">
-                <i class="fas fa-chart-line" style="margin-right: 8px;"></i> Painel de Estudos
+            <a href="https://cicloestudo.com.br/" class="login-btn" style="display: flex; align-items: center; justify-content: center; text-decoration: none; margin-bottom: 15px; padding: 20px; font-size: 1.2rem;">
+                <span style="margin-right: 12px; font-size: 1.4rem;">📘</span> Ciclo de Estudos
             </a>
             
-            <a href="https://cicloestudo.com.br/resumo" class="login-btn" style="display: block; text-decoration: none; background: linear-gradient(135deg, #6366f1, #4f46e5);">
-                <i class="fas fa-pencil-alt" style="margin-right: 8px;"></i> Resumo de Estudo
+            <a href="https://cicloestudo.com.br/resumo" class="login-btn" style="display: flex; align-items: center; justify-content: center; text-decoration: none; background: linear-gradient(135deg, #0284c7, #0369a1); padding: 20px; font-size: 1.2rem;">
+                <span style="margin-right: 12px; font-size: 1.4rem;">🧠</span> Resumos
             </a>
         </div>
-        <div style="margin-top: 20px; color: var(--text-muted); font-size: 0.8rem;">
-            &copy; 2025 Sistema de Estudos
+        <div style="margin-top: 25px; color: var(--text-muted); font-size: 0.85rem; letter-spacing: 0.5px;">
+            &copy; 2026 Meu Sistema de Estudos
         </div>
     </div>
     <script>
@@ -1408,6 +1408,10 @@
         </div>
 
         <div class="nav-menu">
+            <a href="https://cicloestudo.com.br/resumo" class="nav-item" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-pencil-alt"></i>
+                <span>Meus Resumos</span>
+            </a>
             <div class="nav-item active" onclick="switchTab('calendar')">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Calendário</span>
@@ -1432,10 +1436,6 @@
                 <i class="fas fa-history"></i>
                 <span>Histórico</span>
             </div>
-            <a href="resumo" class="nav-item" style="text-decoration: none; color: inherit;">
-                <i class="fas fa-pencil-alt"></i>
-                <span>Meus Resumos</span>
-            </a>
         </div>
 
         <div class="stats-container">

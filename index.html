@@ -1377,9 +1377,9 @@
                 <div class="login-subtitle">Escolha o que deseja acessar hoje</div>
             </div>
             
-            <a href="https://cicloestudo.com.br/" class="login-btn" style="display: flex; align-items: center; justify-content: center; text-decoration: none; margin-bottom: 15px; padding: 20px; font-size: 1.2rem;">
+            <button onclick="hideOverlay()" class="login-btn" style="display: flex; width: 100%; border: none; align-items: center; justify-content: center; text-decoration: none; margin-bottom: 15px; padding: 20px; font-size: 1.2rem; cursor: pointer;">
                 <span style="margin-right: 12px; font-size: 1.4rem;">📘</span> Ciclo de Estudos
-            </a>
+            </button>
             
             <a href="https://cicloestudo.com.br/resumo" class="login-btn" style="display: flex; align-items: center; justify-content: center; text-decoration: none; background: linear-gradient(135deg, #0284c7, #0369a1); padding: 20px; font-size: 1.2rem;">
                 <span style="margin-right: 12px; font-size: 1.4rem;">🧠</span> Resumos
@@ -1393,6 +1393,17 @@
         /**
          * O overlay agora serve como tela de seleção inicial.
          */
+        function hideOverlay() {
+            var overlay = document.getElementById('login-overlay');
+            if (overlay) {
+                overlay.style.transition = 'opacity 0.4s ease, visibility 0.4s';
+                overlay.style.opacity = '0';
+                setTimeout(function() {
+                    overlay.style.display = 'none';
+                }, 400);
+            }
+        }
+
         (function initSelectionOverlay() {
             // Mantemos o overlay visível para seleção
             var overlay = document.getElementById('login-overlay');

@@ -1371,48 +1371,32 @@
         <div class="login-box">
             <div class="login-header">
                 <div class="login-icon-circle">
-                    <i class="fas fa-user-astronaut"></i>
+                    <i class="fas fa-book-reader"></i>
                 </div>
-                <div class="login-title">Bem-vindo</div>
-                <div class="login-subtitle">Entre para continuar seus estudos</div>
+                <div class="login-title">Escolha uma opção</div>
+                <div class="login-subtitle">Acesse o painel ou seus resumos</div>
             </div>
             
-            <div class="input-group">
-                <input type="text" id="login-user" class="login-input" placeholder="Usuário">
-                <i class="fas fa-user"></i>
-            </div>
+            <a href="https://cicloestudo.com.br/" class="login-btn" style="display: block; text-decoration: none; margin-bottom: 15px;">
+                <i class="fas fa-chart-line" style="margin-right: 8px;"></i> Painel de Estudos
+            </a>
             
-            <div class="input-group">
-                <input type="password" id="login-pass" class="login-input" placeholder="Senha">
-                <i class="fas fa-lock"></i>
-            </div>
-            
-            <button class="login-btn" onclick="checkLogin()">Acessar Painel</button>
-            <div id="login-error" class="login-error">
-                <i class="fas fa-exclamation-circle"></i> Credenciais inválidas
-            </div>
+            <a href="https://cicloestudo.com.br/resumo" class="login-btn" style="display: block; text-decoration: none; background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                <i class="fas fa-pencil-alt" style="margin-right: 8px;"></i> Resumo de Estudo
+            </a>
         </div>
         <div style="margin-top: 20px; color: var(--text-muted); font-size: 0.8rem;">
-            &copy; 2025 Painel de Estudos
+            &copy; 2025 Sistema de Estudos
         </div>
     </div>
     <script>
         /**
-         * Oculta o overlay de login imediatamente em ambientes locais (file://) ou quando há dados embutidos.
-         * Fazemos isso aqui (logo após o HTML do overlay) para garantir que funcione mesmo se scripts posteriores falharem.
+         * O overlay agora serve como tela de seleção inicial.
          */
-        (function autoHideLoginOverlay() {
-            try {
-                var shouldSkip = (sessionStorage.getItem('logged_in') === 'true') ||
-                                 (window.location.protocol === 'file:') ||
-                                 !!window.HARDCODED_DATA;
-                if (shouldSkip) {
-                    var overlay = document.getElementById('login-overlay');
-                    if (overlay) overlay.style.display = 'none';
-                }
-            } catch (e) {
-                // Fallback silencioso
-            }
+        (function initSelectionOverlay() {
+            // Mantemos o overlay visível para seleção
+            var overlay = document.getElementById('login-overlay');
+            if (overlay) overlay.style.display = 'flex';
         })();
     </script>
 
@@ -5246,82 +5230,16 @@
             setupOfflineFallbacks();
         }
         
-        // --- LOGIN LOGIC ---
-        function checkLogin() {
-            try {
-                const userEl = document.getElementById('login-user');
-                const passEl = document.getElementById('login-pass');
-                const errorMsg = document.getElementById('login-error');
-                const overlay = document.getElementById('login-overlay');
-                
-                if (!userEl || !passEl) {
-                    alert('Erro: Campos de login não encontrados no DOM.');
-                    return;
-                }
+        // --- SELECTION OVERLAY LOGIC ---
+        // Removido checkLogin original para dar lugar às opções diretas
 
-                // Normalize input
-                const rawUser = userEl.value || '';
-                const rawPass = passEl.value || '';
-                const user = rawUser.trim().toUpperCase();
-                const pass = rawPass.trim().toUpperCase();
-                
-                // Debug log (can be removed later)
-                // console.log('Login attempt:', user, pass);
-
-                if ((user === 'CICLO' || user === 'ADMIN') && (pass === 'CICLO' || pass === 'ADMIN')) {
-                    // Success
-                    if(overlay) {
-                        overlay.style.transition = 'opacity 0.5s ease';
-                        overlay.style.opacity = '0';
-                        setTimeout(() => {
-                            overlay.style.display = 'none';
-                        }, 500);
-                    }
-                    
-                    try {
-                        sessionStorage.setItem('logged_in', 'true');
-                    } catch(e) {
-                        console.warn('SessionStorage unavailable', e);
-                    }
-                } else {
-                    // Error
-                    if (errorMsg) {
-                        errorMsg.style.display = 'block';
-                        errorMsg.style.animation = 'none';
-                        errorMsg.offsetHeight; /* trigger reflow */
-                        errorMsg.style.animation = 'shake 0.4s ease-in-out';
-                        
-                        // Optional: Clear password on error
-                        passEl.value = '';
-                        passEl.focus();
-                    } else {
-                        alert('Credenciais inválidas! Use Usuário: CICLO, Senha: CICLO');
-                    }
-                }
-            } catch(err) {
-                alert('Erro ao processar login: ' + err.message);
-            }
-        }
-
-        // Check session on load
+        // Check session on load - Comentado para sempre mostrar as opções
+        /*
         if (sessionStorage.getItem('logged_in') === 'true' || window.location.protocol === 'file:' || window.HARDCODED_DATA) {
              const overlay = document.getElementById('login-overlay');
              if(overlay) overlay.style.display = 'none';
         }
-
-        // Enter key support
-        const passInput = document.getElementById('login-pass');
-        const userInput = document.getElementById('login-user');
-        if(passInput) {
-            passInput.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') checkLogin();
-            });
-        }
-        if(userInput) {
-            userInput.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') passInput.focus();
-            });
-        }
+        */
 
         // --- THEME LOGIC ---
         function toggleTheme() {

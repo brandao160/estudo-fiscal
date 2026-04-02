@@ -535,22 +535,32 @@
 
         .brand i { color: var(--accent-color); }
 
+        .menu-title {
+            padding: 10px 15px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-top: 15px;
+        }
+
         .nav-menu {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
         }
 
         .nav-item {
             padding: 12px 18px;
             border-radius: 12px;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 12px;
             color: var(--sidebar-muted);
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             font-weight: 500;
             font-size: 0.95rem;
         }
@@ -558,7 +568,7 @@
         .nav-item:hover {
             background-color: rgba(255, 255, 255, 0.05);
             color: #fff;
-            transform: translateX(5px);
+            transform: translateX(8px);
         }
 
         .nav-item.active {
@@ -567,11 +577,46 @@
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
         }
 
+        .nav-item i {
+            color: var(--accent-color);
+            width: 20px;
+            text-align: center;
+        }
+
+        .btn-sidebar-action {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--sidebar-border);
+            color: var(--sidebar-text);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
+        .btn-sidebar-action:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(8px);
+            border-color: var(--accent-color);
+        }
+
+        .btn-sidebar-action i {
+            color: var(--accent-color);
+            width: 20px;
+            text-align: center;
+        }
+
         .stats-container {
-            margin-top: auto;
+            margin-top: 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
         }
 
         .mini-stat {
@@ -1256,6 +1301,7 @@
             <span>Ciclo de Estudo</span>
         </div>
 
+        <div class="menu-title">Navegação</div>
         <div class="nav-menu">
             <a href="https://cicloestudo.com.br/resumo" class="nav-item" style="text-decoration: none; color: inherit;">
                 <i class="fas fa-pencil-alt"></i>
@@ -1287,6 +1333,7 @@
             </div>
         </div>
 
+        <div class="menu-title">Estatísticas</div>
         <div class="stats-container">
             <div class="mini-stat">
                 <div class="mini-stat-label">Dias até a Prova</div>
@@ -1305,46 +1352,44 @@
                 <div class="mini-stat-label">Sequência Atual 🔥</div>
                 <div class="mini-stat-value" id="streak-stat">0 dias</div>
             </div>
+        </div>
 
-            <!-- Backup & Config -->
-            <div style="margin-top: 20px; padding: 0 15px;">
-                <button id="generate-cycle-button" onclick="generateCycleFromModel()" style="width: 100%; padding: 10px; background: var(--accent-color); border: none; color: #fff; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
-                    <i class="fas fa-play-circle"></i> Gerar Ciclo de Estudo
-                </button>
-                <button class="generate-btn" style="width: 100%; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="togglePomodoro(true)">
-                    <i class="fas fa-clock"></i> Pomodoro
-                </button>
-                
-            <div style="margin-top: 10px; display: grid; gap: 8px;">
-                <button id="btn-download-xlsx" onclick="downloadModelTemplateXLSX()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fas fa-table"></i> Baixar Modelo Excel
-                </button>
-                <button id="btn-export-xlsx" onclick="exportCurrentModelXLSX()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fas fa-file-export"></i> Exportar Modelo Atual (Excel)
-                </button>
-                <button id="btn-import-xlsx" onclick="triggerImportModelXLSX()" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fas fa-file-import"></i> Importar Modelo Excel
-                </button>
-                <input type="file" id="import-model-xlsx-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importModelXLSX(this)">
-                </div>
-                
-                <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                    <button onclick="saveSelfContainedHTML()" style="width: 100%; padding: 10px; background: var(--success-color); border: none; color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px;">
-                        <i class="fas fa-save"></i> Salvar Progresso
-                    </button>
-                    <p style="font-size: 0.7rem; color: #aaa; margin-bottom: 15px; text-align: center;">Baixa uma cópia do site com seus dados salvos.</p>
-                    <button onclick="triggerImportProgress()" style="width: 100%; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px;">
-                        <i class="fas fa-upload"></i> Carregar Progresso
-                    </button>
-                    <input type="file" id="import-progress-input" accept=".html,.json,text/html,application/json" style="display:none" onchange="importProgressFile(this)">
-                    <p style="font-size: 0.7rem; color: #aaa; text-align: center;">Carrega progresso de um arquivo HTML/JSON salvo.</p>
+        <div class="menu-title">Dados & Backup</div>
+        <div style="padding: 0 5px; display: flex; flex-direction: column; gap: 4px;">
+            <button id="btn-download-xlsx" class="btn-sidebar-action" onclick="downloadModelTemplateXLSX()">
+                <i class="fas fa-file-excel"></i> Baixar Modelo Excel
+            </button>
+            <button id="btn-export-xlsx" class="btn-sidebar-action" onclick="exportCurrentModelXLSX()">
+                <i class="fas fa-file-export"></i> Exportar Modelo Atual
+            </button>
+            <button id="btn-import-xlsx" class="btn-sidebar-action" onclick="triggerImportModelXLSX()">
+                <i class="fas fa-file-import"></i> Importar Modelo Excel
+            </button>
+            <input type="file" id="import-model-xlsx-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importModelXLSX(this)">
 
-                     <button onclick="resetSchedule()" style="width: 100%; padding: 6px; background: transparent; border: 1px solid #ff6b6b; color: #ff6b6b; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
-                        <i class="fas fa-sync-alt"></i> Regerar Cronograma
-                    </button>
-                    <p style="font-size: 0.7rem; color: #666; margin-top: 5px; text-align: center;">Cuidado: Apaga progresso do calendário.</p>
-                </div>
-            </div>
+            <button id="generate-cycle-button" class="btn-sidebar-action" onclick="generateCycleFromModel()">
+                <i class="fas fa-sync-alt"></i> Regerar Cronograma
+            </button>
+            
+            <button class="btn-sidebar-action" onclick="togglePomodoro(true)">
+                <i class="fas fa-clock"></i> Pomodoro
+            </button>
+
+            <button class="btn-sidebar-action" onclick="triggerImportProgress()">
+                <i class="fas fa-upload"></i> Carregar Progresso
+            </button>
+            <input type="file" id="import-progress-input" accept=".html,.json,text/html,application/json" style="display:none" onchange="importProgressFile(this)">
+
+            <button class="btn-sidebar-action" onclick="resetSchedule()" style="color: #ff6b6b; border-color: rgba(255, 107, 107, 0.2);">
+                <i class="fas fa-sync-alt"></i> Limpar Calendário
+            </button>
+        </div>
+
+        <div style="margin-top: 15px; padding: 0 5px;">
+            <button onclick="saveSelfContainedHTML()" style="width: 100%; padding: 15px; background: #00c853; border: none; color: #fff; border-radius: 15px; cursor: pointer; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3); transition: all 0.3s ease;">
+                <i class="fas fa-save"></i> Salvar Progresso
+            </button>
+            <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 10px;">Baixa uma cópia do site com seus dados salvos.</p>
         </div>
     </nav>
 
@@ -2278,7 +2323,10 @@
 
             // Update UI Tabs
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            const navItem = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(`'${tabName}'`));
+            const navItem = Array.from(document.querySelectorAll('.nav-item')).find(el => {
+                const clickAttr = el.getAttribute('onclick');
+                return clickAttr && clickAttr.includes(`'${tabName}'`);
+            });
             if(navItem) navItem.classList.add('active');
 
             // Render specific content BEFORE showing

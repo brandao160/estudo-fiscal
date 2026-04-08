@@ -481,6 +481,16 @@
             border: 1px solid rgba(0,0,0,0.1);
         }
 
+        .toolbar-zoom-label {
+            min-width: 52px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #475569;
+            padding: 0 6px;
+            user-select: none;
+        }
+
         .word-content-editable {
             width: 100%;
             height: 100%;
@@ -683,6 +693,9 @@
         .btn-word-close { background: transparent; color: #64748b; border: 1px solid #cbd5e1; border-radius: 10px; }
         .btn-word-close:hover { background: #f1f5f9; }
 
+        .btn-word-print { background: white; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 10px; }
+        .btn-word-print:hover { background: #f1f5f9; }
+
         /* --- UTILS --- */
         .toast {
             position: fixed;
@@ -841,6 +854,9 @@
                 <h2 id="tituloEditor">Título do Resumo</h2>
             </div>
             <div style="display: flex; gap: 10px;">
+                <button class="btn btn-word-print" onclick="printResumo()">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
                 <button class="btn btn-word-close" onclick="fecharEditor()">
                     <i class="fas fa-times"></i> Fechar
                 </button>
@@ -900,6 +916,16 @@
                 </button>
                 <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="execCommand('justifyCenter')" title="Centralizar">
                     <i class="fas fa-align-center"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="adjustEditorZoom(-0.1)" title="Diminuir Fonte">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <span id="editor-zoom-label" class="toolbar-zoom-label">100%</span>
+                <button class="toolbar-btn" onmousedown="event.preventDefault()" onclick="adjustEditorZoom(0.1)" title="Aumentar Fonte">
+                    <i class="fas fa-plus"></i>
                 </button>
             </div>
 
@@ -1335,6 +1361,60 @@
         }
     }
 
+    const EDITOR_ZOOM_KEY = 'estudoFiscalResumoEditorZoom';
+    let editorZoom = Math.max(0.8, Math.min(1.8, Number(localStorage.getItem(EDITOR_ZOOM_KEY) || 1)));
+
+    function applyEditorZoom() {
+        const editor = document.getElementById('conteudo');
+        if (!editor) return;
+        const basePx = 19;
+        editor.style.fontSize = (basePx * editorZoom).toFixed(0) + 'px';
+        const label = document.getElementById('editor-zoom-label');
+        if (label) label.textContent = Math.round(editorZoom * 100) + '%';
+    }
+
+    function adjustEditorZoom(delta) {
+        editorZoom = Math.max(0.8, Math.min(1.8, Number((editorZoom + delta).toFixed(2))));
+        localStorage.setItem(EDITOR_ZOOM_KEY, String(editorZoom));
+        applyEditorZoom();
+    }
+
+    function printResumo() {
+        if (indiceAtual === null) return;
+        const badge = document.getElementById('editorBadge')?.innerText || '';
+        const title = document.getElementById('tituloEditor')?.innerText || 'Resumo';
+        const content = document.getElementById('conteudo')?.innerHTML || '';
+
+        const w = window.open('', '_blank');
+        if (!w) return;
+
+        const doc = w.document;
+        doc.open();
+        doc.write(`<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>${title}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #0f172a; padding: 40px; }
+    .badge { display: inline-block; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; background: #e2e8f0; color: #1e293b; font-weight: 800; margin-bottom: 14px; }
+    h1 { font-size: 28px; margin: 0 0 18px; }
+    .content { font-size: 16px; line-height: 1.8; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  ${badge ? `<div class="badge">${badge}</div>` : ``}
+  <h1>${title}</h1>
+  <div class="content">${content}</div>
+</body>
+</html>`);
+        doc.close();
+        w.focus();
+        w.print();
+    }
+
     // Auto-save typing
     document.getElementById('conteudo').addEventListener('input', () => {
         if (indiceAtual !== null) {
@@ -1374,6 +1454,7 @@
         document.getElementById('tituloEditor').innerText = card.titulo;
         document.getElementById('editorBadge').innerText = card.materia || 'Geral';
         document.getElementById('conteudo').innerHTML = card.conteudo || '';
+        applyEditorZoom();
         
         document.body.style.overflow = 'hidden';
     }

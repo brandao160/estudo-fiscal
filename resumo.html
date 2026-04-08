@@ -519,6 +519,12 @@
             overflow-y: auto;
         }
 
+        .word-content-editable * {
+            font-family: inherit !important;
+            font-size: inherit !important;
+            line-height: inherit !important;
+        }
+
         /* --- GRID --- */
         .grid {
             display: grid;
@@ -1460,6 +1466,112 @@
         w.print();
     }
 
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+
+    function plainTextToHtml(text) {
+        return escapeHtml(String(text || '')).replace(/\r?\n/g, '<br>');
+    }
+
+    function sanitizePastedHtml(html) {
+        const parser = new DOMParser();
+        const parsed = parser.parseFromString(html, 'text/html');
+
+        const allowedTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'UL', 'OL', 'LI', 'BR', 'P', 'DIV', 'H1', 'H2', 'H3', 'H4']);
+        const tagMap = { STRONG: 'B', EM: 'I', STRIKE: 'S', H1: 'P', H2: 'P', H3: 'P', H4: 'P', DIV: 'P' };
+
+        const outDoc = document.implementation.createHTMLDocument('');
+        const out = outDoc.createElement('div');
+
+        function appendChildren(srcNode, dstNode) {
+            Array.from(srcNode.childNodes).forEach(child => appendNode(child, dstNode));
+        }
+
+        function appendNode(node, parent) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                parent.appendChild(outDoc.createTextNode(node.textContent || ''));
+                return;
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+            const tag = node.tagName || '';
+            const upper = tag.toUpperCase();
+
+            if (!allowedTags.has(upper)) {
+                if (upper === 'SPAN') {
+                    const style = (node.getAttribute('style') || '').toLowerCase();
+                    const isBold = style.includes('font-weight') && !style.includes('font-weight: normal') && !style.includes('font-weight: 400');
+                    const isItalic = style.includes('font-style: italic');
+                    const isUnderline = style.includes('text-decoration') && style.includes('underline');
+
+                    let wrap = parent;
+                    if (isBold) {
+                        const b = outDoc.createElement('b');
+                        wrap.appendChild(b);
+                        wrap = b;
+                    }
+                    if (isItalic) {
+                        const i = outDoc.createElement('i');
+                        wrap.appendChild(i);
+                        wrap = i;
+                    }
+                    if (isUnderline) {
+                        const u = outDoc.createElement('u');
+                        wrap.appendChild(u);
+                        wrap = u;
+                    }
+                    appendChildren(node, wrap);
+                    return;
+                }
+
+                appendChildren(node, parent);
+                return;
+            }
+
+            const mapped = tagMap[upper] || upper;
+            if (upper === 'BR') {
+                parent.appendChild(outDoc.createElement('br'));
+                return;
+            }
+
+            const el = outDoc.createElement(mapped.toLowerCase());
+
+            if (upper.startsWith('H')) {
+                const b = outDoc.createElement('b');
+                el.appendChild(b);
+                appendChildren(node, b);
+            } else {
+                appendChildren(node, el);
+            }
+
+            parent.appendChild(el);
+        }
+
+        appendChildren(parsed.body, out);
+
+        const cleaned = out.innerHTML
+            .replace(/<p>\s*<\/p>/g, '')
+            .replace(/(<br>\s*){3,}/g, '<br><br>');
+        return cleaned;
+    }
+
+    function insertHtmlAtCursor(html) {
+        document.execCommand('insertHTML', false, html);
+    }
+
+    function handleEditorPaste(e) {
+        e.preventDefault();
+        const clipboard = e.clipboardData || window.clipboardData;
+        const html = clipboard ? clipboard.getData('text/html') : '';
+        const text = clipboard ? clipboard.getData('text/plain') : '';
+
+        const cleaned = html ? sanitizePastedHtml(html) : plainTextToHtml(text);
+        insertHtmlAtCursor(cleaned);
+    }
+
     // Auto-save typing
     document.getElementById('conteudo').addEventListener('input', () => {
         if (indiceAtual !== null) {
@@ -1467,6 +1579,8 @@
             localStorage.setItem('ciclo_cards_v3', JSON.stringify(cards));
         }
     });
+
+    document.getElementById('conteudo').addEventListener('paste', handleEditorPaste);
 
     function criarCard() {
         const tituloInput = document.getElementById('novoTitulo');

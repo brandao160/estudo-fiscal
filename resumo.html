@@ -410,6 +410,19 @@
         .mini-flashcard:hover .btn-delete-mini { opacity: 1; }
         .btn-delete-mini:hover { color: var(--danger-color); }
 
+        .btn-edit-mini {
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            opacity: 0.3;
+            transition: all 0.2s;
+        }
+
+        .mini-flashcard:hover .btn-edit-mini { opacity: 1; }
+        .btn-edit-mini:hover { color: var(--accent-color); }
+
         .btn-create-flashcard {
             padding: 6px 12px;
             background: rgba(59, 130, 246, 0.1);
@@ -1126,8 +1139,20 @@
                             // Filtrar tópicos individualmente se houver busca
                             if (searchTerm && !sub.name.toLowerCase().includes(searchTerm) && !topic.toLowerCase().includes(searchTerm)) return '';
 
-                            // Buscar flashcards para este tópico
-                            const topicCards = cards.filter(c => c.materia === sub.name && c.titulo === topic);
+                            // Buscar resumos para este tópico
+                            const topicKey = `${sub.name}::${idx}`;
+                            const topicCards = cards.filter(c => {
+                                if (c.topicKey && c.topicKey === topicKey) return true;
+                                // Compat: cards antigos (antes do topicKey)
+                                return c.materia === sub.name && c.titulo === topic;
+                            });
+
+                            // Migração silenciosa: fixa cards antigos para não "sumirem" se você renomear o título
+                            topicCards.forEach(c => {
+                                if (!c.topicKey) {
+                                    c.topicKey = topicKey;
+                                }
+                            });
 
                             return `
                                 <div class="topic-group" style="margin-bottom: 15px;">
@@ -1137,7 +1162,7 @@
                                                 onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
                                             <span class="topic-name">${topic}</span>
                                         </div>
-                                        <button class="btn-create-flashcard" onclick="criarFlashcardRapido('${sub.name}', '${topic}')">
+                                        <button class="btn-create-flashcard" onclick="criarFlashcardRapido('${sub.name}', ${idx}, '${topic}')">
                                             <i class="fas fa-plus"></i> Resumo
                                         </button>
                                     </div>
@@ -1154,7 +1179,10 @@
                                                     </div>
                                                     <div class="mini-card-meta">
                                                         <span><i class="fas fa-align-left"></i> ${wordCount} pal.</span>
-                                                        <button class="btn-delete-mini" onclick="deletarCard(event, ${realIndex})">
+                                                        <button class="btn-edit-mini" onclick="renomearResumo(event, ${realIndex})" title="Renomear">
+                                                            <i class="fas fa-pen"></i>
+                                                        </button>
+                                                        <button class="btn-delete-mini" onclick="deletarCard(event, ${realIndex})" title="Excluir">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </button>
                                                     </div>
@@ -1180,14 +1208,16 @@
         if (!syllabusProgress[subjectName]) syllabusProgress[subjectName] = [];
         syllabusProgress[subjectName][topicIndex] = checked;
         localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(syllabusProgress));
+        salvarNoStorage();
         renderSyllabus(); 
     }
 
-    function criarFlashcardRapido(materia, topico) {
+    function criarFlashcardRapido(materia, topicIndex, topico) {
         // Criar card imediatamente
         cards.unshift({ 
             titulo: topico, 
             materia: materia,
+            topicKey: `${materia}::${topicIndex}`,
             conteudo: '',
             data: new Date().toISOString()
         });
@@ -1197,6 +1227,21 @@
         
         // Abrir o editor
         abrir(0);
+    }
+
+    function renomearResumo(event, index) {
+        event.stopPropagation();
+        const card = cards[index];
+        if (!card) return;
+
+        const novo = prompt('Novo título do resumo:', card.titulo || '');
+        if (novo === null) return;
+        const titulo = String(novo).trim();
+        if (!titulo) return;
+
+        card.titulo = titulo;
+        salvarNoStorage();
+        renderSyllabus();
     }
 
     /**

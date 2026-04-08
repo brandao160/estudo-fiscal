@@ -2749,7 +2749,74 @@
             localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(studyHistory));
         }
 
-        let activeSession = null; // { taskIndex, startTime, subject, timerInterval }
+        const ACTIVE_SESSION_STORAGE_KEY = 'estudoFiscalActiveSession';
+        const OPEN_NOTE_ON_LOAD_KEY = 'estudoFiscalOpenNoteOnLoad';
+        const CANCEL_SESSION_ON_LOAD_KEY = 'estudoFiscalCancelSessionOnLoad';
+
+        let activeSession = null;
+
+        function persistActiveSessionToStorage() {
+            if (!activeSession) return;
+            const payload = {
+                dayDateMs: activeSession.dayDate ? activeSession.dayDate.getTime() : null,
+                taskIndex: activeSession.taskIndex,
+                subject: activeSession.subject,
+                startTime: activeSession.startTime,
+                elapsedAtStart: activeSession.elapsedAtStart,
+                elapsedSession: activeSession.elapsedSession,
+                paused: !!activeSession.paused,
+                target: activeSession.target,
+                alarmPlayed: !!activeSession.alarmPlayed,
+                lastResumeEpochMs: activeSession.lastResumeEpochMs || null
+            };
+            localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify(payload));
+        }
+
+        function clearActiveSessionStorage() {
+            localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+        }
+
+        function restoreActiveSessionFromStorage() {
+            const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+            if (!raw) return;
+            let data;
+            try { data = JSON.parse(raw); } catch (e) { return; }
+            if (!data || !data.subject || data.taskIndex === null || data.taskIndex === undefined) return;
+
+            activeSession = {
+                dayDate: data.dayDateMs ? new Date(data.dayDateMs) : null,
+                taskIndex: data.taskIndex,
+                subject: data.subject,
+                startTime: Number(data.startTime || Date.now()),
+                elapsedAtStart: Number(data.elapsedAtStart || 0),
+                elapsedSession: Number(data.elapsedSession || 0),
+                paused: !!data.paused,
+                interval: null,
+                target: Number(data.target || 3600),
+                alarmPlayed: !!data.alarmPlayed,
+                lastResumeEpochMs: data.lastResumeEpochMs ? Number(data.lastResumeEpochMs) : null
+            };
+
+            const bar = document.getElementById('active-study-bar');
+            if (!bar) return;
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
+
+            updateBarTimer();
+            if (activeSession.paused) {
+                clearInterval(activeSession.interval);
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-play"></i> Continuar';
+            } else {
+                if (activeSession.lastResumeEpochMs) {
+                    const delta = Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000);
+                    if (delta > 0) activeSession.elapsedSession += delta;
+                }
+                resumeTimer();
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-pause"></i> Pausar';
+            }
+            window.addEventListener('keydown', barKeyHandler);
+        }
 
         // Triggered when "ESTUDANDO" is selected in modal
         function startActiveSession(index) {
@@ -2794,7 +2861,7 @@
                 interval: null,
                 target: Number(realTask.durationTarget || 3600),
                 alarmPlayed: false,
-                resumeStart: performance.now()
+                lastResumeEpochMs: Date.now()
             };
 
             // Show Bar
@@ -2827,9 +2894,10 @@
         function resumeTimer() {
             if(!activeSession) return;
             activeSession.paused = false;
-            activeSession.resumeStart = performance.now();
+            activeSession.lastResumeEpochMs = Date.now();
             clearInterval(activeSession.interval);
             activeSession.interval = setInterval(updateBarTimer, 1000);
+            persistActiveSessionToStorage();
         }
 
         function playAlarm() {
@@ -2868,13 +2936,15 @@
             if(!activeSession) return;
             activeSession.paused = true;
             clearInterval(activeSession.interval);
-            const delta = Math.floor((performance.now() - activeSession.resumeStart) / 1000);
+            const delta = activeSession.lastResumeEpochMs ? Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000) : 0;
             if(delta > 0) activeSession.elapsedSession += delta;
+            activeSession.lastResumeEpochMs = null;
+            persistActiveSessionToStorage();
         }
 
         function updateBarTimer() {
             if(!activeSession) return;
-            const liveDelta = activeSession.paused ? 0 : Math.floor((performance.now() - activeSession.resumeStart) / 1000);
+            const liveDelta = activeSession.paused || !activeSession.lastResumeEpochMs ? 0 : Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000);
             const total = activeSession.elapsedAtStart + activeSession.elapsedSession + liveDelta;
             document.getElementById('bar-timer-display').textContent = formatTime(total);
             const target = Math.max(1, Number(activeSession.target || 3600));
@@ -2912,8 +2982,8 @@
             document.getElementById('note-questions-correct').value = '';
         }
 
-        function cancelSession() {
-            if(confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) {
+        function cancelSession(skipConfirm) {
+            if(skipConfirm || confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) {
                 pauseTimer();
                 document.getElementById('active-study-bar').classList.remove('visible');
                 // Reverte status para o derivado do tempo atual (provavelmente "Não Iniciado")
@@ -2935,6 +3005,7 @@
                 renderCalendar();
                 renderList();
                 activeSession = null;
+                clearActiveSessionStorage();
                 window.removeEventListener('keydown', barKeyHandler);
             }
         }
@@ -3013,6 +3084,7 @@
             document.getElementById('note-modal').classList.remove('open');
             document.getElementById('active-study-bar').classList.remove('visible');
             activeSession = null;
+            clearActiveSessionStorage();
 
             // 4. Refresh
             renderHistory();
@@ -5125,6 +5197,17 @@
             renderHistory();
             initCalibrationPanel();
             setupOfflineFallbacks();
+            restoreActiveSessionFromStorage();
+            const shouldOpenNote = localStorage.getItem(OPEN_NOTE_ON_LOAD_KEY) === 'true';
+            if (shouldOpenNote) {
+                localStorage.removeItem(OPEN_NOTE_ON_LOAD_KEY);
+                if (activeSession) finishSession();
+            }
+            const shouldCancel = localStorage.getItem(CANCEL_SESSION_ON_LOAD_KEY) === 'true';
+            if (shouldCancel) {
+                localStorage.removeItem(CANCEL_SESSION_ON_LOAD_KEY);
+                if (activeSession) cancelSession(true);
+            }
         }
         
         // --- SELECTION OVERLAY LOGIC ---

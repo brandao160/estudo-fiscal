@@ -537,6 +537,16 @@
         }
         .cycle-builder-tip i { color: var(--accent); margin-top: 2px; }
 
+        .cycle-count-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
+        .count-pick {
+            width: 42px; height: 42px; border-radius: 50%;
+            background: var(--surface-alt); border: 1px solid var(--border); color: var(--ink-2);
+            font-weight: 800; font-size: 1rem; cursor: pointer; font-family: 'Nunito', sans-serif;
+            transition: all 0.14s;
+        }
+        .count-pick:hover { border-color: var(--accent); color: var(--accent); }
+        .count-pick.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 10px rgba(249,115,22,0.35); }
+
         .cycle-log-section {
             background: var(--surface); border: 1px solid var(--border);
             border-radius: var(--r-lg); padding: 16px 18px; margin-bottom: 18px;
@@ -2628,13 +2638,22 @@
                 `<option value="${s.name}">${s.name} (Peso ${s.weight})</option>`
             ).join('');
 
+            selectedDailyCount = null;
             builderEl.innerHTML = `
                 <div class="cycle-add-row">
                     <select id="cycle-add-subject-select">${optionsHtml}</select>
                     <button class="btn btn-secondary" onclick="addAdHocSubjectToday()"><i class="fas fa-plus"></i> Adicionar matéria a hoje</button>
                 </div>
                 <div class="cycle-builder">
-                    <h3><i class="fas fa-sliders-h"></i> Gerar ciclo de hoje</h3>
+                    <h3><i class="fas fa-shuffle"></i> Gerar por quantidade</h3>
+                    <p>Escolha só quantas matérias você quer estudar hoje — o sistema escolhe quais, evitando repetir matéria que você já estudou nos últimos 7 dias (só repete se não sobrar matéria "fresca" suficiente).</p>
+                    <div class="cycle-count-buttons">
+                        ${[1,2,3,4,5,6,7,8].map(n => `<button class="count-pick" data-count="${n}" onclick="selectDailyCount(${n})">${n}</button>`).join('')}
+                    </div>
+                    <button class="btn btn-primary" onclick="generateCycleByCount()"><i class="fas fa-shuffle"></i> Gerar Ciclo por Quantidade</button>
+                </div>
+                <div class="cycle-builder">
+                    <h3><i class="fas fa-sliders-h"></i> Ou escolha as matérias manualmente</h3>
                     <p>Marque as matérias que você indica para o ciclo diário. O ciclo é montado seguindo o peso de cada matéria (matérias de peso maior aparecem mais vezes).</p>
                     <p class="cycle-builder-tip"><i class="fas fa-lightbulb"></i> Dica do método do Ciclo de Estudos: não existe "dia fixo" para cada matéria — você estuda a próxima da fila e troca de matéria a cada 1h–1h15 de foco, com uma pausa curta entre os blocos.</p>
                     <div class="cycle-builder-grid" id="cycle-builder-picks">
@@ -2692,8 +2711,91 @@
                 showToast('Finalize ou cancele a sessão ativa antes de gerar um novo ciclo.', 'warning');
                 return;
             }
-            const dayObj = getOrCreateTodayDayObj();
             const picked = subjectsConfig.filter(s => checked.includes(s.name));
+            buildTodayCycleFromSubjects(picked);
+        }
+
+        // --- GERAR POR QUANTIDADE (evita repetir matéria estudada nos últimos 7 dias) ---
+        let selectedDailyCount = null;
+
+        function selectDailyCount(n) {
+            selectedDailyCount = n;
+            document.querySelectorAll('.count-pick').forEach(el => {
+                el.classList.toggle('active', Number(el.dataset.count) === n);
+            });
+        }
+
+        /** Data da sessão mais recente já estudada dessa matéria (null se nunca estudada). */
+        function lastStudiedDate(subjectName) {
+            let latest = null;
+            studyHistory.forEach(h => {
+                if (h.subject !== subjectName) return;
+                const d = new Date(h.date);
+                if (!latest || d > latest) latest = d;
+            });
+            return latest;
+        }
+
+        /** true se há sessão de estudo real registrada para a matéria nos últimos `days` dias. */
+        function wasStudiedInLastDays(subjectName, days) {
+            const last = lastStudiedDate(subjectName);
+            if (!last) return false;
+            return (Date.now() - last.getTime()) < days * 24 * 60 * 60 * 1000;
+        }
+
+        /**
+         * Gera o ciclo de hoje escolhendo automaticamente `selectedDailyCount` matérias:
+         * prioriza quem NÃO foi estudado nos últimos 7 dias; só repete matéria recente
+         * se não sobrar matéria "fresca" suficiente para completar a quantidade escolhida.
+         */
+        function generateCycleByCount() {
+            if (!selectedDailyCount) {
+                showToast('Escolha quantas matérias você quer estudar hoje.', 'warning');
+                return;
+            }
+            if (activeSession) {
+                showToast('Finalize ou cancele a sessão ativa antes de gerar um novo ciclo.', 'warning');
+                return;
+            }
+            if (!subjectsConfig.length) return;
+            const n = Math.min(selectedDailyCount, subjectsConfig.length);
+
+            const fresh = subjectsConfig.filter(s => !wasStudiedInLastDays(s.name, 7));
+            const stale = subjectsConfig.filter(s => wasStudiedInLastDays(s.name, 7));
+
+            // Entre as frescas, prioriza quem tem pior desempenho; desempata por peso maior.
+            fresh.sort((a, b) => {
+                const pa = getSubjectPerformanceRate(a.name);
+                const pb = getSubjectPerformanceRate(b.name);
+                const ra = pa === null ? 50 : pa;
+                const rb = pb === null ? 50 : pb;
+                if (ra !== rb) return ra - rb;
+                return (b.weight || 1) - (a.weight || 1);
+            });
+
+            let selected = fresh.slice(0, n);
+            if (selected.length < n) {
+                // Não há matéria fresca suficiente: completa com quem foi estudado há mais tempo.
+                stale.sort((a, b) => {
+                    const la = lastStudiedDate(a.name);
+                    const lb = lastStudiedDate(b.name);
+                    return (la ? la.getTime() : 0) - (lb ? lb.getTime() : 0);
+                });
+                const missing = n - selected.length;
+                selected = selected.concat(stale.slice(0, missing));
+                showToast(`Só havia ${fresh.length} matéria(s) sem estudo nos últimos 7 dias — completei com quem você estudou há mais tempo.`, 'info');
+            }
+
+            buildTodayCycleFromSubjects(selected);
+        }
+
+        /**
+         * Monta o ciclo de HOJE a partir de uma lista de matérias já escolhidas (objetos do
+         * subjectsConfig), respeitando o peso de cada uma e aplicando a variedade semanal /
+         * priorização por desempenho fraco. Usado tanto pelo seletor manual quanto pelo "por quantidade".
+         */
+        function buildTodayCycleFromSubjects(picked) {
+            const dayObj = getOrCreateTodayDayObj();
             const WEEK_WINDOW = 6; // dias corridos anteriores considerados "a semana"
 
             // Contagem-base = peso (frequência desejada no ciclo)

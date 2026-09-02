@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -344,6 +344,13 @@
             justify-content: space-between;
             align-items: flex-start;
         }
+        #theme-toggle {
+            border: 1px solid var(--border); color: var(--ink-3); background: var(--surface);
+            border-radius: 50%; width: 38px; height: 38px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.14s;
+        }
+        #theme-toggle:hover { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
 
         .header-title h1 {
             margin: 0;
@@ -1046,6 +1053,7 @@
             <h1 id="current-subject-title">Conteúdo Programático</h1>
             <p id="stats-text">Explore seu edital e acesse seus flashcards...</p>
         </div>
+        <button id="theme-toggle" onclick="toggleTheme()" title="Modo Escuro"><i class="fas fa-moon"></i></button>
     </header>
 
     <div class="actions-bar">
@@ -1978,7 +1986,43 @@
         window.location.href = 'https://cicloestudo.com.br/';
     }
 
+    // --- THEME LOGIC (mesmo padrão do Ciclo de Estudo: light por padrão, toggle para dark) ---
+    function updateThemeIcon(theme) {
+        const btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        const icon = btn.querySelector('i');
+        if (theme === 'light') {
+            icon.className = 'fas fa-moon';
+            btn.title = 'Modo Escuro';
+        } else {
+            icon.className = 'fas fa-sun';
+            btn.title = 'Modo Claro';
+        }
+    }
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        const current = html.getAttribute('data-theme');
+        const next = current === 'light' ? 'dark' : 'light';
+        if (next === 'light') html.setAttribute('data-theme', 'light');
+        else html.removeAttribute('data-theme');
+        localStorage.setItem('theme', next);
+        updateThemeIcon(next);
+    }
+
+    function initTheme() {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'dark') {
+            document.documentElement.removeAttribute('data-theme');
+            updateThemeIcon('dark');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            updateThemeIcon('light');
+        }
+    }
+
     // Init
+    initTheme();
     carregarDados();
     renderSyllabus();
     updateActiveStudyBar();

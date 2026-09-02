@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -214,6 +214,22 @@
         }
         [data-theme="light"] .brand i { color: #EA6F0F !important; -webkit-text-fill-color: #EA6F0F !important; }
 
+        /* PERFIS */
+        .profile-switcher { display: flex; gap: 4px; padding: 0 10px 10px; align-items: center; }
+        .profile-switcher select {
+            flex: 1; min-width: 0; background: var(--sidebar-card-bg); color: var(--sidebar-text);
+            border: 1px solid var(--sidebar-border); border-radius: var(--r);
+            padding: 6px 8px; font-size: 0.78rem; font-family: 'Source Sans 3', sans-serif;
+            font-weight: 700; cursor: pointer;
+        }
+        .profile-icon-btn {
+            background: transparent; border: 1px solid var(--sidebar-border); color: var(--sidebar-muted);
+            width: 26px; height: 26px; border-radius: var(--r); cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+            transition: all 0.14s;
+        }
+        .profile-icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
         /* NAV */
         .menu-title {
             padding: 14px 10px 4px;
@@ -408,63 +424,140 @@
         @keyframes slideRightOut { from{transform:translateX(0);opacity:1} to{transform:translateX(24px);opacity:0} }
         @keyframes slideRightIn  { from{transform:translateX(-24px);opacity:0} to{transform:translateX(0);opacity:1} }
 
-        /* ─── CALENDAR ─────────────────────────────────────────────── */
-        .calendar-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 16px;
+        /* ─── CICLO DE ESTUDO (HOME) ───────────────────────────────── */
+        .cycle-empty {
+            background: var(--surface); border: 1px dashed var(--border);
+            border-radius: var(--r-xl); padding: 48px 32px; text-align: center;
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
         }
-        .calendar-header h2 {
-            margin: 0; font-size: 1.1rem; font-weight: 800;
-            text-transform: capitalize; color: var(--ink);
-            font-family: 'Nunito', sans-serif;
-        }
-        .calendar-controls { display: flex; gap: 6px; }
-        .calendar-controls button {
+        .cycle-empty i { font-size: 2.2rem; color: var(--accent); opacity: 0.8; }
+        .cycle-empty h3 { margin: 0; font-family: 'Nunito', sans-serif; font-size: 1.15rem; color: var(--ink); }
+        .cycle-empty p { margin: 0; color: var(--ink-3); font-size: 0.9rem; max-width: 420px; }
+
+        .cycle-summary-bar {
+            display: flex; align-items: center; justify-content: space-between;
             background: var(--surface); border: 1px solid var(--border);
-            color: var(--ink-3); padding: 6px 12px; border-radius: var(--r);
-            cursor: pointer; transition: all 0.14s; font-size: 0.85rem;
+            border-radius: var(--r-lg); padding: 16px 20px; margin-bottom: 18px;
+            gap: 20px; flex-wrap: wrap;
         }
-        .calendar-controls button:hover {
-            background: var(--accent-soft); color: var(--accent);
-            border-color: var(--accent);
-        }
+        .cycle-summary-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1rem; color: var(--ink); display:flex; align-items:center; gap:8px; }
+        .cycle-summary-title i { color: var(--accent); }
+        .cycle-summary-stats { display: flex; gap: 22px; }
+        .cycle-summary-stat { text-align: center; }
+        .cycle-summary-stat b { display: block; font-size: 1.05rem; font-weight: 800; color: var(--ink); font-family: 'Nunito', sans-serif; }
+        .cycle-summary-stat span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-3); }
+        .cycle-summary-bar-track { flex: 1; min-width: 140px; height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+        .cycle-summary-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-secondary)); border-radius: 99px; transition: width 0.4s; }
+        .gap-pending { color: var(--amber) !important; }
+        .gap-done { color: var(--green) !important; }
 
-        .calendar-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+        .week-strip {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 12px 16px; margin-bottom: 18px;
         }
-        .week-day {
-            text-align: center; font-size: 0.67rem; font-weight: 800;
-            text-transform: uppercase; letter-spacing: 1px;
-            color: var(--ink-3); padding: 8px;
+        .week-strip-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-3); margin-bottom: 8px; font-family: 'Nunito', sans-serif; }
+        .week-strip-cells { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .week-cell {
+            background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--r);
+            padding: 8px 4px; text-align: center; cursor: default;
+        }
+        .week-cell.is-today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+        .week-cell-day { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; color: var(--ink-3); font-family: 'Nunito', sans-serif; }
+        .week-cell-count { font-size: 1.1rem; font-weight: 800; color: var(--ink); font-family: 'Nunito', sans-serif; margin: 2px 0; }
+        .week-cell-sub { font-size: 0.66rem; color: var(--ink-3); }
+
+        .cycle-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+        .cycle-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 14px 16px;
+            display: flex; align-items: center; gap: 14px;
+            transition: all 0.16s cubic-bezier(0.4,0,0.2,1);
+        }
+        .cycle-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(249,115,22,0.12); }
+        .cycle-card.is-active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), 0 6px 20px rgba(249,115,22,0.18); }
+        .cycle-card.is-done { opacity: 0.55; }
+        .cycle-num {
+            width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+            background: var(--surface-alt); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.82rem; color: var(--ink-3);
             font-family: 'Nunito', sans-serif;
         }
+        .cycle-card.is-active .cycle-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .cycle-card.is-done .cycle-num { background: var(--green-soft); border-color: transparent; color: var(--green); }
+        .cycle-card-body { flex: 1; min-width: 0; }
+        .cycle-card-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+        .cycle-card-name { font-weight: 800; font-size: 0.96rem; color: var(--ink); font-family: 'Nunito', sans-serif; }
+        .cycle-card-track { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+        .cycle-card-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s; }
+        .cycle-card-meta { font-size: 0.76rem; color: var(--ink-3); margin-top: 5px; }
+        .cycle-card-actions { flex-shrink: 0; display: flex; gap: 6px; align-items: center; }
+        .cycle-remove-btn {
+            background: transparent; border: 1px solid var(--border); color: var(--ink-3);
+            width: 30px; height: 30px; border-radius: var(--r); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+            transition: all 0.14s;
+        }
+        .cycle-remove-btn:hover { color: var(--red); border-color: var(--red); background: var(--red-soft); }
 
-        .day-cell {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--r-md);
-            padding: 10px; min-height: 80px;
-            cursor: pointer; position: relative;
-            transition: all 0.16s cubic-bezier(0.4,0,0.2,1);
-            box-shadow: var(--sh-xs);
+        .cycle-builder {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 18px 20px; margin-top: 6px;
         }
-        .day-cell:hover:not(.empty) {
-            transform: translateY(-2px);
-            border-color: var(--accent);
-            box-shadow: 0 4px 14px rgba(249,115,22,0.2);
+        .cycle-builder h3 { margin: 0 0 4px; font-family: 'Nunito', sans-serif; font-size: 0.98rem; color: var(--ink); }
+        .cycle-builder p { margin: 0 0 14px; font-size: 0.82rem; color: var(--ink-3); }
+        .cycle-builder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 8px; margin-bottom: 16px; }
+        .cycle-pick {
+            display: flex; align-items: center; gap: 9px;
+            background: var(--surface-alt); border: 1px solid var(--border);
+            border-radius: var(--r); padding: 9px 11px; cursor: pointer;
+            transition: all 0.14s; font-size: 0.85rem;
         }
-        .day-cell.today {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(249,115,22,0.2);
+        .cycle-pick:hover { border-color: var(--accent); }
+        .cycle-pick input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+        .cycle-pick span { flex: 1; color: var(--ink-2); font-weight: 600; }
+        .cycle-pick.checked { background: var(--accent-soft); border-color: var(--accent); }
+        .cycle-pick.checked span { color: var(--accent); }
+        .cycle-pick small { color: var(--ink-3); font-weight: 700; }
+
+        .cycle-add-row {
+            display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;
         }
-        .day-cell.today .day-number { color: var(--accent); }
-        .day-cell.empty { background: transparent; border-color: transparent; cursor: default; }
-        .day-number { font-size: 0.88rem; font-weight: 800; color: var(--ink-3); margin-bottom: 6px; font-family: 'Nunito', sans-serif; }
-        .dot { width: 7px; height: 7px; border-radius: 3px; display: inline-block; margin: 1px; }
-        .dot-ns  { background: var(--ink-4); }
-        .dot-ic  { background: var(--amber); }
-        .dot-ok  { background: var(--green); }
-        .day-dots { display: flex; flex-wrap: wrap; gap: 2px; }
+        .cycle-add-row select {
+            flex: 1; min-width: 200px; background: var(--input-bg); color: var(--ink);
+            border: 1px solid var(--input-border); border-radius: var(--r);
+            padding: 8px 10px; font-family: 'Source Sans 3', sans-serif; font-size: 0.86rem;
+        }
+
+        .cycle-builder-tip {
+            display: flex; align-items: flex-start; gap: 8px;
+            background: var(--accent-soft); border: 1px solid rgba(249,115,22,0.25);
+            border-radius: var(--r); padding: 9px 12px; margin: 0 0 16px !important;
+            font-size: 0.8rem !important; color: var(--ink-2) !important;
+        }
+        .cycle-builder-tip i { color: var(--accent); margin-top: 2px; }
+
+        .cycle-log-section {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--r-lg); padding: 16px 18px; margin-bottom: 18px;
+        }
+        .cycle-log-section h3 {
+            margin: 0 0 10px; font-family: 'Nunito', sans-serif; font-size: 0.96rem;
+            color: var(--ink); display: flex; align-items: center; gap: 8px;
+        }
+        .cycle-log-section h3 i { color: var(--accent); }
+        .cycle-log-total {
+            margin-left: auto; background: var(--green-soft); color: var(--green);
+            padding: 2px 10px; border-radius: var(--r-full); font-size: 0.76rem; font-weight: 800;
+        }
+        .cycle-log-empty { margin: 0; font-size: 0.84rem; color: var(--ink-3); }
+        .cycle-log-list { display: flex; flex-direction: column; gap: 8px; }
+        .cycle-log-item { border-bottom: 1px solid var(--border-2); padding-bottom: 8px; }
+        .cycle-log-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .cycle-log-item-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .cycle-log-subject { font-weight: 700; color: var(--ink); font-size: 0.88rem; }
+        .cycle-log-time { font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; }
+        .cycle-log-note { font-size: 0.8rem; color: var(--ink-3); font-style: italic; margin-top: 3px; }
 
         .status-pill {
             display: inline-block; padding: 2px 8px;
@@ -535,7 +628,7 @@
         }
         .syllabus-content.open { display: block; }
         .topic-item {
-            display: flex; align-items: flex-start; gap: 10px;
+            display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
             padding: 6px 0; border-bottom: 1px solid var(--border-2);
         }
         .topic-item:last-child { border-bottom: none; }
@@ -546,10 +639,22 @@
             transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
         }
         .topic-checkbox:checked { transform: scale(1.18); }
-        .topic-text { font-size: 0.9rem; color: var(--ink-2); line-height: 1.45; }
+        .topic-text { font-size: 0.9rem; color: var(--ink-2); line-height: 1.45; flex: 1; min-width: 160px; }
         .topic-checkbox:checked + .topic-text {
             color: var(--green); text-decoration: line-through; opacity: 0.6;
         }
+        .review-badge {
+            font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: var(--r-full);
+            background: var(--surface-alt); color: var(--ink-3); cursor: pointer;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;
+        }
+        .review-badge.due { background: var(--amber-soft); color: var(--amber); }
+        .review-add { display: flex; gap: 3px; }
+        .review-add button {
+            font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: var(--r);
+            background: transparent; border: 1px solid var(--border); color: var(--ink-3); cursor: pointer;
+        }
+        .review-add button:hover { border-color: var(--accent); color: var(--accent); }
         .progress-mini {
             width: 80px; height: 4px; background: var(--border);
             border-radius: 99px; overflow: hidden;
@@ -827,6 +932,27 @@
             border-top-color: var(--accent);
         }
 
+        /* ─── MODO FOCO ─────────────────────────────────────────────── */
+        #focus-mode-overlay {
+            position: fixed; inset: 0; z-index: 9000; display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+            background: radial-gradient(circle at 50% 40%, #1A0800 0%, #0A0A0A 70%);
+        }
+        #focus-mode-overlay.open { display: flex; }
+        .focus-subject {
+            font-size: 1.3rem; font-weight: 900; color: rgba(255,255,255,0.85);
+            text-transform: uppercase; letter-spacing: 2px; font-family: 'Nunito', sans-serif;
+        }
+        .focus-timer {
+            font-size: 5.5rem; font-weight: 800; color: var(--accent);
+            font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+            text-shadow: 0 0 40px rgba(249,115,22,0.35);
+        }
+        .focus-progress { width: 360px; max-width: 80vw; height: 8px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+        .focus-progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-secondary)); transition: width 0.3s; }
+        .focus-target { font-size: 0.85rem; color: rgba(255,255,255,0.45); font-family: monospace; }
+        .focus-controls { display: flex; gap: 10px; margin-top: 10px; }
+
         /* ─── NOTE MODAL ───────────────────────────────────────────── */
         #note-modal {
             position: fixed; inset: 0;
@@ -886,64 +1012,6 @@
             display: flex; justify-content: flex-end; gap: 7px;
         }
 
-        /* ─── POMODORO WIDGET ──────────────────────────────────────── */
-        #pomodoro-widget {
-            position: fixed; bottom: 76px; right: 20px;
-            width: 196px; background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--r-xl); padding: 14px;
-            box-shadow: var(--sh-lg), 0 0 0 1px rgba(249,115,22,0.15);
-            z-index: 5000;
-            display: none; flex-direction: column; align-items: center; gap: 7px;
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            transition: all 0.25s ease;
-        }
-        #pomodoro-widget.minimized {
-            width: 48px; height: 48px; padding: 0; border-radius: 50%;
-            justify-content: center; cursor: pointer; overflow: hidden;
-        }
-        #pomodoro-widget.minimized .pomo-content { display: none; }
-        #pomodoro-widget.minimized .pomo-icon    { display: flex; }
-        .pomo-icon { display: none; font-size: 1.25rem; color: var(--accent); }
-        .pomo-content { width: 100%; text-align: center; }
-        .pomo-timer {
-            font-size: 2.4rem; font-weight: 700; color: var(--ink);
-            margin: 7px 0; letter-spacing: -2px;
-            font-family: 'JetBrains Mono', monospace;
-            font-variant-numeric: tabular-nums;
-        }
-        .pomo-controls {
-            display: flex; gap: 4px; justify-content: center; margin-bottom: 7px;
-            background: rgba(255,255,255,0.04);
-            border-radius: var(--r-full); padding: 3px;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .pomo-btn {
-            background: transparent; border: none;
-            color: var(--ink-3); padding: 4px 11px; border-radius: var(--r-full);
-            cursor: pointer; font-size: 0.73rem;
-            font-family: 'Nunito', sans-serif; font-weight: 700;
-            transition: all 0.14s;
-        }
-        .pomo-btn:hover { background: rgba(255,255,255,0.08); color: var(--ink); }
-        .pomo-btn.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(249,115,22,0.35); }
-        .pomo-actions { display: flex; gap: 7px; justify-content: center; }
-        .pomo-action-btn {
-            background: var(--accent); color: white; border: none;
-            padding: 7px 15px; border-radius: var(--r-full);
-            cursor: pointer; font-weight: 700; font-size: 0.95rem;
-            font-family: 'Nunito', sans-serif; transition: all 0.14s;
-            box-shadow: 0 2px 10px rgba(249,115,22,0.3);
-        }
-        .pomo-action-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
-        .pomo-close {
-            position: absolute; top: 5px; right: 8px;
-            background: none; border: none;
-            color: rgba(255,255,255,0.3); cursor: pointer; font-size: 0.78rem;
-            transition: color 0.14s; padding: 2px;
-        }
-        .pomo-close:hover { color: rgba(255,255,255,0.7); }
-
         /* ─── TOAST ────────────────────────────────────────────────── */
         #toast-container {
             position: fixed; top: 16px; right: 16px;
@@ -998,23 +1066,41 @@
         .subject-progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.4s; }
         .subject-stats { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--ink-3); font-weight: 600; }
 
-        /* ─── MODEL EDITOR MODAL ───────────────────────────────────── */
-        #model-editor-modal input,
-        #model-editor-modal select {
-            background: var(--input-bg) !important;
-            color: var(--ink) !important;
-            border: 1px solid var(--input-border) !important;
-            border-radius: var(--r) !important;
-            font-family: 'Source Sans 3', sans-serif !important;
-            font-size: 0.88rem !important;
-            transition: border-color 0.14s !important;
+        /* ─── TUTORIAL DE UTILIZAÇÃO ───────────────────────────────── */
+        .excel-tutorial-steps { display: flex; flex-direction: column; gap: 18px; }
+        .excel-tutorial-step { display: flex; gap: 14px; align-items: flex-start; }
+        .excel-tutorial-num {
+            width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+            background: var(--accent); color: #fff; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Nunito', sans-serif; font-size: 0.85rem;
         }
-        #model-editor-modal input:focus,
-        #model-editor-modal select:focus {
-            outline: none !important;
-            border-color: var(--accent) !important;
-            box-shadow: 0 0 0 3px var(--accent-soft) !important;
+        .excel-tutorial-step b { color: var(--ink); font-family: 'Nunito', sans-serif; font-size: 0.94rem; }
+        .excel-tutorial-step p { margin: 4px 0 0; font-size: 0.86rem; color: var(--ink-2); line-height: 1.5; }
+        .excel-tutorial-step code {
+            background: var(--surface-alt); border: 1px solid var(--border);
+            border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
         }
+        .excel-tutorial-table-wrap { overflow-x: auto; margin: 8px 0; }
+        .excel-tutorial-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .excel-tutorial-table th, .excel-tutorial-table td {
+            border: 1px solid var(--border); padding: 6px 9px; text-align: left; white-space: nowrap;
+        }
+        .excel-tutorial-table th { background: var(--surface-alt); color: var(--ink-3); font-weight: 700; }
+        .excel-tutorial-table td { color: var(--ink-2); }
+
+        /* ─── ASSISTENTE DE PRIMEIRO ACESSO ────────────────────────── */
+        .wizard-lead { font-size: 0.96rem; color: var(--ink); line-height: 1.5; margin: 0 0 14px; }
+        .wizard-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .wizard-choice {
+            display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+            background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--r-lg);
+            padding: 20px 14px; cursor: pointer; transition: all 0.15s; font-family: 'Source Sans 3', sans-serif;
+        }
+        .wizard-choice:hover { border-color: var(--accent); background: var(--accent-soft); }
+        .wizard-choice i { font-size: 1.6rem; color: var(--accent); margin-bottom: 4px; }
+        .wizard-choice b { color: var(--ink); font-size: 0.92rem; font-family: 'Nunito', sans-serif; }
+        .wizard-choice span { font-size: 0.78rem; color: var(--ink-3); }
 
         /* ─── LIST FILTER INPUTS ───────────────────────────────────── */
         #list-filters select,
@@ -1120,23 +1206,6 @@
         window.HARDCODED_DATA = null;
     </script>
     <div id="toast-container"></div>
-    <!-- POMODORO WIDGET -->
-    <div id="pomodoro-widget">
-        <button class="pomo-close" onclick="togglePomodoro(false)"><i class="fas fa-times"></i></button>
-        <div class="pomo-icon" onclick="togglePomodoroMin()"><i class="fas fa-clock"></i></div>
-        <div class="pomo-content">
-            <div class="pomo-controls">
-                <button class="pomo-btn active" onclick="setPomoMode('work')">Foco</button>
-                <button class="pomo-btn" onclick="setPomoMode('short')">Curto</button>
-                <button class="pomo-btn" onclick="setPomoMode('long')">Longo</button>
-            </div>
-            <div class="pomo-timer" id="pomo-display">25:00</div>
-            <div class="pomo-actions">
-                <button class="pomo-action-btn" id="pomo-start-btn" onclick="togglePomoTimer()"><i class="fas fa-play"></i></button>
-                <button class="pomo-action-btn" onclick="resetPomoTimer()"><i class="fas fa-redo"></i></button>
-            </div>
-        </div>
-    </div>
     
 
     <!-- Sidebar -->
@@ -1146,15 +1215,17 @@
             <span>Ciclo de Estudo</span>
         </div>
 
+        <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+
         <div class="menu-title">Navegação</div>
         <div class="nav-menu">
             <a href="https://cicloestudo.com.br/resumo" class="nav-item" style="text-decoration: none; color: inherit;">
                 <i class="fas fa-pencil-alt"></i>
                 <span>Meus Resumos</span>
             </a>
-            <div class="nav-item active" onclick="switchTab('calendar')">
-                <i class="fas fa-calendar-alt"></i>
-                <span>Calendário</span>
+            <div class="nav-item active" onclick="switchTab('cycle')">
+                <i class="fas fa-bullseye"></i>
+                <span>Ciclo de Estudo</span>
             </div>
             <div class="nav-item" onclick="switchTab('subjects')">
                 <i class="fas fa-chart-pie"></i>
@@ -1201,9 +1272,6 @@
 
         <div class="menu-title">Dados & Backup</div>
         <div style="padding: 0 5px; display: flex; flex-direction: column; gap: 4px;">
-            <button id="btn-download-xlsx" class="btn-sidebar-action" onclick="downloadModelTemplateXLSX()">
-                <i class="fas fa-file-excel"></i> Baixar Modelo Excel
-            </button>
             <button id="btn-export-xlsx" class="btn-sidebar-action" onclick="exportCurrentModelXLSX()">
                 <i class="fas fa-file-export"></i> Exportar Modelo Atual
             </button>
@@ -1213,11 +1281,7 @@
             <input type="file" id="import-model-xlsx-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importModelXLSX(this)">
 
             <button id="generate-cycle-button" class="btn-sidebar-action" onclick="generateCycleFromModel()">
-                <i class="fas fa-sync-alt"></i> Regerar Cronograma
-            </button>
-            
-            <button class="btn-sidebar-action" onclick="togglePomodoro(true)">
-                <i class="fas fa-clock"></i> Pomodoro
+                <i class="fas fa-sync-alt"></i> Gerar Ciclo de Estudo
             </button>
 
             <button class="btn-sidebar-action" onclick="triggerImportProgress()">
@@ -1226,7 +1290,7 @@
             <input type="file" id="import-progress-input" accept=".html,.json,text/html,application/json" style="display:none" onchange="importProgressFile(this)">
 
             <button class="btn-sidebar-action" onclick="resetSchedule()" style="color: #ff6b6b; border-color: rgba(255, 107, 107, 0.2);">
-                <i class="fas fa-sync-alt"></i> Limpar Calendário
+                <i class="fas fa-sync-alt"></i> Limpar Ciclo Gerado
             </button>
         </div>
 
@@ -1242,12 +1306,12 @@
     <main class="main-content">
         <div class="top-bar">
             <div class="page-title">
-                <h1 id="page-title-text">Calendário de Estudos</h1>
+                <h1 id="page-title-text">Ciclo de Estudo</h1>
                 <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
             </div>
             <div style="display:flex; gap:10px; align-items:center;">
-                <button id="open-model-editor-btn" class="btn-primary" style="padding: 8px 14px; border-radius: 8px; font-weight: 700;" onclick="openModelEditor()" title="Editar Tabela de Matérias">
-                    Tabela de Matérias
+                <button id="open-model-editor-btn" class="btn-primary" style="padding: 8px 14px; border-radius: 8px; font-weight: 700;" onclick="openUsageTutorial()" title="Ver tutorial de utilização">
+                    <i class="fas fa-graduation-cap"></i> TUTORIAL DE UTILIZAÇÃO
                 </button>
                 <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
                     <i class="fas fa-moon"></i>
@@ -1257,28 +1321,14 @@
 
         <div class="content-area">
             
-            <!-- Tab: Calendar -->
-            <div id="view-calendar" class="view-section active">
-                <div class="calendar-header">
-                    <h2 id="current-month-label" style="margin:0;">Dezembro 2025</h2>
-                    <div class="calendar-controls">
-                        <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
-                        <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
-                    </div>
-                </div>
-                
-                <div class="calendar-grid">
-                    <div class="week-day">Seg</div>
-                    <div class="week-day">Ter</div>
-                    <div class="week-day">Qua</div>
-                    <div class="week-day">Qui</div>
-                    <div class="week-day">Sex</div>
-                    <div class="week-day">Sáb</div>
-                    <div class="week-day">Dom</div>
-                </div>
-                <div id="calendar-days" class="calendar-grid" style="margin-top: 10px;">
-                    <!-- JS generated -->
-                </div>
+            <!-- Tab: Ciclo de Estudo (Home) -->
+            <div id="view-cycle" class="view-section active">
+                <div id="cycle-summary-bar-container"><!-- JS generated --></div>
+                <div id="cycle-week-strip-container"><!-- JS generated --></div>
+                <div id="cycle-list-container"><!-- JS generated --></div>
+                <div id="cycle-today-log-container"><!-- JS generated --></div>
+                <div id="cycle-reviews-container"><!-- JS generated --></div>
+                <div id="cycle-builder-container"><!-- JS generated --></div>
             </div>
 
             <!-- Tab: Subjects -->
@@ -1344,6 +1394,11 @@
 
             <!-- Tab: History -->
             <div id="view-history" class="view-section">
+                <div style="display:flex; justify-content:flex-end; margin-bottom: 14px;">
+                    <button class="btn btn-secondary" onclick="clearStudyHistory()" style="color: var(--red); border-color: rgba(239,68,68,0.3);">
+                        <i class="fas fa-trash"></i> Limpar Histórico
+                    </button>
+                </div>
                 <div id="history-container">
                     <!-- JS generated -->
                 </div>
@@ -1435,89 +1490,6 @@
         </div>
     </div>
 
-    <!-- Model Editor Modal -->
-    <div class="modal-overlay" id="model-editor-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <div class="modal-title">Tabela de Matérias</div>
-                <button class="close-modal" onclick="closeModelEditor()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <div class="subject-card" style="margin-bottom: 20px; padding: 20px;">
-                    <h3 style="margin: 0 0 12px 0;">Gerais</h3>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <div>
-                            <label style="font-size:0.85rem; color: var(--text-muted);">Concurso</label>
-                            <input id="model-concurso" type="text" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.85rem; color: var(--text-muted);">Órgão</label>
-                            <input id="model-orgao" type="text" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.85rem; color: var(--text-muted);">Início do Ciclo</label>
-                            <input id="model-inicio" type="date" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.85rem; color: var(--text-muted);">Fim do Ciclo</label>
-                            <input id="model-fim" type="date" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:10px; border-radius:8px;">
-                        </div>
-                    </div>
-                    <div style="margin-top:12px;">
-                        <label style="font-size:0.85rem; color: var(--text-muted); display:block; margin-bottom:6px;">Slots por dia (Seg a Dom)</label>
-                        <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:8px;">
-                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Seg</span><input id="slots-seg" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
-                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Ter</span><input id="slots-ter" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
-                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Qua</span><input id="slots-qua" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
-                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Qui</span><input id="slots-qui" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
-                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Sex</span><input id="slots-sex" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
-                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Sáb</span><input id="slots-sab" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
-                            <div><span style="font-size:0.75rem; color: var(--text-muted);">Dom</span><input id="slots-dom" type="number" min="0" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:8px;" /></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="subject-card" style="padding: 20px;">
-                    <div style="display:flex; justify-content: space-between; align-items:center;">
-                        <h3 style="margin: 0;">Conteúdo</h3>
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn-secondary" onclick="addContentRow()" title="Adicionar linha">+ Linha</button>
-                        </div>
-                    </div>
-                    <table id="model-editor-table" style="width:100%; margin-top:10px; table-layout:fixed;">
-                        <colgroup>
-                            <col style="width:10%;">
-                            <col style="width:26%;">
-                            <col style="width:8%;">
-                            <col style="width:10%;">
-                            <col style="width:10%;">
-                            <col style="width:10%;">
-                            <col style="width:23%;">
-                            <col style="width:3%;">
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th>Categoria</th>
-                                <th>Matéria</th>
-                                <th>Peso</th>
-                                <th>Tickets</th>
-                                <th>Qtde PDF</th>
-                                <th>Qtde Paginas</th>
-                                <th>Tópico</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="model-editor-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModelEditor()">Cancelar</button>
-                <button id="model-editor-load-btn" class="btn btn-primary" onclick="addRowsToExistingModel()" title="Adicionar apenas estas linhas ao Modelo">Adicionar ao Modelo</button>
-                <button id="model-editor-save-btn" class="btn btn-primary" onclick="saveModelFromEditor()">Salvar Modelo</button>
-            </div>
-        </div>
-    </div>
-
     <!-- NOTE MODAL -->
     <div id="note-modal">
         <div class="note-modal-content">
@@ -1560,6 +1532,9 @@
             <span id="bar-target-label" class="bar-target"></span>
         </div>
         <div class="bar-controls">
+            <button class="bar-btn btn-cancel" onclick="openFocusMode()" title="Modo Foco (tela cheia)">
+                <i class="fas fa-expand"></i> Modo Foco
+            </button>
             <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
                 <i class="fas fa-pause"></i> Pausar
             </button>
@@ -1572,94 +1547,125 @@
         </div>
     </div>
 
+    <!-- MODO FOCO (tela cheia, sem distração) -->
+    <div id="focus-mode-overlay">
+        <div class="focus-subject" id="focus-subject-name">Matéria</div>
+        <div class="focus-timer" id="focus-timer-display">00:00:00</div>
+        <div class="focus-progress"><div class="focus-progress-fill" id="focus-progress-fill"></div></div>
+        <div class="focus-target" id="focus-target-label"></div>
+        <div class="focus-controls">
+            <button class="bar-btn btn-continue" onclick="togglePauseResume()"><i class="fas fa-pause" id="focus-pause-icon"></i> Pausar</button>
+            <button class="bar-btn btn-save" onclick="finishSession()"><i class="fas fa-check"></i> Salvar</button>
+            <button class="bar-btn btn-cancel" onclick="closeFocusMode()"><i class="fas fa-compress"></i> Sair do Modo Foco</button>
+        </div>
+    </div>
+
+    <!-- EXCEL IMPORT TUTORIAL -->
+    <div class="modal-overlay" id="usage-tutorial-modal">
+        <div class="modal" style="width: 760px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-graduation-cap" style="color: var(--accent);"></i> Tutorial de Utilização</div>
+                <button class="close-modal" onclick="closeUsageTutorial()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="excel-tutorial-steps">
+                    <div class="excel-tutorial-step">
+                        <div class="excel-tutorial-num">1</div>
+                        <div>
+                            <b>Exporte sua planilha</b>
+                            <p>Clique em <i>"Exportar Modelo Atual"</i> na barra lateral. Baixa um <code>.xlsx</code> já no formato certo, com duas abas: <b>Gerais</b> (concurso, órgão, período) e <b>Conteudo</b> (suas matérias) — use como ponto de partida, mesmo que ainda esteja com as matérias de exemplo.</p>
+                        </div>
+                    </div>
+                    <div class="excel-tutorial-step">
+                        <div class="excel-tutorial-num">2</div>
+                        <div>
+                            <b>Preencha a aba "Conteudo"</b>
+                            <p>Uma linha por matéria (repita a matéria em várias linhas se quiser listar tópicos diferentes):</p>
+                            <div class="excel-tutorial-table-wrap">
+                                <table class="excel-tutorial-table">
+                                    <thead><tr><th>Categoria</th><th>Materia</th><th>Peso</th><th>Tickets</th><th>Topico</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>Basico</td><td>Direito Constitucional</td><td>1</td><td>1</td><td>Controle de Constitucionalidade</td></tr>
+                                        <tr><td>Especifico</td><td>Auditoria</td><td>3</td><td>3</td><td>Planejamento de Auditoria</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p><b>Peso</b> (1 a 3) define a frequência da matéria no ciclo: peso 3 aparece até 3x mais que peso 1.</p>
+                        </div>
+                    </div>
+                    <div class="excel-tutorial-step">
+                        <div class="excel-tutorial-num">3</div>
+                        <div>
+                            <b>Importe o arquivo</b>
+                            <p>Clique em <i>"Importar Modelo Excel"</i> e selecione o arquivo editado. Suas matérias, pesos e conteúdo programático são carregados automaticamente em todas as abas.</p>
+                        </div>
+                    </div>
+                    <div class="excel-tutorial-step">
+                        <div class="excel-tutorial-num">4</div>
+                        <div>
+                            <b>Monte o Ciclo de Estudo do dia</b>
+                            <p>Não existe mais calendário fixo: na aba <i>"Ciclo de Estudo"</i>, marque as matérias de hoje e clique em <i>"Gerar Ciclo de Hoje"</i>. A fila é montada pelo peso de cada matéria, e o sistema evita repetir demais a mesma matéria em relação aos últimos dias — só repete de perto quando você mesmo marcou poucas matérias.</p>
+                        </div>
+                    </div>
+                    <div class="excel-tutorial-step">
+                        <div class="excel-tutorial-num">5</div>
+                        <div>
+                            <b>Estude e acompanhe</b>
+                            <p>Clique em <i>"Iniciar Estudo"</i> num card da fila para abrir o cronômetro. Ao salvar, a sessão entra em <i>"O que estudei hoje"</i> e no <i>Histórico</i> — e as abas <i>Matérias & Progresso</i> e <i>Tempo de Estudo</i> se atualizam sozinhas.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <label style="display:flex; align-items:center; gap:6px; margin-right:auto; font-size:0.82rem; color: var(--ink-3); cursor:pointer;">
+                    <input type="checkbox" id="tutorial-dont-show" style="accent-color: var(--accent);"> Não mostrar automaticamente de novo
+                </label>
+                <button class="btn btn-primary" onclick="closeUsageTutorial()"><i class="fas fa-check"></i> Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ASSISTENTE DE PRIMEIRO ACESSO -->
+    <div class="modal-overlay" id="onboarding-wizard-modal">
+        <div class="modal" style="width: 560px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-hand-sparkles" style="color: var(--accent);"></i> Bem-vindo(a) ao Ciclo de Estudo</div>
+                <button class="close-modal" onclick="closeOnboardingWizard()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="wizard-step" data-wizard-step="1">
+                    <p class="wizard-lead">Esse app te ajuda a montar e estudar um ciclo de matérias todo dia, sem calendário fixo. Vamos configurar rapidinho?</p>
+                    <label class="note-label" for="wizard-concurso-input">Qual concurso/prova você está estudando? (opcional)</label>
+                    <input id="wizard-concurso-input" class="note-input" type="text" placeholder="Ex: SEFAZ-GO, Auditor Fiscal...">
+                </div>
+                <div class="wizard-step" data-wizard-step="2" style="display:none;">
+                    <p class="wizard-lead">Como você quer começar?</p>
+                    <div class="wizard-choice-grid">
+                        <button class="wizard-choice" onclick="wizardChooseImport()">
+                            <i class="fas fa-file-excel"></i>
+                            <b>Já tenho minhas matérias</b>
+                            <span>Importar uma planilha Excel agora</span>
+                        </button>
+                        <button class="wizard-choice" onclick="wizardChooseExample()">
+                            <i class="fas fa-bolt"></i>
+                            <b>Usar o exemplo pronto</b>
+                            <span>Começar com matérias de exemplo e editar depois</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="wizard-step" data-wizard-step="3" style="display:none;">
+                    <p class="wizard-lead"><i class="fas fa-circle-check" style="color: var(--green);"></i> Tudo pronto! Agora é só gerar o ciclo de hoje.</p>
+                    <p style="font-size:0.85rem; color: var(--ink-3);">Na aba "Ciclo de Estudo", marque as matérias de hoje e clique em "Gerar Ciclo de Hoje". Você pode rever o passo a passo completo a qualquer momento no botão "Tutorial de Utilização".</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="wizard-back-btn" style="display:none;" onclick="wizardGoToStep(wizardStep - 1)">Voltar</button>
+                <button class="btn btn-primary" id="wizard-next-btn" onclick="wizardGoToStep(wizardStep + 1)">Próximo</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        /* --- POMODORO LOGIC --- */
-        let pomoInterval = null;
-        let pomoTime = 25 * 60;
-        let pomoActive = false;
-        let pomoMode = 'work'; // work, short, long
-
-        function togglePomodoro(show) {
-            const w = document.getElementById('pomodoro-widget');
-            if(show) {
-                w.style.display = 'flex';
-                w.classList.remove('minimized');
-            } else {
-                w.style.display = 'none';
-                clearInterval(pomoInterval);
-                pomoActive = false;
-                updatePomoButton();
-            }
-        }
-
-        function togglePomodoroMin() {
-            const w = document.getElementById('pomodoro-widget');
-            w.classList.toggle('minimized');
-        }
-
-        function setPomoMode(mode) {
-            pomoMode = mode;
-            pomoActive = false;
-            clearInterval(pomoInterval);
-            updatePomoButton();
-            
-            document.querySelectorAll('.pomo-btn').forEach(b => b.classList.remove('active'));
-            if(mode === 'work') {
-                pomoTime = 25 * 60;
-                event.target.classList.add('active');
-            } else if(mode === 'short') {
-                pomoTime = 5 * 60;
-                event.target.classList.add('active');
-            } else {
-                pomoTime = 15 * 60;
-                event.target.classList.add('active');
-            }
-            updatePomoDisplay();
-        }
-
-        function updatePomoDisplay() {
-            const m = Math.floor(pomoTime / 60).toString().padStart(2, '0');
-            const s = (pomoTime % 60).toString().padStart(2, '0');
-            document.getElementById('pomo-display').textContent = `${m}:${s}`;
-            if(pomoActive) document.title = `(${m}:${s}) Painel de Estudos`;
-            else document.title = 'Painel de Estudos';
-        }
-
-        function togglePomoTimer() {
-            if(pomoActive) {
-                clearInterval(pomoInterval);
-                pomoActive = false;
-            } else {
-                pomoInterval = setInterval(() => {
-                    pomoTime--;
-                    if(pomoTime <= 0) {
-                        clearInterval(pomoInterval);
-                        pomoActive = false;
-                        showToast('Tempo esgotado! Hora de trocar o status.', 'success');
-                        // Play sound?
-                    }
-                    updatePomoDisplay();
-                }, 1000);
-                pomoActive = true;
-            }
-            updatePomoButton();
-        }
-
-        function resetPomoTimer() {
-            clearInterval(pomoInterval);
-            pomoActive = false;
-            updatePomoButton();
-            if(pomoMode === 'work') pomoTime = 25 * 60;
-            else if(pomoMode === 'short') pomoTime = 5 * 60;
-            else pomoTime = 15 * 60;
-            updatePomoDisplay();
-        }
-
-        function updatePomoButton() {
-            const btn = document.getElementById('pomo-start-btn');
-            btn.innerHTML = pomoActive ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
-        }
-
         /* --- TOAST LOGIC --- */
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
@@ -1693,6 +1699,94 @@
             showToast(msg, 'info');
         }
 
+        // --- PERFIS (múltiplas pessoas no mesmo navegador) ---
+        // Perfil "default" usa as chaves originais (sem sufixo) — dados antigos continuam
+        // acessíveis sem migração. Perfis extras usam chaves com sufixo "__<id>".
+        const PROFILE_REGISTRY_KEY = 'estudoFiscalProfiles';
+        const ACTIVE_PROFILE_KEY = 'estudoFiscalActiveProfile';
+
+        function activeProfileId() {
+            return localStorage.getItem(ACTIVE_PROFILE_KEY) || 'default';
+        }
+
+        /** Namespaceia uma chave de dados de acordo com o perfil ativo. */
+        function K(baseKey) {
+            const pid = activeProfileId();
+            return pid === 'default' ? baseKey : (baseKey + '__' + pid);
+        }
+
+        function getProfiles() {
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
+            return [{ id: 'default', name: 'Principal' }, ...custom];
+        }
+
+        function getActiveProfileName() {
+            const p = getProfiles().find(p => p.id === activeProfileId());
+            return p ? p.name : 'Principal';
+        }
+
+        function switchProfile(id) {
+            localStorage.setItem(ACTIVE_PROFILE_KEY, id);
+            location.reload();
+        }
+
+        function createProfile() {
+            const name = prompt('Nome do novo perfil (ex: seu nome):');
+            if (!name || !name.trim()) return;
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
+            const id = 'p_' + Date.now();
+            custom.push({ id, name: name.trim() });
+            localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
+            switchProfile(id);
+        }
+
+        function renameActiveProfile() {
+            const pid = activeProfileId();
+            if (pid === 'default') {
+                showToast('O perfil "Principal" não pode ser renomeado.', 'warning');
+                return;
+            }
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
+            const profile = custom.find(p => p.id === pid);
+            if (!profile) return;
+            const name = prompt('Novo nome do perfil:', profile.name);
+            if (!name || !name.trim()) return;
+            profile.name = name.trim();
+            localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
+            renderProfileSwitcher();
+        }
+
+        function deleteActiveProfile() {
+            const pid = activeProfileId();
+            if (pid === 'default') {
+                showToast('O perfil "Principal" não pode ser excluído.', 'warning');
+                return;
+            }
+            if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil (matérias, ciclo, histórico) serão apagados.`)) return;
+            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel']
+                .forEach(base => localStorage.removeItem(base + '__' + pid));
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
+            localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
+            switchProfile('default');
+        }
+
+        function renderProfileSwitcher() {
+            const el = document.getElementById('profile-switcher');
+            if (!el) return;
+            const profiles = getProfiles();
+            const active = activeProfileId();
+            el.innerHTML = `
+                <select id="profile-select" onchange="this.value === '__new__' ? createProfile() : switchProfile(this.value)">
+                    ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${p.name}</option>`).join('')}
+                    <option value="__new__">+ Novo perfil…</option>
+                </select>
+                ${active !== 'default' ? `
+                    <button class="profile-icon-btn" title="Renomear perfil" onclick="renameActiveProfile()"><i class="fas fa-pen"></i></button>
+                    <button class="profile-icon-btn" title="Excluir perfil" onclick="deleteActiveProfile()"><i class="fas fa-trash"></i></button>
+                ` : ''}
+            `;
+        }
+
         // --- DATA & CONFIG ---
         const ENABLE_API = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
@@ -1704,11 +1798,11 @@
             try {
                 const payload = {
                     data: {
-                        estudoFiscalData: JSON.parse(localStorage.getItem('estudoFiscalData') || '{}'),
-                        estudoFiscalSyllabus: JSON.parse(localStorage.getItem('estudoFiscalSyllabus') || '{}'),
-                        estudoFiscalStudyHistory: JSON.parse(localStorage.getItem('estudoFiscalStudyHistory') || '[]'),
-                        estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem('estudoFiscalScheduleStructure') || '[]'),
-                        estudoFiscalModel: JSON.parse(localStorage.getItem('estudoFiscalModel') || 'null')
+                        estudoFiscalData: JSON.parse(localStorage.getItem(K('estudoFiscalData')) || '{}'),
+                        estudoFiscalSyllabus: JSON.parse(localStorage.getItem(K('estudoFiscalSyllabus')) || '{}'),
+                        estudoFiscalStudyHistory: JSON.parse(localStorage.getItem(K('estudoFiscalStudyHistory')) || '[]'),
+                        estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem(K('estudoFiscalScheduleStructure')) || '[]'),
+                        estudoFiscalModel: JSON.parse(localStorage.getItem(K('estudoFiscalModel')) || 'null')
                     }
                 };
                 await fetch('/api/save_bulk', {
@@ -1768,7 +1862,7 @@
                 const resCycle = await fetch('/api/cycle');
                 const cycle = await resCycle.json();
                 if (cycle && cycle.ok && cycle.schedule) {
-                    localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(cycle.schedule));
+                    localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(cycle.schedule));
                     await logEvent(`HYDRATE: ciclo carregado (${Array.isArray(cycle.schedule) ? cycle.schedule.length : 0} dias)`);
                 }
 
@@ -1777,14 +1871,14 @@
                 const json = await res.json();
                 if (json && json.ok && json.data) {
                     const d = json.data;
-                    if (d.estudoFiscalData) localStorage.setItem('estudoFiscalData', JSON.stringify(d.estudoFiscalData));
-                    if (d.estudoFiscalSyllabus) localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(d.estudoFiscalSyllabus));
-                    if (d.estudoFiscalStudyHistory) localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(d.estudoFiscalStudyHistory));
+                    if (d.estudoFiscalData) localStorage.setItem(K('estudoFiscalData'), JSON.stringify(d.estudoFiscalData));
+                    if (d.estudoFiscalSyllabus) localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(d.estudoFiscalSyllabus));
+                    if (d.estudoFiscalStudyHistory) localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(d.estudoFiscalStudyHistory));
                     // Só usa backup do schedule se /api/cycle não trouxe nada
                     if (!cycle.schedule && d.estudoFiscalScheduleStructure) {
-                        localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(d.estudoFiscalScheduleStructure));
+                        localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(d.estudoFiscalScheduleStructure));
                     }
-                    if (d.estudoFiscalModel) localStorage.setItem('estudoFiscalModel', JSON.stringify(d.estudoFiscalModel));
+                    if (d.estudoFiscalModel) localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(d.estudoFiscalModel));
                 }
             } catch (e) {
                 console.warn('Falha ao hidratar do disco:', e);
@@ -1826,7 +1920,7 @@
          * Carrega um modelo salvo no localStorage e aplica em start/end/subjects.
          */
         function loadModelFromStorage() {
-            const raw = localStorage.getItem('estudoFiscalModel');
+            const raw = localStorage.getItem(K('estudoFiscalModel'));
             if (!raw) return;
             try {
                 const model = JSON.parse(raw);
@@ -1864,7 +1958,7 @@
                 if (Array.isArray(model.syllabus)) {
                     syllabusData = model.syllabus; // será definido abaixo como let
                 }
-                const savedScheduleJson = localStorage.getItem('estudoFiscalScheduleStructure');
+                const savedScheduleJson = localStorage.getItem(K('estudoFiscalScheduleStructure'));
                 if (savedScheduleJson) {
                     setGenerateButtonState('success');
                     try {
@@ -1891,7 +1985,7 @@
                             });
                         });
                         if (dirty) {
-                            localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
                         }
                     } catch(e) {
                         console.error('Falha ao reidratar cronograma salvo:', e);
@@ -1920,7 +2014,7 @@
          */
         function generateSchedule() {
             // Check if we have a saved schedule structure
-            const savedScheduleJson = localStorage.getItem('estudoFiscalScheduleStructure');
+            const savedScheduleJson = localStorage.getItem(K('estudoFiscalScheduleStructure'));
             
             if (savedScheduleJson) {
                 // Parse saved dates strings back to Date objects
@@ -1947,7 +2041,7 @@
                     });
                 });
                 if (dirty) {
-                    localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                    localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
                 }
                 console.log("Loaded saved schedule structure.");
                 return;
@@ -2096,7 +2190,7 @@
             }
             
             // Save the generated structure
-            localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
             
             if (ENABLE_API) {
                 try {
@@ -2116,20 +2210,20 @@
         // Keys: 'estudoFiscalData' (status), 'estudoFiscalSyllabus' (syllabus)
         
         // Migration: Check for old 'sefazGoData' and migrate if 'estudoFiscalData' is missing
-        let savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+        let savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
         const oldSefazData = JSON.parse(localStorage.getItem('sefazGoData'));
         
         if(oldSefazData && Object.keys(savedData).length === 0) {
             console.log("Migrating SEFAZ-GO status data to Estudo Fiscal...");
             savedData = oldSefazData;
-            localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
         }
         
         /**
          * Aplica dados salvos (tempo, meta, notas) no cronograma carregado.
          */
         function applySavedStatusToSchedule() {
-            const saved = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+            const saved = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
             fullSchedule.forEach(day => {
                 day.tasks.forEach(task => {
                     const data = saved[task.id];
@@ -2155,8 +2249,8 @@
         // --- RENDER FUNCTIONS ---
 
 
-        const tabOrder = ['calendar', 'subjects', 'list', 'syllabus', 'time-stats', 'history'];
-        let currentTab = 'calendar';
+        const tabOrder = ['cycle', 'subjects', 'list', 'syllabus', 'time-stats', 'history'];
+        let currentTab = 'cycle';
 
         function switchTab(tabName) {
             if (tabName === currentTab) return;
@@ -2175,7 +2269,7 @@
             if(navItem) navItem.classList.add('active');
 
             // Render specific content BEFORE showing
-            if (tabName === 'calendar') renderCalendar();
+            if (tabName === 'cycle') renderDailyCycle();
             else if (tabName === 'subjects') renderSubjects();
             else if (tabName === 'list') renderList();
             else if (tabName === 'syllabus') renderSyllabus();
@@ -2205,7 +2299,7 @@
 
                 // Update Title
                 const titles = {
-                    'calendar': 'Calendário de Estudos',
+                    'cycle': 'Ciclo de Estudo',
                     'subjects': 'Progresso por Matéria',
                     'list': 'Cronograma Completo',
                     'syllabus': 'Conteúdo Programático',
@@ -2253,6 +2347,9 @@
         }
 
         function renderCalendar() {
+            renderDailyCycle();
+            const container0 = document.getElementById('calendar-days');
+            if (!container0) return; // Calendário removido da interface — mantido apenas o Ciclo de Estudo
             const year = viewDate.getFullYear();
             const month = viewDate.getMonth();
             
@@ -2321,6 +2418,447 @@
 
                 container.appendChild(div);
             }
+        }
+
+        // --- CICLO DE ESTUDO (HOME VIEW) ---
+        /**
+         * Retorna (e cria se necessário) a entrada de hoje dentro do fullSchedule.
+         */
+        function getOrCreateTodayDayObj() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let dayObj = fullSchedule.find(d => {
+                const a = new Date(d.date); a.setHours(0, 0, 0, 0);
+                return a.getTime() === today.getTime();
+            });
+            if (!dayObj) {
+                dayObj = { date: today, tasks: [] };
+                fullSchedule.push(dayObj);
+                fullSchedule.sort((a, b) => a.date.getTime() - b.date.getTime());
+            }
+            return dayObj;
+        }
+
+        function persistSchedule() {
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
+            syncToDisk();
+        }
+
+        /**
+         * Renderiza a tela principal "Ciclo de Estudo": fila de matérias de hoje +
+         * construtor para indicar quais matérias entram no ciclo.
+         */
+        function renderDailyCycle() {
+            const listEl = document.getElementById('cycle-list-container');
+            const summaryEl = document.getElementById('cycle-summary-bar-container');
+            const builderEl = document.getElementById('cycle-builder-container');
+            const logEl = document.getElementById('cycle-today-log-container');
+            const weekEl = document.getElementById('cycle-week-strip-container');
+            const reviewsEl = document.getElementById('cycle-reviews-container');
+            if (!listEl || !summaryEl || !builderEl || !logEl || !weekEl || !reviewsEl) return; // view ainda não montada
+
+            const dayObj = getOrCreateTodayDayObj();
+            const tasks = dayObj.tasks || [];
+
+            const todayLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+                .replace(/^\w/, c => c.toUpperCase());
+
+            if (!subjectsConfig || subjectsConfig.length === 0) {
+                summaryEl.innerHTML = '';
+                listEl.innerHTML = '';
+                logEl.innerHTML = '';
+                weekEl.innerHTML = '';
+                reviewsEl.innerHTML = '';
+                builderEl.innerHTML = `
+                    <div class="cycle-empty">
+                        <i class="fas fa-book-open"></i>
+                        <h3>Nenhuma matéria cadastrada</h3>
+                        <p>Cadastre suas matérias em "Tabela de Matérias" para montar o seu ciclo diário de estudo.</p>
+                        <button class="btn btn-primary" onclick="openUsageTutorial()"><i class="fas fa-graduation-cap"></i> Ver Tutorial de Utilização</button>
+                    </div>`;
+                return;
+            }
+
+            // --- Resumo do dia (planejado vs. realizado) ---
+            const done = tasks.filter(t => deriveTaskStatus(t) === 'concluido').length;
+            const totalTime = tasks.reduce((acc, t) => acc + (t.timeSpent || 0), 0);
+            const plannedTime = tasks.reduce((acc, t) => acc + (t.durationTarget || 3600), 0);
+            const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+            const gapSeconds = Math.max(0, plannedTime - totalTime);
+            summaryEl.innerHTML = tasks.length ? `
+                <div class="cycle-summary-bar">
+                    <div class="cycle-summary-title"><i class="fas fa-bullseye"></i> ${todayLabel}</div>
+                    <div class="cycle-summary-bar-track"><div class="cycle-summary-bar-fill" style="width:${pct}%"></div></div>
+                    <div class="cycle-summary-stats">
+                        <div class="cycle-summary-stat"><b>${done}/${tasks.length}</b><span>Blocos concluídos</span></div>
+                        <div class="cycle-summary-stat"><b>${formatHM(totalTime)} / ${formatHM(plannedTime)}</b><span>Feito / Planejado</span></div>
+                        <div class="cycle-summary-stat"><b class="${gapSeconds > 0 ? 'gap-pending' : 'gap-done'}">${gapSeconds > 0 ? formatHM(gapSeconds) : '✓'}</b><span>${gapSeconds > 0 ? 'Falta hoje' : 'Meta batida'}</span></div>
+                    </div>
+                </div>` : '';
+
+            // --- Tira-teima da semana (últimos 7 dias, hoje incluso) ---
+            {
+                const todayMid = new Date(); todayMid.setHours(0,0,0,0);
+                const cells = [];
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date(todayMid); d.setDate(d.getDate() - i);
+                    const dObj = fullSchedule.find(day => {
+                        const a = new Date(day.date); a.setHours(0,0,0,0);
+                        return a.getTime() === d.getTime();
+                    });
+                    const dayTasks = dObj ? dObj.tasks : [];
+                    const subjects = [...new Set(dayTasks.map(t => t.subject))];
+                    const doneCount = dayTasks.filter(t => deriveTaskStatus(t) === 'concluido').length;
+                    const isToday = i === 0;
+                    cells.push(`
+                        <div class="week-cell ${isToday ? 'is-today' : ''}" title="${subjects.join(', ') || 'Nada planejado'}">
+                            <div class="week-cell-day">${d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</div>
+                            <div class="week-cell-count">${subjects.length || '–'}</div>
+                            <div class="week-cell-sub">${dayTasks.length ? `${doneCount}/${dayTasks.length}` : ''}</div>
+                        </div>`);
+                }
+                weekEl.innerHTML = `
+                    <div class="week-strip">
+                        <div class="week-strip-title">Últimos 7 dias</div>
+                        <div class="week-strip-cells">${cells.join('')}</div>
+                    </div>`;
+            }
+
+            // --- Fila de matérias de hoje ---
+            if (tasks.length === 0) {
+                listEl.innerHTML = `
+                    <div class="cycle-empty">
+                        <i class="fas fa-mug-hot"></i>
+                        <h3>Nada no ciclo de hoje ainda</h3>
+                        <p>Escolha abaixo as matérias que você vai estudar hoje e clique em "Gerar Ciclo de Hoje".</p>
+                    </div>`;
+            } else {
+                const activeTaskId = (activeSession && dayObj.date.getTime() === (activeSession.dayDate && activeSession.dayDate.getTime())) ? tasks[activeSession.taskIndex]?.id : null;
+                listEl.innerHTML = `<div class="cycle-list">` + tasks.map((task, index) => {
+                    const status = deriveTaskStatus(task);
+                    const isActive = task.id === activeTaskId;
+                    const isDone = status === 'concluido' && !isActive;
+                    const target = task.durationTarget || 3600;
+                    const spent = task.timeSpent || 0;
+                    const percent = Math.min(100, Math.round((spent / target) * 100));
+                    const statusChipClass = status === 'concluido' ? 'ok' : (status === 'nao_concluido' ? 'ic' : 'ns');
+                    const statusLabel = status === 'concluido' ? 'Concluído' : (status === 'nao_concluido' ? 'Em andamento' : 'Não iniciado');
+                    const actionLabel = spent > 0 ? 'Continuar' : 'Iniciar Estudo';
+                    return `
+                        <div class="cycle-card ${isActive ? 'is-active' : ''} ${isDone ? 'is-done' : ''}">
+                            <div class="cycle-num">${isDone ? '<i class=\"fas fa-check\"></i>' : index + 1}</div>
+                            <div class="cycle-card-body">
+                                <div class="cycle-card-top">
+                                    <span class="cycle-card-name">${task.subject}</span>
+                                    <span class="tag-${task.type === 'Específico' ? 'spec' : 'basic'}">${task.type}</span>
+                                    <span class="status-pill ${statusChipClass}">${statusLabel}</span>
+                                </div>
+                                <div class="cycle-card-track"><div class="cycle-card-fill" style="width:${percent}%"></div></div>
+                                <div class="cycle-card-meta">${formatTime(spent)} de ${formatTime(target)} · Peso ${task.weight || 1}</div>
+                            </div>
+                            <div class="cycle-card-actions">
+                                ${isActive
+                                    ? `<span class="status-pill ic"><i class="fas fa-stopwatch"></i> Estudando</span>`
+                                    : `<button class="start-btn" onclick="startCycleTask('${task.id}')"><i class="fas fa-play"></i> ${actionLabel}</button>`}
+                                <button class="cycle-remove-btn" title="Remover de hoje" onclick="removeCycleTask('${task.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                }).join('') + `</div>`;
+            }
+
+            // --- O que estudei hoje (log real, baseado no Histórico) ---
+            const now = new Date();
+            const todayHistory = studyHistory.filter(h => {
+                const d = new Date(h.date);
+                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+            }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (todayHistory.length === 0) {
+                logEl.innerHTML = `
+                    <div class="cycle-log-section">
+                        <h3><i class="fas fa-clipboard-check"></i> O que estudei hoje</h3>
+                        <p class="cycle-log-empty">Nenhuma sessão salva ainda hoje. Assim que você clicar em "Salvar" no cronômetro, a matéria aparece aqui.</p>
+                    </div>`;
+            } else {
+                const bySubject = {};
+                todayHistory.forEach(h => { bySubject[h.subject] = (bySubject[h.subject] || 0) + (h.duration || 0); });
+                const totalToday = Object.values(bySubject).reduce((a, b) => a + b, 0);
+                logEl.innerHTML = `
+                    <div class="cycle-log-section">
+                        <h3><i class="fas fa-clipboard-check"></i> O que estudei hoje <span class="cycle-log-total">${formatHM(totalToday)}</span></h3>
+                        <div class="cycle-log-list">
+                            ${todayHistory.map(h => `
+                                <div class="cycle-log-item">
+                                    <div class="cycle-log-item-top">
+                                        <span class="cycle-log-subject">${h.subject}</span>
+                                        <span class="cycle-log-time">${new Date(h.date).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})} · ${formatHM(h.duration)}</span>
+                                    </div>
+                                    ${h.note ? `<div class="cycle-log-note">"${h.note}"</div>` : ''}
+                                    ${h.questions ? `<div class="cycle-log-note">Questões: ${h.correct || 0}/${h.questions}</div>` : ''}
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            // --- Revisões espaçadas pendentes ---
+            const dueReviews = getDueReviews();
+            if (dueReviews.length === 0) {
+                reviewsEl.innerHTML = '';
+            } else {
+                reviewsEl.innerHTML = `
+                    <div class="cycle-log-section">
+                        <h3><i class="fas fa-bell"></i> Revisões pendentes <span class="cycle-log-total" style="background: var(--amber-soft); color: var(--amber);">${dueReviews.length}</span></h3>
+                        <div class="cycle-log-list">
+                            ${dueReviews.map(r => `
+                                <div class="cycle-log-item" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                                    <div>
+                                        <div class="cycle-log-subject">${r.subjectName}</div>
+                                        <div class="cycle-log-note" style="font-style:normal;">${r.topicText}</div>
+                                    </div>
+                                    <button class="btn btn-secondary" onclick="addSubjectTaskToday('${r.subjectName.replace(/'/g,"\\'")}'); clearTopicReview('${r.subjectName.replace(/'/g,"\\'")}', ${r.topicIndex})">
+                                        <i class="fas fa-plus"></i> Adicionar a hoje
+                                    </button>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            // --- Construtor do ciclo (indicar matérias) ---
+            const optionsHtml = subjectsConfig.map(s =>
+                `<option value="${s.name}">${s.name} (Peso ${s.weight})</option>`
+            ).join('');
+
+            builderEl.innerHTML = `
+                <div class="cycle-add-row">
+                    <select id="cycle-add-subject-select">${optionsHtml}</select>
+                    <button class="btn btn-secondary" onclick="addAdHocSubjectToday()"><i class="fas fa-plus"></i> Adicionar matéria a hoje</button>
+                </div>
+                <div class="cycle-builder">
+                    <h3><i class="fas fa-sliders-h"></i> Gerar ciclo de hoje</h3>
+                    <p>Marque as matérias que você indica para o ciclo diário. O ciclo é montado seguindo o peso de cada matéria (matérias de peso maior aparecem mais vezes).</p>
+                    <p class="cycle-builder-tip"><i class="fas fa-lightbulb"></i> Dica do método do Ciclo de Estudos: não existe "dia fixo" para cada matéria — você estuda a próxima da fila e troca de matéria a cada 1h–1h15 de foco, com uma pausa curta entre os blocos.</p>
+                    <div class="cycle-builder-grid" id="cycle-builder-picks">
+                        ${subjectsConfig.map((s, i) => `
+                            <label class="cycle-pick" id="cycle-pick-${i}">
+                                <input type="checkbox" value="${s.name}" checked onchange="document.getElementById('cycle-pick-${i}').classList.toggle('checked', this.checked)">
+                                <span>${s.name}</span>
+                                <small>P${s.weight}</small>
+                            </label>`).join('')}
+                    </div>
+                    <button class="btn btn-primary" onclick="generateTodayCycleFromPicks()"><i class="fas fa-sync-alt"></i> Gerar Ciclo de Hoje</button>
+                </div>`;
+            document.querySelectorAll('.cycle-pick').forEach(el => el.classList.add('checked'));
+        }
+
+        /**
+         * Monta o ciclo de HOJE (somente) a partir das matérias marcadas no construtor,
+         * respeitando o peso de cada uma (peso = quantidade de blocos no ciclo do dia).
+         */
+        /**
+         * Conta em quantos dos últimos `daysBack` dias (sem contar hoje) a matéria apareceu
+         * no ciclo gerado — usado para evitar repetir demais a mesma matéria durante a semana.
+         */
+        function countRecentDayAppearances(subjectName, daysBack) {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            let count = 0;
+            for (let i = 1; i <= daysBack; i++) {
+                const d = new Date(today); d.setDate(d.getDate() - i);
+                const dayObj = fullSchedule.find(day => {
+                    const a = new Date(day.date); a.setHours(0, 0, 0, 0);
+                    return a.getTime() === d.getTime();
+                });
+                if (dayObj && dayObj.tasks.some(t => t.subject === subjectName)) count++;
+            }
+            return count;
+        }
+
+        /** % de acerto em questões da matéria (null se não houver dado suficiente). */
+        function getSubjectPerformanceRate(subjectName) {
+            let qTotal = 0, qCorrect = 0;
+            studyHistory.forEach(h => {
+                if (h.subject === subjectName && h.questions) { qTotal += h.questions; qCorrect += (h.correct || 0); }
+            });
+            if (qTotal < 5) return null;
+            return Math.round((qCorrect / qTotal) * 100);
+        }
+
+        function generateTodayCycleFromPicks() {
+            const checked = Array.from(document.querySelectorAll('#cycle-builder-picks input:checked')).map(el => el.value);
+            if (checked.length === 0) {
+                showToast('Selecione ao menos uma matéria para gerar o ciclo de hoje.', 'warning');
+                return;
+            }
+            if (activeSession) {
+                showToast('Finalize ou cancele a sessão ativa antes de gerar um novo ciclo.', 'warning');
+                return;
+            }
+            const dayObj = getOrCreateTodayDayObj();
+            const picked = subjectsConfig.filter(s => checked.includes(s.name));
+            const WEEK_WINDOW = 6; // dias corridos anteriores considerados "a semana"
+
+            // Contagem-base = peso (frequência desejada no ciclo)
+            let counts = {};
+            picked.forEach(s => { counts[s.name] = Math.max(1, Math.round(s.weight || 1)); });
+
+            // Score de prioridade: quanto MENOR, mais a matéria "merece" aparecer/ganhar bloco —
+            // combina "pouco vista na semana" com "desempenho fraco em questões" (matéria carente).
+            let priority = {};
+            if (picked.length >= 3) {
+                picked.forEach(s => {
+                    const recent = countRecentDayAppearances(s.name, WEEK_WINDOW);
+                    const perf = getSubjectPerformanceRate(s.name);
+                    const perfPenalty = perf === null ? 0 : (perf < 60 ? 2 : (perf < 80 ? 1 : 0));
+                    priority[s.name] = recent - perfPenalty;
+                });
+                // Matéria "superexposta" (apareceu em 4+ dos últimos 6 dias) cede 1 bloco de hoje
+                // para quem tem prioridade mais alta (pouco vista e/ou desempenho fraco).
+                const recentCount = {};
+                picked.forEach(s => { recentCount[s.name] = countRecentDayAppearances(s.name, WEEK_WINDOW); });
+                const overexposed = picked.filter(s => recentCount[s.name] >= 4 && counts[s.name] > 1);
+                overexposed.forEach(s => {
+                    const candidates = picked.filter(other => other.name !== s.name);
+                    if (candidates.length === 0) return;
+                    candidates.sort((a, b) => priority[a.name] - priority[b.name]);
+                    const beneficiary = candidates[0];
+                    counts[s.name] -= 1;
+                    counts[beneficiary.name] += 1;
+                });
+            }
+
+            // Intercala as matérias: prioriza quem tem mais blocos restantes hoje e, em empate,
+            // quem tem maior prioridade (pouco vista na semana / desempenho fraco).
+            let order = [];
+            let lastSub = null;
+            let totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
+            for (let i = 0; i < totalBlocks; i++) {
+                let candidates = picked.filter(s => counts[s.name] > 0);
+                if (candidates.length === 0) break;
+                let valid = candidates.filter(s => s.name !== lastSub);
+                if (valid.length === 0) valid = candidates;
+                valid.sort((a, b) => {
+                    const byCount = counts[b.name] - counts[a.name];
+                    if (byCount !== 0) return byCount;
+                    return (priority[a.name] || 0) - (priority[b.name] || 0);
+                });
+                const pick = valid[0];
+                order.push(pick);
+                counts[pick.name]--;
+                lastSub = pick.name;
+            }
+
+            dayObj.tasks = order.map((s, i) => ({
+                id: `task-cycle-${Date.now()}-${i}`,
+                subject: s.name,
+                type: s.type,
+                weight: s.weight,
+                completed: false,
+                timeSpent: 0,
+                durationTarget: 3600,
+                note: ''
+            }));
+
+            persistSchedule();
+            renderDailyCycle();
+            showToast('Ciclo de hoje gerado com sucesso!', 'success');
+        }
+
+        /**
+         * Adiciona uma matéria avulsa (ad-hoc) ao ciclo de hoje.
+         */
+        /**
+         * Adiciona uma matéria (por nome) como bloco avulso no ciclo de hoje.
+         * Compartilhado pelo seletor manual e pelas revisões espaçadas pendentes.
+         */
+        function addSubjectTaskToday(subjectName) {
+            const subConfig = subjectsConfig.find(s => s.name === subjectName);
+            const dayObj = getOrCreateTodayDayObj();
+            dayObj.tasks.push({
+                id: `task-adhoc-${Date.now()}`,
+                subject: subjectName,
+                type: subConfig ? subConfig.type : 'Básico',
+                weight: subConfig ? subConfig.weight : 1,
+                completed: false,
+                timeSpent: 0,
+                durationTarget: 3600,
+                note: ''
+            });
+            persistSchedule();
+            renderDailyCycle();
+            showToast(`"${subjectName}" adicionada ao ciclo de hoje.`, 'success');
+        }
+
+        function addAdHocSubjectToday() {
+            const select = document.getElementById('cycle-add-subject-select');
+            if (!select || !select.value) return;
+            addSubjectTaskToday(select.value);
+        }
+
+        /**
+         * Remove uma matéria do ciclo de hoje (não afeta o histórico já salvo).
+         */
+        function removeCycleTask(taskId) {
+            if (activeSession) {
+                const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+                if (dayObj && dayObj.tasks[activeSession.taskIndex] && dayObj.tasks[activeSession.taskIndex].id === taskId) {
+                    showToast('Não é possível remover a matéria em estudo agora.', 'warning');
+                    return;
+                }
+            }
+            const dayObj = getOrCreateTodayDayObj();
+            dayObj.tasks = dayObj.tasks.filter(t => t.id !== taskId);
+            persistSchedule();
+            renderDailyCycle();
+        }
+
+        /**
+         * Inicia o contador de estudo para uma matéria do ciclo de hoje.
+         */
+        function startCycleTask(taskId) {
+            if (activeSession) {
+                showToast('Já existe uma sessão ativa. Finalize-a primeiro.', 'warning');
+                return;
+            }
+            const dayObj = getOrCreateTodayDayObj();
+            const index = dayObj.tasks.findIndex(t => t.id === taskId);
+            if (index === -1) return;
+            const task = dayObj.tasks[index];
+
+            task._inProgress = true;
+            const saved = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+            if (!saved[task.id]) saved[task.id] = {};
+            saved[task.id].status = 'nao_concluido';
+            saved[task.id].note = task.note || '';
+            saved[task.id].timeSpent = task.timeSpent || 0;
+            saved[task.id].durationTarget = task.durationTarget || 3600;
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(saved));
+
+            activeSession = {
+                dayDate: dayObj.date,
+                taskIndex: index,
+                subject: task.subject,
+                startTime: Date.now(),
+                elapsedAtStart: task.timeSpent || 0,
+                elapsedSession: 0,
+                paused: false,
+                interval: null,
+                target: Number(task.durationTarget || 3600),
+                alarmPlayed: false,
+                lastResumeEpochMs: Date.now()
+            };
+
+            const bar = document.getElementById('active-study-bar');
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
+
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
+            updateBarTimer();
+            resumeTimer();
+            window.addEventListener('keydown', barKeyHandler);
+            renderDailyCycle();
         }
 
         // --- MODAL LOGIC ---
@@ -2575,6 +3113,18 @@
             return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
         }
 
+        /**
+         * Formato compacto e legível para exibição de tempo (ex: "3h 20m").
+         * Usado nos cards/resumos; formatTime() continua sendo o formato do cronômetro (00:00:00).
+         */
+        function formatHM(seconds) {
+            seconds = Math.max(0, Math.round(seconds || 0));
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (h === 0 && m === 0) return '0m';
+            return (h > 0 ? `${h}h ` : '') + `${m}m`;
+        }
+
         function deriveTaskStatus(task) {
             const spent = Number(task.timeSpent || 0);
             const target = Number(task.durationTarget || 3600);
@@ -2586,12 +3136,29 @@
 
         // --- SESSION & HISTORY LOGIC ---
         // Load history with migration
-        let studyHistory = JSON.parse(localStorage.getItem('estudoFiscalStudyHistory')) || [];
+        let studyHistory = JSON.parse(localStorage.getItem(K('estudoFiscalStudyHistory'))) || [];
         const oldSefazHistory = JSON.parse(localStorage.getItem('sefazStudyHistory'));
         if (oldSefazHistory && studyHistory.length === 0) {
             console.log("Migrating SEFAZ-GO history to Estudo Fiscal...");
             studyHistory = oldSefazHistory;
-            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(studyHistory));
+            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
+        }
+
+        /**
+         * Apaga permanentemente o histórico de sessões de estudo (não afeta matérias/ciclo/syllabus).
+         */
+        function clearStudyHistory() {
+            if (studyHistory.length === 0) {
+                showToast('O histórico já está vazio.', 'info');
+                return;
+            }
+            if (!confirm('Tem certeza que deseja apagar TODO o histórico de estudos? Essa ação não pode ser desfeita.')) return;
+            studyHistory = [];
+            localStorage.removeItem(K('estudoFiscalStudyHistory'));
+            renderHistory();
+            renderTimeStats();
+            renderDailyCycle();
+            showToast('Histórico de estudos apagado.', 'success');
         }
 
         const ACTIVE_SESSION_STORAGE_KEY = 'estudoFiscalActiveSession';
@@ -2679,13 +3246,13 @@
             const realTask = dayObj.tasks[index];
             // Marca em progresso e persiste status "Não Concluído" imediatamente
             realTask._inProgress = true;
-            const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+            const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
             if(!savedData[realTask.id]) savedData[realTask.id] = {};
             savedData[realTask.id].status = 'nao_concluido';
             savedData[realTask.id].note = realTask.note || '';
             savedData[realTask.id].timeSpent = realTask.timeSpent || 0;
             savedData[realTask.id].durationTarget = realTask.durationTarget || 3600;
-            localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
             renderCalendar();
             renderList();
 
@@ -2727,13 +3294,17 @@
 
         function togglePauseResume() {
             if(!activeSession) return;
+            let label;
             if(activeSession.paused) {
                 resumeTimer();
-                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-pause"></i> Pausar';
+                label = '<i class="fas fa-pause"></i> Pausar';
             } else {
                 pauseTimer();
-                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-play"></i> Continuar';
+                label = '<i class="fas fa-play"></i> Continuar';
             }
+            document.getElementById('btn-pause-resume').innerHTML = label;
+            const focusBtn = document.getElementById('focus-pause-icon')?.closest('button');
+            if (focusBtn) focusBtn.innerHTML = label;
         }
 
         function resumeTimer() {
@@ -2787,6 +3358,26 @@
             persistActiveSessionToStorage();
         }
 
+        // --- MODO FOCO ---
+        function openFocusMode() {
+            if (!activeSession) return;
+            const overlay = document.getElementById('focus-mode-overlay');
+            if (!overlay) return;
+            document.getElementById('focus-subject-name').textContent = activeSession.subject;
+            overlay.classList.add('open');
+            updateBarTimer();
+        }
+
+        function closeFocusMode() {
+            const overlay = document.getElementById('focus-mode-overlay');
+            if (overlay) overlay.classList.remove('open');
+        }
+
+        function isFocusModeOpen() {
+            const overlay = document.getElementById('focus-mode-overlay');
+            return !!(overlay && overlay.classList.contains('open'));
+        }
+
         function updateBarTimer() {
             if(!activeSession) return;
             const liveDelta = activeSession.paused || !activeSession.lastResumeEpochMs ? 0 : Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000);
@@ -2798,6 +3389,14 @@
             if(fill) fill.style.width = pct + '%';
             const label = document.getElementById('bar-target-label');
             if(label) label.textContent = `/ Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
+            if (isFocusModeOpen()) {
+                const ft = document.getElementById('focus-timer-display');
+                const ffill = document.getElementById('focus-progress-fill');
+                const flabel = document.getElementById('focus-target-label');
+                if (ft) ft.textContent = formatTime(total);
+                if (ffill) ffill.style.width = pct + '%';
+                if (flabel) flabel.textContent = `Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
+            }
             if(!activeSession.alarmPlayed && total >= target) {
                 activeSession.alarmPlayed = true;
                 playAlarm();
@@ -2819,6 +3418,7 @@
         function finishSession() {
             if(!activeSession) return;
             pauseTimer();
+            closeFocusMode();
             // Open Note Modal
             document.getElementById('note-modal').classList.add('open');
             // Clear textarea and inputs
@@ -2830,6 +3430,7 @@
         function cancelSession(skipConfirm) {
             if(skipConfirm || confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) {
                 pauseTimer();
+                closeFocusMode();
                 document.getElementById('active-study-bar').classList.remove('visible');
                 // Reverte status para o derivado do tempo atual (provavelmente "Não Iniciado")
                 if(activeSession) {
@@ -2838,13 +3439,13 @@
                         const task = dayObj.tasks[activeSession.taskIndex];
                         delete task._inProgress;
                         const d = deriveTaskStatus(task);
-                        const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+                        const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
                         if(!savedData[task.id]) savedData[task.id] = {};
                         savedData[task.id].status = d;
                         savedData[task.id].note = task.note || '';
                         savedData[task.id].timeSpent = task.timeSpent || 0;
                         savedData[task.id].durationTarget = task.durationTarget || 3600;
-                        localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
+                        localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
                     }
                 }
                 renderCalendar();
@@ -2889,7 +3490,7 @@
             };
             
             studyHistory.unshift(historyItem); // Add to top
-            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(studyHistory));
+            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
 
             // 2. Update Cycle Task (Total Time)
             const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
@@ -2914,14 +3515,14 @@
                 }
                 
                 // Save to Global Data (Using Generic Key)
-                const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+                const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
                 if(!savedData[task.id]) savedData[task.id] = {};
                 savedData[task.id].status = derivedStatus; 
                 savedData[task.id].note = task.note;
                 savedData[task.id].timeSpent = task.timeSpent;
                 savedData[task.id].durationTarget = task.durationTarget || 3600;
-                localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
-                localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+                localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
                 syncToDisk();
             }
 
@@ -2961,7 +3562,8 @@
                 finishSession();
             } else if(e.key === 'Escape') {
                 e.preventDefault();
-                cancelSession();
+                if (isFocusModeOpen()) closeFocusMode();
+                else cancelSession();
             }
         }
 
@@ -3105,7 +3707,7 @@
                 dayObj.tasks.forEach(t => { const d = deriveTaskStatus(t); t.completed = (d === 'concluido'); });
 
                 // Save to Storage
-                const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+                const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
                 
                 dayObj.tasks.forEach(t => {
                     if(!savedData[t.id]) savedData[t.id] = {};
@@ -3116,8 +3718,8 @@
                     savedData[t.id].durationTarget = t.durationTarget || 3600;
                 });
 
-                localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
-                localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+                localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+                localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
                 // Persistir ciclo e sincronizar
                 if (ENABLE_API) {
                     try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
@@ -3143,20 +3745,24 @@
             container.innerHTML = '';
 
             subjectsConfig.forEach(sub => {
-                // Calculate stats
+                // Calculate stats: blocos (quantidade de sessões planejadas) vs tempo real estudado
                 let total = 0;
                 let done = 0;
-                
+                let secondsSpent = 0;
+                let secondsTarget = 0;
+
                 fullSchedule.forEach(day => {
                     day.tasks.forEach(t => {
                         if(t.subject === sub.name) {
                             total++;
                             if(t.completed) done++;
+                            secondsSpent += (t.timeSpent || 0);
+                            secondsTarget += (t.durationTarget || 3600);
                         }
                     });
                 });
 
-                const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+                const percent = secondsTarget === 0 ? 0 : Math.min(100, Math.round((secondsSpent / secondsTarget) * 100));
 
                 // Calculate Question Performance
                 let qTotal = 0;
@@ -3179,14 +3785,14 @@
                         <div class="subject-badge ${'badge-w' + (sub.weight || 1)}">Peso ${sub.weight}</div>
                     </div>
                     <div class="subject-stat">
-                        <span>Horas planejadas</span>
-                        <span>${total}h</span>
+                        <span>Tempo estudado</span>
+                        <span>${formatHM(secondsSpent)} de ${formatHM(secondsTarget)}</span>
                     </div>
                     <div class="subject-stat">
-                        <span>Concluído</span>
-                        <span>${done}h (${percent}%)</span>
+                        <span>Blocos concluídos</span>
+                        <span>${done}/${total} (${percent}%)</span>
                     </div>
-                    
+
                     <!-- Performance -->
                      <div class="subject-stat" style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
                         <span>Desempenho</span>
@@ -3720,7 +4326,7 @@
         ];
 
         (function(){
-            const rawModel = localStorage.getItem('estudoFiscalModel');
+            const rawModel = localStorage.getItem(K('estudoFiscalModel'));
             if(rawModel){
                 try{
                     const model = JSON.parse(rawModel);
@@ -3729,7 +4335,55 @@
             }
         })();
 
-        let syllabusProgress = JSON.parse(localStorage.getItem('estudoFiscalSyllabus')) || {};
+        let syllabusProgress = JSON.parse(localStorage.getItem(K('estudoFiscalSyllabus'))) || {};
+
+        // --- REVISÃO ESPAÇADA ---
+        // Chave: "NomeDaMatéria||índiceDoTópico" -> data ISO (yyyy-mm-dd) da próxima revisão.
+        let reviewSchedule = JSON.parse(localStorage.getItem(K('estudoFiscalReviews'))) || {};
+
+        function reviewKey(subjectName, topicIndex) { return subjectName + '||' + topicIndex; }
+
+        function todayISO() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        function scheduleTopicReview(subjectName, topicIndex, days) {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            reviewSchedule[reviewKey(subjectName, topicIndex)] = iso;
+            localStorage.setItem(K('estudoFiscalReviews'), JSON.stringify(reviewSchedule));
+            renderSyllabus();
+            renderDailyCycle();
+            showToast(`Revisão agendada para ${d.toLocaleDateString('pt-BR')}.`, 'success');
+        }
+
+        function clearTopicReview(subjectName, topicIndex) {
+            delete reviewSchedule[reviewKey(subjectName, topicIndex)];
+            localStorage.setItem(K('estudoFiscalReviews'), JSON.stringify(reviewSchedule));
+            renderSyllabus();
+            renderDailyCycle();
+        }
+
+        /** Retorna as revisões vencidas (data agendada <= hoje), com o texto do tópico. */
+        function getDueReviews() {
+            const today = todayISO();
+            const due = [];
+            Object.keys(reviewSchedule).forEach(key => {
+                if (reviewSchedule[key] > today) return;
+                const [subjectName, topicIndexStr] = key.split('||');
+                const topicIndex = Number(topicIndexStr);
+                let topicText = null;
+                for (const section of syllabusData) {
+                    const subj = section.subjects.find(s => s.name === subjectName);
+                    if (subj && subj.topics[topicIndex] !== undefined) { topicText = subj.topics[topicIndex]; break; }
+                }
+                if (topicText === null) return; // matéria/tópico não existe mais no syllabus atual
+                due.push({ subjectName, topicIndex, topicText, dueDate: reviewSchedule[key] });
+            });
+            return due;
+        }
         
         // Migrate Syllabus
         const oldSefazSyllabus = JSON.parse(localStorage.getItem('sefazCycle_syllabus'));
@@ -3747,7 +4401,7 @@
                 syllabusProgress[newKey] = oldSefazSyllabus[oldKey];
             });
             
-            localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(syllabusProgress));
+            localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(syllabusProgress));
         }
 
         function toggleSyllabusItem(subjectName, topicIndex, checked) {
@@ -3761,7 +4415,7 @@
                 }
             }
             syllabusProgress[subjectName][topicIndex] = checked;
-            localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(syllabusProgress));
+            localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(syllabusProgress));
             
             // Update UI partially to prevent closing accordion
             updateSyllabusUI(subjectName);
@@ -3864,14 +4518,28 @@
                             </div>
                         </div>
                         <div class="syllabus-content">
-                            ${sub.topics.map((topic, idx) => `
+                            ${sub.topics.map((topic, idx) => {
+                                const dueDate = reviewSchedule[reviewKey(sub.name, idx)];
+                                let reviewBadge = '';
+                                if (dueDate) {
+                                    const isDue = dueDate <= todayISO();
+                                    reviewBadge = `<span class="review-badge ${isDue ? 'due' : ''}" title="Revisão agendada" onclick="clearTopicReview('${sub.name.replace(/'/g,"\\'")}', ${idx})">
+                                        <i class="fas fa-bell"></i> ${isDue ? 'Revisar!' : new Date(dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                    </span>`;
+                                }
+                                return `
                                 <div class="topic-item">
-                                    <input type="checkbox" class="topic-checkbox" 
-                                        ${savedTopics[idx] ? 'checked' : ''} 
+                                    <input type="checkbox" class="topic-checkbox"
+                                        ${savedTopics[idx] ? 'checked' : ''}
                                         onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
                                     <span class="topic-text">${topic}</span>
-                                </div>
-                            `).join('')}
+                                    ${reviewBadge}
+                                    <span class="review-add">
+                                        <button title="Revisar em 7 dias" onclick="scheduleTopicReview('${sub.name.replace(/'/g,"\\'")}', ${idx}, 7)">7d</button>
+                                        <button title="Revisar em 30 dias" onclick="scheduleTopicReview('${sub.name.replace(/'/g,"\\'")}', ${idx}, 30)">30d</button>
+                                    </span>
+                                </div>`;
+                            }).join('')}
                         </div>
                     `;
                     container.appendChild(card);
@@ -3935,10 +4603,10 @@
         // --- BACKUP & RESTORE ---
         function downloadBackup() {
             const data = {
-                estudoFiscalData: JSON.parse(localStorage.getItem('estudoFiscalData') || '{}'),
-                estudoFiscalSyllabus: JSON.parse(localStorage.getItem('estudoFiscalSyllabus') || '{}'),
-                estudoFiscalStudyHistory: JSON.parse(localStorage.getItem('estudoFiscalStudyHistory') || '[]'),
-                estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem('estudoFiscalScheduleStructure') || 'null'),
+                estudoFiscalData: JSON.parse(localStorage.getItem(K('estudoFiscalData')) || '{}'),
+                estudoFiscalSyllabus: JSON.parse(localStorage.getItem(K('estudoFiscalSyllabus')) || '{}'),
+                estudoFiscalStudyHistory: JSON.parse(localStorage.getItem(K('estudoFiscalStudyHistory')) || '[]'),
+                estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem(K('estudoFiscalScheduleStructure')) || 'null'),
                 backupDate: new Date().toISOString()
             };
             
@@ -3967,16 +4635,16 @@
                     const data = JSON.parse(e.target.result);
                     
                     if(confirm(`Restaurar backup de ${new Date(data.backupDate).toLocaleDateString('pt-BR')}? Isso substituirá os dados atuais.`)) {
-                        if(data.estudoFiscalData) localStorage.setItem('estudoFiscalData', JSON.stringify(data.estudoFiscalData));
-                        if(data.estudoFiscalSyllabus) localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(data.estudoFiscalSyllabus));
+                        if(data.estudoFiscalData) localStorage.setItem(K('estudoFiscalData'), JSON.stringify(data.estudoFiscalData));
+                        if(data.estudoFiscalSyllabus) localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(data.estudoFiscalSyllabus));
                         
                         if(data.estudoFiscalStudyHistory) {
-                            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(data.estudoFiscalStudyHistory));
+                            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(data.estudoFiscalStudyHistory));
                         } else if(data.sefazStudyHistory) {
-                            localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(data.sefazStudyHistory));
+                            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(data.sefazStudyHistory));
                         }
 
-                        if(data.estudoFiscalScheduleStructure) localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(data.estudoFiscalScheduleStructure));
+                        if(data.estudoFiscalScheduleStructure) localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(data.estudoFiscalScheduleStructure));
                         
                         alert('Backup restaurado com sucesso! A página será recarregada.');
                         location.reload();
@@ -4112,365 +4780,71 @@
             return m ? m[1] : t;
         }
 
-        /**
-         * Abre o editor de modelo (Tabela de Matérias) e pré-carrega dados.
-         */
-        function openModelEditor() {
-            const modal = document.getElementById('model-editor-modal');
-            if (!modal) return;
-            modal.classList.add('open');
-            setModelEditorLoadState(false);
-            populateModelEditorFromStorageOrDefaults();
+        // --- TUTORIAL DE UTILIZAÇÃO ---
+        function openUsageTutorial() {
+            const modal = document.getElementById('usage-tutorial-modal');
+            if (modal) modal.classList.add('open');
         }
 
-        /**
-         * Fecha o editor de modelo.
-         */
-        function closeModelEditor() {
-            const modal = document.getElementById('model-editor-modal');
+        function closeUsageTutorial() {
+            const modal = document.getElementById('usage-tutorial-modal');
             if (!modal) return;
+            const dontShow = document.getElementById('tutorial-dont-show');
+            if (dontShow && dontShow.checked) {
+                localStorage.setItem('estudoFiscalTutorialSeen', 'true');
+            }
             modal.classList.remove('open');
         }
 
-        /**
-         * Limpa todas as linhas do conteúdo no editor.
-         */
-        function clearModelEditorRows() {
-            const tbody = document.getElementById('model-editor-tbody');
-            if (tbody) tbody.innerHTML = '';
+        // --- ASSISTENTE DE PRIMEIRO ACESSO ---
+        let wizardStep = 1;
+
+        function openOnboardingWizard() {
+            wizardStep = 1;
+            wizardGoToStep(1);
+            const modal = document.getElementById('onboarding-wizard-modal');
+            if (modal) modal.classList.add('open');
         }
 
-        /**
-         * Adiciona uma nova linha de conteúdo ao editor de modelo.
-         */
-        function addContentRow(rowData) {
-            const tbody = document.getElementById('model-editor-tbody');
-            if (!tbody) return;
-            const tr = document.createElement('tr');
-            const d = Object.assign({
-                categoria: 'Basico',
-                materia: '',
-                peso: 1,
-                tickets: 1,
-                qtdePdf: 0,
-                qtdePaginas: 0,
-                topico: ''
-            }, rowData || {});
-            tr.innerHTML = `
-                <td>
-                    <select name="categoria" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;">
-                        <option value="Basico" ${String(d.categoria).toLowerCase().includes('bas') ? 'selected' : ''}>Basico</option>
-                        <option value="Especifico" ${String(d.categoria).toLowerCase().includes('esp') ? 'selected' : ''}>Especifico</option>
-                    </select>
-                </td>
-                <td><input name="materia" type="text" value="${d.materia || ''}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;" placeholder="Nome da Matéria"></td>
-                <td><input name="peso" type="number" min="0" max="3" value="${d.peso !== undefined ? Number(d.peso) : 1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;" title="0=Excluir do Ciclo, 1=1x, 2=2x, 3=3x"></td>
-                <td><input name="tickets" type="number" min="0" value="${d.tickets !== undefined ? Number(d.tickets) : 1}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;" title="Legado (ignorado)"></td>
-                <td><input name="qtdePdf" type="number" min="0" value="${Number(d.qtdePdf)||0}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
-                <td><input name="qtdePaginas" type="number" min="0" value="${Number(d.qtdePaginas)||0}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
-                <td><input name="topico" type="text" value="${d.topico || ''}" style="width:100%; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:8px; border-radius:6px;"></td>
-                <td style="text-align:right;">
-                    <button class="btn-secondary" onclick="removeContentRow(this)" title="Remover" style="padding:6px 10px;"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-            tbody.appendChild(tr);
+        function closeOnboardingWizard() {
+            localStorage.setItem('estudoFiscalOnboardingSeen', 'true');
+            const modal = document.getElementById('onboarding-wizard-modal');
+            if (modal) modal.classList.remove('open');
         }
 
-        /**
-         * Remove a linha de conteúdo clicada.
-         */
-        function removeContentRow(btn) {
-            const tr = btn && btn.closest('tr');
-            if (tr) tr.remove();
-        }
-
-        /**
-         * Preenche o bloco de gerais do editor a partir de um modelo.
-         */
-        function fillGeneralFieldsFromModel(model) {
-            const concurso = model?.concurso || (document.getElementById('page-subtitle-text')?.textContent.replace('Foco na meta: ','') || '');
-            const orgao = model?.orgao || '';
-            const inicio = model?.inicioCiclo ? normalizeDateValue(model.inicioCiclo) : startDate.toISOString().slice(0,10);
-            const fim = model?.fimCiclo ? normalizeDateValue(model.fimCiclo) : endDate.toISOString().slice(0,10);
-            const slots = Array.isArray(model?.slotsPorDia) ? model.slotsPorDia : slotsPorDia;
-
-            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-            setVal('model-concurso', concurso);
-            setVal('model-orgao', orgao);
-            setVal('model-inicio', inicio);
-            setVal('model-fim', fim);
-            setVal('slots-seg', Number(slots[0]||0));
-            setVal('slots-ter', Number(slots[1]||0));
-            setVal('slots-qua', Number(slots[2]||0));
-            setVal('slots-qui', Number(slots[3]||0));
-            setVal('slots-sex', Number(slots[4]||0));
-            setVal('slots-sab', Number(slots[5]||0));
-            setVal('slots-dom', Number(slots[6]||0));
-        }
-
-        /**
-         * Carrega no editor um modelo salvo (localStorage) ou um exemplo básico.
-         */
-        function populateModelEditorFromStorageOrDefaults() {
-            const raw = localStorage.getItem('estudoFiscalModel');
-            const model = raw ? JSON.parse(raw) : null;
-            clearModelEditorRows();
-            if (model && Array.isArray(model.materias)) {
-                fillGeneralFieldsFromModel(model);
-                const catBySubject = {};
-                (model.syllabus || []).forEach(sec => (sec.subjects || []).forEach(s => { catBySubject[s.name] = sec.category; }));
-                model.materias.forEach(m => {
-                    const catFull = normalizeCategoryLabel(catBySubject[m.nome] || m.tipo || 'Basico');
-                    const catShort = shortCategoryLabelFromTitle(catFull);
-                    addContentRow({
-                        categoria: catShort,
-                        materia: m.nome,
-                        peso: m.peso !== undefined ? m.peso : 1,
-                        tickets: m.tickets || (m.peso !== undefined ? m.peso : 1),
-                        qtdePdf: m.qtdePdf || 0,
-                        qtdePaginas: m.qtdePaginas || 0,
-                        topico: ''
-                    });
-                    const sec = (model.syllabus || []).find(sec => (sec.subjects || []).some(s => s.name === m.nome));
-                    const subj = sec ? sec.subjects.find(s => s.name === m.nome) : null;
-                    if (subj && Array.isArray(subj.topics)) {
-                        subj.topics.forEach(t => addContentRow({
-                            categoria: catShort,
-                            materia: m.nome,
-                            peso: m.peso !== undefined ? m.peso : 1,
-                            tickets: m.tickets || (m.peso !== undefined ? m.peso : 1),
-                            qtdePdf: m.qtdePdf || 0,
-                            qtdePaginas: m.qtdePaginas || 0,
-                            topico: t
-                        }));
-                    }
-                });
-                setModelEditorLoadState(true);
-            } else {
-                fillGeneralFieldsFromModel(null);
-                addContentRow({ categoria: 'Basico', materia: 'Língua Portuguesa', peso: 1, tickets: 1, qtdePdf: 0, qtdePaginas: 0, topico: '' });
-                addContentRow({ categoria: 'Especifico', materia: 'Auditoria', peso: 3, tickets: 3, qtdePdf: 0, qtdePaginas: 0, topico: '' });
-                setModelEditorLoadState(false);
-            }
-        }
-
-        /**
-         * Carrega um modelo padrão completo no editor, baseado na configuração atual.
-         */
-        function loadModelTemplateIntoEditor() {
-            const catMap = {};
-            syllabusData.forEach(sec => sec.subjects.forEach(s => { catMap[s.name] = shortCategoryLabelFromTitle(sec.category); }));
-            clearModelEditorRows();
-            subjectsConfig.forEach(m => {
-                const catShort = catMap[m.name] || (m.type === 'Específico' ? 'Especifico' : 'Basico');
-                addContentRow({
-                    categoria: catShort,
-                    materia: m.name,
-                    peso: m.weight !== undefined ? m.weight : 1,
-                    tickets: m.tickets || (m.weight !== undefined ? m.weight : 1),
-                    qtdePdf: m.qtdePdf || 0,
-                    qtdePaginas: m.qtdePaginas || 0,
-                    topico: ''
-                });
-            });
-            setModelEditorLoadState(true);
-            showToast('Modelo carregado com matérias padrão. Ajuste e salve.', 'success');
-        }
-
-        /**
-         * Atualiza estado visual do botão Carregar e habilita/desabilita Salvar.
-         */
-        function setModelEditorLoadState(loaded) {
-            const loadBtn = document.getElementById('model-editor-load-btn');
-            const saveBtn = document.getElementById('model-editor-save-btn');
-            if (loadBtn) {
-                loadBtn.textContent = 'Adicionar ao Modelo';
-                loadBtn.style.background = 'var(--accent-color)';
-                loadBtn.style.color = '#fff';
-            }
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.style.opacity = '1';
-                saveBtn.style.cursor = 'pointer';
-            }
-        }
-
-        /**
-         * Adiciona apenas as linhas atuais ao modelo existente (merge sem sobrescrever gerais).
-         */
-        function addRowsToExistingModel() {
-            try {
-                const rawModel = localStorage.getItem('estudoFiscalModel');
-                const getVal = id => document.getElementById(id)?.value || '';
-                let model = rawModel ? JSON.parse(rawModel) : {
-                    concurso: getVal('model-concurso').trim(),
-                    orgao: getVal('model-orgao').trim(),
-                    inicioCiclo: normalizeDateValue(getVal('model-inicio')) || startDate.toISOString().slice(0,10),
-                    fimCiclo: normalizeDateValue(getVal('model-fim')) || endDate.toISOString().slice(0,10),
-                    slotsPorDia: [
-                        Number(getVal('slots-seg')||slotsPorDia[0]||0),
-                        Number(getVal('slots-ter')||slotsPorDia[1]||0),
-                        Number(getVal('slots-qua')||slotsPorDia[2]||0),
-                        Number(getVal('slots-qui')||slotsPorDia[3]||0),
-                        Number(getVal('slots-sex')||slotsPorDia[4]||0),
-                        Number(getVal('slots-sab')||slotsPorDia[5]||0),
-                        Number(getVal('slots-dom')||slotsPorDia[6]||0)
-                    ],
-                    materias: [],
-                    syllabus: []
-                };
-                model.materias = Array.isArray(model.materias) ? model.materias : [];
-                model.syllabus = Array.isArray(model.syllabus) ? model.syllabus : [];
-
-                const rows = document.querySelectorAll('#model-editor-tbody tr');
-                const materiasMap = new Map();
-                const syllabusMap = new Map();
-                rows.forEach(tr => {
-                    const categoriaRaw = tr.querySelector('[name="categoria"]')?.value || 'Basico';
-                    const materia = tr.querySelector('[name="materia"]')?.value?.trim();
-                    if (!materia) return;
-                    let peso = Number(tr.querySelector('[name="peso"]')?.value);
-                    if (isNaN(peso)) peso = 1;
-                    peso = Math.min(3, Math.max(0, peso)); // Allow 0
-                    let tickets = Number(tr.querySelector('[name="tickets"]')?.value);
-                    tickets = Math.max(0, isNaN(tickets) ? peso : tickets);
-                    let qtdePdf = Number(tr.querySelector('[name="qtdePdf"]')?.value || 0);
-                    let qtdePaginas = Number(tr.querySelector('[name="qtdePaginas"]')?.value || 0);
-                    const topico = tr.querySelector('[name="topico"]')?.value?.trim() || '';
-
-                    const categoriaCompleta = normalizeCategoryLabel(categoriaRaw);
-                    const categoriaCurta = shortCategoryLabelFromTitle(categoriaCompleta);
-                    if (!materiasMap.has(materia)) materiasMap.set(materia, { nome: materia, tipo: categoriaCurta, peso, tickets, qtdePdf, qtdePaginas });
-                    const key = categoriaCompleta + '|' + materia;
-                    if (!syllabusMap.has(key)) syllabusMap.set(key, { category: categoriaCompleta, name: materia, topics: [] });
-                    if (topico) syllabusMap.get(key).topics.push(topico);
-                });
-
-                // Merge materias
-                materiasMap.forEach((m) => {
-                    const idx = model.materias.findIndex(mm => mm.nome === m.nome);
-                    if (idx >= 0) {
-                        model.materias[idx] = { ...model.materias[idx], ...m };
-                    } else {
-                        model.materias.push(m);
-                    }
-                });
-
-                // Merge syllabus
-                syllabusMap.forEach(item => {
-                    let section = model.syllabus.find(sec => sec.category === item.category);
-                    if (!section) {
-                        section = { category: item.category, subjects: [] };
-                        model.syllabus.push(section);
-                    }
-                    let subj = section.subjects.find(s => s.name === item.name);
-                    if (!subj) {
-                        subj = { name: item.name, topics: [] };
-                        section.subjects.push(subj);
-                    }
-                    const merged = new Set([...(subj.topics || []), ...item.topics]);
-                    subj.topics = Array.from(merged).filter(t => t && String(t).trim().length > 0);
-                });
-
-                localStorage.setItem('estudoFiscalModel', JSON.stringify(model));
-
-                // Feedback visual do botão
-                const btn = document.getElementById('model-editor-load-btn');
-                if (btn) {
-                    btn.textContent = 'Adicionado!';
-                    btn.style.background = 'var(--success-color)';
-                    setTimeout(() => {
-                        btn.textContent = 'Adicionar ao Modelo';
-                        btn.style.background = 'var(--accent-color)';
-                    }, 1500);
+        function wizardGoToStep(step) {
+            if (step < 1) return;
+            if (wizardStep === 1) {
+                const nameInput = document.getElementById('wizard-concurso-input');
+                if (nameInput && nameInput.value.trim()) {
+                    const subEl = document.getElementById('page-subtitle-text');
+                    if (subEl) subEl.textContent = `Foco na meta: ${nameInput.value.trim()}`;
+                    localStorage.setItem('estudoFiscalConcursoName', nameInput.value.trim());
                 }
-
-                // Atualiza UI de abas (sem regenerar cronograma)
-                loadModelFromStorage();
-                renderSyllabus();
-                renderSubjects();
-                renderTimeStats();
-                updateStats();
-                renderList();
-                setGenerateButtonState('pending');
-                showToast('Matérias adicionadas ao modelo. Gere o ciclo para aplicar.', 'success');
-            } catch (e) {
-                showToast('Erro ao adicionar ao modelo: ' + e.message, 'error');
             }
+            if (step > 3) { closeOnboardingWizard(); return; }
+            wizardStep = step;
+            document.querySelectorAll('.wizard-step').forEach(el => {
+                el.style.display = Number(el.dataset.wizardStep) === step ? 'block' : 'none';
+            });
+            document.getElementById('wizard-back-btn').style.display = step > 1 ? 'inline-flex' : 'none';
+            const nextBtn = document.getElementById('wizard-next-btn');
+            if (step >= 3) {
+                nextBtn.innerHTML = '<i class="fas fa-check"></i> Concluir';
+            } else {
+                nextBtn.innerHTML = 'Próximo';
+            }
+            // Passo 2 tem escolhas próprias, então some com o botão "Próximo" genérico
+            nextBtn.style.display = step === 2 ? 'none' : 'inline-flex';
         }
-        /**
-         * Salva o modelo preenchido no editor em localStorage e sinaliza geração de ciclo.
-         */
-        function saveModelFromEditor() {
-            try {
-                const getVal = id => document.getElementById(id)?.value || '';
-                const concurso = getVal('model-concurso').trim();
-                const orgao = getVal('model-orgao').trim();
-                const inicioCiclo = normalizeDateValue(getVal('model-inicio'));
-                const fimCiclo = normalizeDateValue(getVal('model-fim'));
-                const slotsPorDiaLocal = [
-                    Number(getVal('slots-seg')||0),
-                    Number(getVal('slots-ter')||0),
-                    Number(getVal('slots-qua')||0),
-                    Number(getVal('slots-qui')||0),
-                    Number(getVal('slots-sex')||0),
-                    Number(getVal('slots-sab')||0),
-                    Number(getVal('slots-dom')||0)
-                ];
 
-                const materiasMap = new Map();
-                const syllabusMap = new Map();
-                const rows = document.querySelectorAll('#model-editor-tbody tr');
-                rows.forEach(tr => {
-                    const categoriaRaw = tr.querySelector('[name="categoria"]')?.value || 'Basico';
-                    const materia = tr.querySelector('[name="materia"]')?.value?.trim();
-                    if (!materia) return;
-                    let peso = Number(tr.querySelector('[name="peso"]')?.value);
-                    if (isNaN(peso)) peso = 1;
-                    peso = Math.min(3, Math.max(0, peso)); // Allow 0
-                    let tickets = Number(tr.querySelector('[name="tickets"]')?.value);
-                    tickets = Math.max(0, isNaN(tickets) ? peso : tickets);
-                    let qtdePdf = Number(tr.querySelector('[name="qtdePdf"]')?.value || 0);
-                    let qtdePaginas = Number(tr.querySelector('[name="qtdePaginas"]')?.value || 0);
-                    const topico = tr.querySelector('[name="topico"]')?.value?.trim() || '';
+        function wizardChooseImport() {
+            closeOnboardingWizard();
+            triggerImportModelXLSX();
+        }
 
-                    const categoriaCompleta = normalizeCategoryLabel(categoriaRaw);
-                    const categoriaCurta = shortCategoryLabelFromTitle(categoriaCompleta);
-
-                    if (!materiasMap.has(materia)) materiasMap.set(materia, { nome: materia, tipo: categoriaCurta, peso, tickets, qtdePdf, qtdePaginas });
-                    const key = categoriaCompleta + '|' + materia;
-                    if (!syllabusMap.has(key)) syllabusMap.set(key, { category: categoriaCompleta, name: materia, topics: [] });
-                    if (topico) syllabusMap.get(key).topics.push(topico);
-                });
-
-                const materias = Array.from(materiasMap.values());
-                const byCategory = {};
-                syllabusMap.forEach(item => {
-                    const cat = item.category;
-                    if (!byCategory[cat]) byCategory[cat] = [];
-                    byCategory[cat].push({ name: item.name, topics: item.topics });
-                });
-                const syllabusArray = Object.keys(byCategory).map(cat => ({ category: cat, subjects: byCategory[cat] }));
-
-                const model = { concurso, orgao, inicioCiclo, fimCiclo, slotsPorDia: slotsPorDiaLocal, materias, syllabus: syllabusArray };
-                localStorage.setItem('estudoFiscalModel', JSON.stringify(model));
-                // Limpa cronograma antigo para forçar nova geração e atualizar abas
-                localStorage.removeItem('estudoFiscalScheduleStructure');
-                loadModelFromStorage();
-                applySavedStatusToSchedule();
-                renderCalendar();
-                renderSubjects();
-                renderList();
-                updateStats();
-                renderSyllabus();
-                renderTimeStats();
-                renderHistory();
-                setGenerateButtonState('pending');
-                showToast('Modelo salvo. Gere o ciclo para atualizar a Lista Completa.', 'success');
-                closeModelEditor();
-            } catch (e) {
-                showToast('Erro ao salvar modelo: ' + e.message, 'error');
-            }
+        function wizardChooseExample() {
+            wizardGoToStep(3);
         }
 
         /**
@@ -4634,9 +5008,9 @@
          * Aplica o modelo importado no sistema e regenera cronograma.
          */
         function applyImportedModel(model) {
-            localStorage.setItem('estudoFiscalModel', JSON.stringify(model));
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(model));
             loadModelFromStorage();
-            localStorage.removeItem('estudoFiscalScheduleStructure');
+            localStorage.removeItem(K('estudoFiscalScheduleStructure'));
             fullSchedule = [];
             setGenerateButtonState('pending');
             init();
@@ -4644,9 +5018,9 @@
         }
 
         function generateCycleFromModel() {
-            const raw = localStorage.getItem('estudoFiscalModel');
+            const raw = localStorage.getItem(K('estudoFiscalModel'));
             if (raw) loadModelFromStorage();
-            localStorage.removeItem('estudoFiscalScheduleStructure');
+            localStorage.removeItem(K('estudoFiscalScheduleStructure'));
             fullSchedule = [];
             generateSchedule();
             setGenerateButtonState('success');
@@ -4659,7 +5033,7 @@
          */
         function exportCurrentModelCSV() {
             const headers = ['Concurso','Orgao','InicioCiclo','FimCiclo','Categoria','Materia','Peso','Tickets','Topico'];
-            const modelRaw = localStorage.getItem('estudoFiscalModel');
+            const modelRaw = localStorage.getItem(K('estudoFiscalModel'));
             const model = modelRaw ? JSON.parse(modelRaw) : null;
             const concurso = model?.concurso || 'Modelo Atual';
             const orgao = model?.orgao || '';
@@ -4736,11 +5110,11 @@
         function saveSelfContainedHTML() {
             // 1. Gather all data
             const persistencePayload = {
-                estudoFiscalData: JSON.parse(localStorage.getItem('estudoFiscalData') || '{}'),
-                estudoFiscalSyllabus: JSON.parse(localStorage.getItem('estudoFiscalSyllabus') || '{}'),
-                estudoFiscalStudyHistory: JSON.parse(localStorage.getItem('estudoFiscalStudyHistory') || '[]'),
-                estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem('estudoFiscalScheduleStructure') || '[]'),
-                estudoFiscalModel: JSON.parse(localStorage.getItem('estudoFiscalModel') || 'null')
+                estudoFiscalData: JSON.parse(localStorage.getItem(K('estudoFiscalData')) || '{}'),
+                estudoFiscalSyllabus: JSON.parse(localStorage.getItem(K('estudoFiscalSyllabus')) || '{}'),
+                estudoFiscalStudyHistory: JSON.parse(localStorage.getItem(K('estudoFiscalStudyHistory')) || '[]'),
+                estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem(K('estudoFiscalScheduleStructure')) || '[]'),
+                estudoFiscalModel: JSON.parse(localStorage.getItem(K('estudoFiscalModel')) || 'null')
             };
 
             // 2. Get current HTML
@@ -4845,7 +5219,7 @@
          * Exporta o modelo atual para Excel (inclui tópicos do syllabus).
          */
         function exportCurrentModelXLSX() {
-            const modelRaw = localStorage.getItem('estudoFiscalModel');
+            const modelRaw = localStorage.getItem(K('estudoFiscalModel'));
             const model = modelRaw ? JSON.parse(modelRaw) : null;
             const concurso = model?.concurso || (document.getElementById('page-subtitle-text')?.textContent.replace('Foco na meta: ','') || 'Modelo Atual');
             const orgao = model?.orgao || '';
@@ -4913,6 +5287,33 @@
         /**
          * Importa arquivo Excel, converte em linhas e aplica modelo.
          */
+        /**
+         * Valida um modelo antes de aplicar: erros bloqueiam a importação,
+         * avisos são mostrados mas permitem seguir em frente.
+         */
+        function validateModel(model) {
+            const errors = [];
+            const warnings = [];
+            if (!model || !Array.isArray(model.materias) || model.materias.length === 0) {
+                errors.push('Nenhuma matéria encontrada na aba "Conteudo". Confira se a coluna "Materia" está preenchida.');
+                return { errors, warnings };
+            }
+            const seen = new Set();
+            model.materias.forEach((m) => {
+                if (!m.nome || !String(m.nome).trim()) { errors.push('Há uma linha com a coluna "Materia" vazia.'); return; }
+                if (seen.has(m.nome)) warnings.push(`Matéria "${m.nome}" aparece em mais de uma linha (serão mescladas).`);
+                seen.add(m.nome);
+                const peso = Number(m.peso);
+                if (isNaN(peso) || peso < 1 || peso > 3) {
+                    warnings.push(`Matéria "${m.nome}": peso "${m.peso}" fora de 1-3, será ajustado para 1.`);
+                }
+            });
+            if (!model.concurso || !String(model.concurso).trim()) {
+                warnings.push('Campo "Concurso" (aba Gerais) está vazio.');
+            }
+            return { errors, warnings };
+        }
+
         function importModelXLSX(input) {
             const file = input.files[0];
             if(!file) return;
@@ -4936,6 +5337,15 @@
                         alert('Planilha inválida. Use duas abas: Gerais e Conteudo.');
                         return;
                     }
+                    const { errors, warnings } = validateModel(model);
+                    if (errors.length > 0) {
+                        alert('Não foi possível importar:\n\n' + errors.join('\n'));
+                        return;
+                    }
+                    if (warnings.length > 0) {
+                        const proceed = confirm('Avisos encontrados na planilha:\n\n' + warnings.join('\n') + '\n\nImportar mesmo assim?');
+                        if (!proceed) return;
+                    }
                     applyImportedModel(model);
                     alert('Modelo Excel importado com sucesso! Cronograma regenerado.');
                 } catch(err) {
@@ -4950,13 +5360,13 @@
         
         function resetSchedule() {
             if(confirm("Tem certeza? Isso irá gerar um NOVO cronograma aleatório e apagar o progresso visual do calendário (histórico e syllabus serão mantidos).")) {
-                localStorage.removeItem('estudoFiscalScheduleStructure');
+                localStorage.removeItem(K('estudoFiscalScheduleStructure'));
                 // We should also clear status related to old schedule tasks IDs since IDs will change
                 // But maybe user wants to keep completed count? 
                 // Actually, if IDs change, the old status map becomes useless garbage.
                 // Let's clear status map too to be clean.
                 if(confirm("Deseja limpar também o status de 'FEITO' das tarefas do calendário antigo? (Recomendado)")) {
-                    localStorage.removeItem('estudoFiscalData');
+                    localStorage.removeItem(K('estudoFiscalData'));
                 }
                 syncToDisk();
                 location.reload();
@@ -4965,14 +5375,11 @@
 
         function setupOfflineFallbacks() {
             const hasXLSX = (typeof XLSX !== 'undefined');
-            const btnDL = document.getElementById('btn-download-xlsx');
             const btnEX = document.getElementById('btn-export-xlsx');
             const btnIM = document.getElementById('btn-import-xlsx');
-            if (btnDL && btnEX && btnIM && !hasXLSX) {
-                btnDL.innerHTML = '<i class="fas fa-table"></i> Baixar Modelo CSV';
-                btnDL.onclick = downloadModelTemplateCSV;
+            if (btnEX && btnIM && !hasXLSX) {
                 btnEX.innerHTML = '<i class="fas fa-file-export"></i> Exportar Modelo Atual (CSV)';
-                btnEX.onclick = () => alert('Use Backup JSON para exportar progresso; modelo CSV disponível em Baixar Modelo CSV.');
+                btnEX.onclick = downloadModelTemplateCSV;
                 btnIM.innerHTML = '<i class="fas fa-file-import"></i> Importar Modelo CSV';
                 btnIM.onclick = triggerImportModel;
                 const inputX = document.getElementById('import-model-xlsx-input');
@@ -4986,7 +5393,7 @@
             if(!dayObj) return;
             dayObj.tasks = JSON.parse(JSON.stringify(currentDayTasksDraft));
             dayObj.tasks.forEach(t => { const d = deriveTaskStatus(t); t.completed = (d === 'concluido'); });
-            const savedData = JSON.parse(localStorage.getItem('estudoFiscalData')) || {};
+            const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
             dayObj.tasks.forEach(t => {
                 if(!savedData[t.id]) savedData[t.id] = {};
                 const d = deriveTaskStatus(t);
@@ -4995,8 +5402,8 @@
                 savedData[t.id].timeSpent = t.timeSpent || 0;
                 savedData[t.id].durationTarget = t.durationTarget || 3600;
             });
-            localStorage.setItem('estudoFiscalData', JSON.stringify(savedData));
-            localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(fullSchedule));
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
             if (ENABLE_API) {
                 try { fetch('/api/cycle', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ schedule: fullSchedule }) }).catch(()=>{}); } catch(e) {}
             }
@@ -5010,26 +5417,27 @@
 
         // Start
         function init() {
+            renderProfileSwitcher();
             // 0. Check for HARDCODED_DATA (Self-Contained File)
             if (window.HARDCODED_DATA) {
                 console.log('Carregando dados embutidos (Self-Contained Mode)...');
                 const d = window.HARDCODED_DATA;
-                if (d.estudoFiscalData) localStorage.setItem('estudoFiscalData', JSON.stringify(d.estudoFiscalData));
-                if (d.estudoFiscalSyllabus) localStorage.setItem('estudoFiscalSyllabus', JSON.stringify(d.estudoFiscalSyllabus));
-                if (d.estudoFiscalStudyHistory) localStorage.setItem('estudoFiscalStudyHistory', JSON.stringify(d.estudoFiscalStudyHistory));
-                if (d.estudoFiscalScheduleStructure) localStorage.setItem('estudoFiscalScheduleStructure', JSON.stringify(d.estudoFiscalScheduleStructure));
-                if (d.estudoFiscalModel) localStorage.setItem('estudoFiscalModel', JSON.stringify(d.estudoFiscalModel));
+                if (d.estudoFiscalData) localStorage.setItem(K('estudoFiscalData'), JSON.stringify(d.estudoFiscalData));
+                if (d.estudoFiscalSyllabus) localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(d.estudoFiscalSyllabus));
+                if (d.estudoFiscalStudyHistory) localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(d.estudoFiscalStudyHistory));
+                if (d.estudoFiscalScheduleStructure) localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(d.estudoFiscalScheduleStructure));
+                if (d.estudoFiscalModel) localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(d.estudoFiscalModel));
                 
                 showToast('Dados restaurados do arquivo salvo!', 'success');
             }
 
             // Se tivermos dados no storage mas fullSchedule estiver vazio (ex: F5), carregamos.
-            const savedScheduleJson = localStorage.getItem('estudoFiscalScheduleStructure');
+            const savedScheduleJson = localStorage.getItem(K('estudoFiscalScheduleStructure'));
             if (fullSchedule.length === 0 && savedScheduleJson) {
                 generateSchedule(); // A função generateSchedule detecta o storage e carrega dele em vez de gerar novo
             }
 
-            const hasSchedule = !!localStorage.getItem('estudoFiscalScheduleStructure');
+            const hasSchedule = !!localStorage.getItem(K('estudoFiscalScheduleStructure'));
             setGenerateButtonState(hasSchedule ? 'success' : 'pending');
             // Garante reidratação do cronograma e aplicação de status
             loadModelFromStorage();
@@ -5054,6 +5462,13 @@
                 localStorage.removeItem(CANCEL_SESSION_ON_LOAD_KEY);
                 if (activeSession) cancelSession(true);
             }
+
+            // Mostra o assistente de primeiro acesso uma única vez por perfil sem modelo próprio.
+            const hasOwnModel = !!localStorage.getItem(K('estudoFiscalModel'));
+            const onboardingSeen = localStorage.getItem('estudoFiscalOnboardingSeen') === 'true';
+            if (!hasOwnModel && !onboardingSeen) {
+                setTimeout(openOnboardingWizard, 600);
+            }
         }
         
         // --- SELECTION OVERLAY LOGIC ---
@@ -5071,15 +5486,14 @@
         function toggleTheme() {
             const html = document.documentElement;
             const current = html.getAttribute('data-theme');
-            const next = current === 'light' ? null : 'light'; // null = default dark
-            if (next) {
-                html.setAttribute('data-theme', next);
-                localStorage.setItem('theme', next);
+            const next = current === 'light' ? 'dark' : 'light'; // padrão agora é light
+            if (next === 'light') {
+                html.setAttribute('data-theme', 'light');
             } else {
                 html.removeAttribute('data-theme');
-                localStorage.removeItem('theme');
             }
-            updateThemeIcon(next || 'dark');
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
             if (currentTab === 'time-stats') {
                 setTimeout(renderTimeStats, 50);
             }
@@ -5100,12 +5514,12 @@
 
         function initTheme() {
             const saved = localStorage.getItem('theme');
-            if (saved === 'light') {
-                document.documentElement.setAttribute('data-theme', 'light');
-                updateThemeIcon('light');
-            } else {
+            if (saved === 'dark') {
                 document.documentElement.removeAttribute('data-theme');
                 updateThemeIcon('dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                updateThemeIcon('light');
             }
         }
 

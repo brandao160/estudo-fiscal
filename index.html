@@ -1562,6 +1562,10 @@
                         <input type="number" id="note-questions-correct" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
                     </div>
                 </div>
+                <div style="display:flex; gap:6px; align-items:flex-start; font-size:0.78rem; color:var(--text-secondary, #999); margin-bottom:10px; line-height:1.4;">
+                    <i class="fas fa-lightbulb" style="color:var(--accent-color); margin-top:2px;"></i>
+                    <span>Antes de fechar: resolva 5-10 questões dessa matéria e dê uma revisada rápida nos pontos principais — reforça muito mais do que só ler.</span>
+                </div>
                 <label class="note-label">Anotações</label>
                 <textarea id="note-textarea" class="note-textarea" placeholder="Faça suas anotações aqui!"></textarea>
             </div>
@@ -1880,7 +1884,7 @@
                 return;
             }
             if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil (matérias, ciclo, histórico) serão apagados.`)) return;
-            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel']
+            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun']
                 .forEach(base => localStorage.removeItem(base + '__' + pid));
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
@@ -2006,27 +2010,27 @@
         
         let subjectsConfig = [
             // Conhecimentos Básicos (Peso 1)
-            { name: "Língua Portuguesa", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Exatas", type: "Básico", weight: 1, tickets: 1 }, // Substitui RLM, Mat. Fin, Estatística
-            { name: "Direito Constitucional", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Direito Administrativo", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Direito Financeiro", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Direito Civil", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Empresarial", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Penal", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Economia", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Contabilidade Geral", type: "Básico", weight: 1, tickets: 1 },
-            { name: "Realidade do Estado", type: "Básico", weight: 1, tickets: 1 },
-            
+            { name: "Língua Portuguesa", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'pesada' },
+            { name: "Exatas", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'pesada' }, // Substitui RLM, Mat. Fin, Estatística
+            { name: "Direito Constitucional", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'leve' },
+            { name: "Direito Administrativo", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'leve' },
+            { name: "Direito Financeiro", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'leve' },
+            { name: "Direito Civil", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'leve' },
+            { name: "Empresarial", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'leve' },
+            { name: "Penal", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'leve' },
+            { name: "Economia", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'pesada' },
+            { name: "Contabilidade Geral", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'pesada' },
+            { name: "Realidade do Estado", type: "Básico", weight: 1, tickets: 1, dificuldade: 3, carga: 'leve' },
+
             // Conhecimentos Específicos
-            { name: "Tecnologia da Informação", type: "Específico", weight: 2, tickets: 2 },
-            { name: "Auditoria", type: "Específico", weight: 3, tickets: 3 },
-            { name: "Contabilidade Geral e Avançada", type: "Específico", weight: 3, tickets: 3 },
-            { name: "Contabilidade Pública", type: "Específico", weight: 1, tickets: 1 },
-            { name: "Contabilidade de Custos", type: "Específico", weight: 3, tickets: 3 },
-            { name: "Direito Tributário I", type: "Específico", weight: 3, tickets: 3 },
-            { name: "Direito Tributário II – Reforma Tributária", type: "Específico", weight: 3, tickets: 3 },
-            { name: "Legislação Tributária Estadual", type: "Específico", weight: 3, tickets: 3 }
+            { name: "Tecnologia da Informação", type: "Específico", weight: 2, tickets: 2, dificuldade: 3, carga: 'leve' },
+            { name: "Auditoria", type: "Específico", weight: 3, tickets: 3, dificuldade: 3, carga: 'pesada' },
+            { name: "Contabilidade Geral e Avançada", type: "Específico", weight: 3, tickets: 3, dificuldade: 3, carga: 'pesada' },
+            { name: "Contabilidade Pública", type: "Específico", weight: 1, tickets: 1, dificuldade: 3, carga: 'pesada' },
+            { name: "Contabilidade de Custos", type: "Específico", weight: 3, tickets: 3, dificuldade: 3, carga: 'pesada' },
+            { name: "Direito Tributário I", type: "Específico", weight: 3, tickets: 3, dificuldade: 3, carga: 'leve' },
+            { name: "Direito Tributário II – Reforma Tributária", type: "Específico", weight: 3, tickets: 3, dificuldade: 3, carga: 'leve' },
+            { name: "Legislação Tributária Estadual", type: "Específico", weight: 3, tickets: 3, dificuldade: 3, carga: 'leve' }
         ];
 
         // Config padrão: matérias por dia (Seg..Dom)
@@ -2062,7 +2066,9 @@
                         weight: m.peso !== undefined ? Number(m.peso) : 1,
                         tickets: Number(m.tickets || 1),
                         qtdePdf: Number(m.qtdePdf || 0),
-                        qtdePaginas: Number(m.qtdePaginas || 0)
+                        qtdePaginas: Number(m.qtdePaginas || 0),
+                        dificuldade: Number(m.dificuldade) || 3,
+                        carga: m.carga || ''
                     }));
                 }
                 if (Array.isArray(model.slotsPorDia) && model.slotsPorDia.length === 7) {
@@ -2133,7 +2139,7 @@
                 inicioCiclo: startDate.toISOString().slice(0, 10),
                 fimCiclo: endDate.toISOString().slice(0, 10),
                 slotsPorDia,
-                materias: subjectsConfig.map(s => ({ nome: s.name, tipo: s.type, peso: s.weight, tickets: s.tickets || s.weight })),
+                materias: subjectsConfig.map(s => ({ nome: s.name, tipo: s.type, peso: s.weight, tickets: s.tickets || s.weight, dificuldade: s.dificuldade || 3, carga: s.carga || '' })),
                 syllabus: syllabusData
             };
             localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(model));
@@ -2212,7 +2218,7 @@
                 const wRaw = Math.round(s.weight || 0);
                 if (wRaw <= 0) return;
 
-                const w = Math.max(1, wRaw); 
+                const w = effectiveWeight(s);
                 counts[s.name] = w;
                 initialCounts[s.name] = w;
                 totalBlocks += w;
@@ -2237,27 +2243,30 @@
 
             let masterCycle = [];
             let lastSub = null;
+            let lastCarga = null;
 
             // Algoritmo de Preenchimento Intercalado
             for (let i = 0; i < totalBlocks; i++) {
                 // Candidatos: matérias que ainda têm blocos a distribuir
                 let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
-                
-                if (candidates.length === 0) break; 
+
+                if (candidates.length === 0) break;
 
                 // Tenta evitar a matéria anterior (lastSub)
                 let valid = candidates.filter(s => s.name !== lastSub);
-                
+
                 // Se não tiver opção (só sobrou a mesma), usa ela mesma
                 if (valid.length === 0) valid = candidates;
 
                 // Critério de escolha: Prioriza quem tem MAIS blocos restantes
                 valid.sort((a, b) => counts[b.name] - counts[a.name]);
 
-                const pick = valid[0];
+                // Entre opções de mesma prioridade, prefere alternar carga cognitiva (pesada/leve)
+                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
                 masterCycle.push(pick);
                 counts[pick.name]--;
                 lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
             }
 
             // Fallback
@@ -2581,6 +2590,41 @@
         }
 
         /**
+         * Método clássico de ciclo de estudos: o ciclo não "reseta" — se sobrou tarefa não
+         * concluída de um dia passado, ela é movida pra hoje em vez de simplesmente ficar perdida.
+         * Opt-in (preferência "Não pular blocos perdidos" em planejamento.html), pra não surpreender
+         * quem já está acostumado com o comportamento atual. Roda no máximo 1x por dia e só olha
+         * pros últimos 14 dias (evita empilhar tarefas indefinidamente se o usuário sumir por meses).
+         */
+        function rolloverMissedTasks() {
+            if (localStorage.getItem(K('estudoFiscalRolloverMissed')) !== 'true') return;
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const todayKey = today.toDateString();
+            const lastRunKey = K('estudoFiscalRolloverLastRun');
+            if (localStorage.getItem(lastRunKey) === todayKey) return;
+
+            const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 14);
+            const todayObj = getOrCreateTodayDayObj();
+            let movedCount = 0;
+
+            fullSchedule.forEach(day => {
+                if (day === todayObj) return;
+                const d = new Date(day.date); d.setHours(0, 0, 0, 0);
+                if (d.getTime() >= today.getTime() || d.getTime() < cutoff.getTime()) return;
+                const pending = (day.tasks || []).filter(t => deriveTaskStatus(t) !== 'concluido');
+                if (!pending.length) return;
+                day.tasks = day.tasks.filter(t => deriveTaskStatus(t) === 'concluido');
+                pending.forEach(t => { todayObj.tasks.push(t); movedCount++; });
+            });
+
+            localStorage.setItem(lastRunKey, todayKey);
+            if (movedCount > 0) {
+                persistSchedule();
+                showToast(`${movedCount} tarefa${movedCount > 1 ? 's' : ''} atrasada${movedCount > 1 ? 's' : ''} ${movedCount > 1 ? 'movidas' : 'movida'} pra hoje.`, 'info');
+            }
+        }
+
+        /**
          * Renderiza a tela principal "Ciclo de Estudo": fila de matérias de hoje +
          * construtor para indicar quais matérias entram no ciclo.
          */
@@ -2827,6 +2871,53 @@
             return Math.round((qCorrect / qTotal) * 100);
         }
 
+        /** % do conteúdo programático já concluído pra uma matéria (0 se não houver tópicos cadastrados). */
+        function subjectSyllabusCompletionPct(subjectName) {
+            let topics = [];
+            for (const section of syllabusData) {
+                const found = (section.subjects || []).find(s => s.name === subjectName);
+                if (found) { topics = found.topics || []; break; }
+            }
+            if (!topics.length) return 0;
+            const saved = syllabusProgress[subjectName] || [];
+            const done = topics.filter((_, i) => saved[i]).length;
+            return done / topics.length;
+        }
+
+        /**
+         * Peso efetivo usado no gerador de ciclo (frequência de blocos), combinando:
+         * - peso do edital (importância na prova);
+         * - dificuldade pessoal (1-5, padrão 3 = neutro, não altera o comportamento anterior);
+         * - "modo revisão": matéria com 90%+ do conteúdo já concluído perde metade do peso,
+         *   liberando espaço no ciclo pras matérias que ainda faltam mais (método clássico de
+         *   ciclo de estudos: ao terminar uma matéria ela entra em modo revisão com carga reduzida).
+         */
+        function effectiveWeight(s) {
+            const raw = Math.max(1, Math.round(s.weight || 0));
+            const dificuldade = Number(s.dificuldade) || 3;
+            let w = Math.max(1, Math.round(raw * (dificuldade / 3)));
+            if (subjectSyllabusCompletionPct(s.name) >= 0.9) {
+                w = Math.max(1, Math.ceil(w / 2));
+            }
+            return w;
+        }
+
+        /**
+         * Tenta escolher, dentre `valid` (já ordenado por prioridade), um candidato com "carga"
+         * cognitiva diferente da última escolhida — só troca a ordem entre opções de prioridade
+         * equivalente (nunca troca a contagem de blocos de cada matéria, só a ordem de exibição).
+         * Método clássico de ciclo de estudos: intercalar matéria pesada (raciocínio/cálculo) com
+         * matéria leve (memorização/legislação) evita a fadiga de emendar duas pesadas seguidas.
+         */
+        function pickAlternatingCarga(valid, lastCarga, rankKey) {
+            if (!lastCarga || valid.length < 2) return valid[0];
+            const top = valid[0];
+            if (top.carga !== lastCarga) return top;
+            const topRank = rankKey(top);
+            const alt = valid.find(s => s.carga && s.carga !== lastCarga && rankKey(s) === topRank);
+            return alt || top;
+        }
+
         function generateTodayCycleFromPicks() {
             const checked = Array.from(document.querySelectorAll('#cycle-builder-picks input:checked')).map(el => el.value);
             if (checked.length === 0) {
@@ -2927,9 +3018,9 @@
             const dayObj = getOrCreateTodayDayObj();
             const WEEK_WINDOW = 6; // dias corridos anteriores considerados "a semana"
 
-            // Contagem-base: 1 bloco por matéria (modo "por quantidade") ou peso = frequência (modo manual).
+            // Contagem-base: 1 bloco por matéria (modo "por quantidade") ou peso efetivo = frequência (modo manual).
             let counts = {};
-            picked.forEach(s => { counts[s.name] = opts.oneBlockEach ? 1 : Math.max(1, Math.round(s.weight || 1)); });
+            picked.forEach(s => { counts[s.name] = opts.oneBlockEach ? 1 : effectiveWeight(s); });
 
             // Score de prioridade: quanto MENOR, mais a matéria "merece" aparecer/ganhar bloco —
             // combina "pouco vista na semana" com "desempenho fraco em questões" (matéria carente).
@@ -2961,6 +3052,7 @@
             // quem tem maior prioridade (pouco vista na semana / desempenho fraco).
             let order = [];
             let lastSub = null;
+            let lastCarga = null;
             let totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
             for (let i = 0; i < totalBlocks; i++) {
                 let candidates = picked.filter(s => counts[s.name] > 0);
@@ -2972,10 +3064,12 @@
                     if (byCount !== 0) return byCount;
                     return (priority[a.name] || 0) - (priority[b.name] || 0);
                 });
-                const pick = valid[0];
+                // Entre opções de mesma prioridade, prefere alternar carga cognitiva (pesada/leve)
+                const pick = pickAlternatingCarga(valid, lastCarga, s => `${counts[s.name]}|${priority[s.name] || 0}`);
                 order.push(pick);
                 counts[pick.name]--;
                 lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
             }
 
             dayObj.tasks = order.map((s, i) => ({
@@ -6038,6 +6132,7 @@ ${editalText}
             loadModelFromStorage();
             persistDefaultModelIfMissing();
             applySavedStatusToSchedule();
+            rolloverMissedTasks();
             renderCalendar();
             renderSubjects();
             renderList();

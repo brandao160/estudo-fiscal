@@ -155,6 +155,23 @@
         .routine-total-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 8px 12px; background: var(--accent-soft); border-radius: var(--r); }
         .routine-total-row strong { color: var(--accent); font-family: 'Nunito', sans-serif; font-size: 1.05rem; }
 
+        /* Preferências do ciclo */
+        .pref-row { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border-2); }
+        .pref-row-body { flex: 1; min-width: 0; }
+        .pref-row-title { font-weight: 700; font-size: 0.9rem; color: var(--ink); font-family: 'Nunito', sans-serif; }
+        .pref-row-desc { font-size: 0.78rem; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 99px; transition: 0.15s; }
+        .switch-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.15s; box-shadow: var(--sh-xs); }
+        .switch input:checked + .switch-slider { background: var(--accent); }
+        .switch input:checked + .switch-slider::before { transform: translateX(18px); }
+
+        .subj-dist-select {
+            padding: 5px 6px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--ink);
+            border-radius: var(--r-sm); font-family: 'Source Sans 3', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+        }
+
         /* Prioridades da semana */
         .priority-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-2); }
         .priority-row:last-child { border-bottom: none; }
@@ -323,6 +340,40 @@
                         <strong><span id="routine-total-hours">0</span>h</strong>
                     </div>
                     <div class="pace-status neutral" id="pace-status-box">Calculando…</div>
+                    <div class="pace-status warn" id="routine-rest-tip" style="display:none; margin-top:8px;"><i class="fas fa-mug-hot"></i> Reserve pelo menos 1 dia de descanso na semana — até quem estuda em ritmo forte precisa disso.</div>
+                </div>
+            </div>
+
+            <div class="plan-card" style="margin-bottom: 18px;">
+                <h2><i class="fas fa-sliders"></i> Preferências do ciclo</h2>
+                <p class="plan-card-sub">Ajustes que mudam de verdade como o Ciclo de Estudo monta sua agenda.</p>
+                <div class="pref-row">
+                    <div class="pref-row-body">
+                        <div class="pref-row-title">Edital já foi publicado</div>
+                        <div class="pref-row-desc">Depois que o edital sai, dá pra apertar o ritmo — quem já passou costuma aumentar a carga semanal nesse momento.</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="pref-edital-publicado" onchange="updateEditalPublicado(this.checked)"><span class="switch-slider"></span></label>
+                </div>
+                <div class="pace-status warn" id="edital-publicado-tip" style="display:none;"><i class="fas fa-arrow-up"></i> Considere aumentar sua rotina semanal em ~15-20% enquanto durar a reta final até a prova.</div>
+
+                <div class="pref-row">
+                    <div class="pref-row-body">
+                        <div class="pref-row-title">Meu concurso tem prova discursiva</div>
+                        <div class="pref-row-desc">Reserva um bloco de horas por semana só pra prática de redação/discursiva, separado da distribuição por matéria.</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="pref-tem-discursiva" onchange="updateTemDiscursiva(this.checked)"><span class="switch-slider"></span></label>
+                </div>
+                <div class="pace-input-row" id="discursiva-hours-row" style="display:none;">
+                    <input type="number" id="discursiva-hours-input" min="0" max="20" step="0.5" value="3" onchange="updateDiscursivaHoras(this.value)">
+                    <span>horas / semana reservadas pra discursiva</span>
+                </div>
+
+                <div class="pref-row" style="border-bottom:none;">
+                    <div class="pref-row-body">
+                        <div class="pref-row-title">Não pular blocos perdidos</div>
+                        <div class="pref-row-desc">Se você perder um dia, as tarefas não concluídas são movidas pra hoje em vez de ficarem pra trás — o ciclo não reseta, só continua de onde parou.</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="pref-rollover" onchange="updateRolloverPref(this.checked)"><span class="switch-slider"></span></label>
                 </div>
             </div>
 
@@ -345,13 +396,15 @@
 
             <div class="plan-card">
                 <h2><i class="fas fa-scale-balanced"></i> Distribuição por matéria</h2>
-                <p class="plan-card-sub">Quanto do seu tempo total cada matéria deveria consumir (proporcional ao peso), comparado com o quanto do conteúdo programático já foi concluído.</p>
+                <p class="plan-card-sub">Quanto do seu tempo total cada matéria deveria consumir (peso do edital × dificuldade pessoal), comparado com o quanto do conteúdo programático já foi concluído. Dificuldade e carga cognitiva são editáveis aqui e usadas de verdade pelo gerador do Ciclo de Estudo.</p>
                 <div style="overflow-x:auto;">
                     <table class="subj-dist-table">
                         <thead>
                             <tr>
                                 <th>Matéria</th>
                                 <th>Peso</th>
+                                <th>Dificuldade</th>
+                                <th>Carga</th>
                                 <th>% do tempo total</th>
                                 <th>Tempo estudado</th>
                                 <th>Conteúdo concluído</th>
@@ -426,7 +479,7 @@
             const pid = activeProfileId();
             if (pid === 'default') { showToast('O perfil "Principal" não pode ser excluído.', 'warning'); return; }
             if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil serão apagados.`)) return;
-            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours']
+            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun']
                 .forEach(base => localStorage.removeItem(base + '__' + pid));
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
@@ -553,6 +606,53 @@
                     <div class="routine-day-unit">h/dia</div>
                 </div>`).join('');
             document.getElementById('routine-total-hours').textContent = slots.reduce((a, b) => a + b, 0);
+            document.getElementById('routine-rest-tip').style.display = slots.every(h => h > 0) ? 'flex' : 'none';
+        }
+
+        /* --- Preferências do ciclo (edital publicado / discursiva / rollover de blocos perdidos) --- */
+        function updateEditalPublicado(checked) {
+            if (!sharedModel) return;
+            sharedModel.editalPublicado = checked;
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            document.getElementById('edital-publicado-tip').style.display = checked ? 'flex' : 'none';
+            showToast(checked ? 'Marcado — considere apertar o ritmo.' : 'Preferência atualizada.', 'success');
+        }
+
+        function updateTemDiscursiva(checked) {
+            if (!sharedModel) return;
+            sharedModel.temDiscursiva = checked;
+            if (checked && !sharedModel.horasDiscursivaSemana) sharedModel.horasDiscursivaSemana = 3;
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            document.getElementById('discursiva-hours-row').style.display = checked ? 'flex' : 'none';
+            renderPace();
+            renderWeeklyPriorities();
+            showToast('Preferência atualizada.', 'success');
+        }
+
+        function updateDiscursivaHoras(value) {
+            if (!sharedModel) return;
+            sharedModel.horasDiscursivaSemana = Math.max(0, Number(value) || 0);
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            renderPace();
+            renderWeeklyPriorities();
+            showToast('Horas de discursiva salvas.', 'success');
+        }
+
+        function updateRolloverPref(checked) {
+            localStorage.setItem(K('estudoFiscalRolloverMissed'), checked ? 'true' : 'false');
+            showToast(checked ? 'O Ciclo de Estudo vai mover blocos perdidos pra hoje.' : 'Preferência desativada.', 'success');
+        }
+
+        function renderCyclePrefs() {
+            document.getElementById('pref-edital-publicado').checked = !!(sharedModel && sharedModel.editalPublicado);
+            document.getElementById('edital-publicado-tip').style.display = (sharedModel && sharedModel.editalPublicado) ? 'flex' : 'none';
+
+            const temDiscursiva = !!(sharedModel && sharedModel.temDiscursiva);
+            document.getElementById('pref-tem-discursiva').checked = temDiscursiva;
+            document.getElementById('discursiva-hours-row').style.display = temDiscursiva ? 'flex' : 'none';
+            document.getElementById('discursiva-hours-input').value = (sharedModel && sharedModel.horasDiscursivaSemana) || 3;
+
+            document.getElementById('pref-rollover').checked = localStorage.getItem(K('estudoFiscalRolloverMissed')) === 'true';
         }
 
         let sharedModel = null;
@@ -569,7 +669,8 @@
 
             if (sharedModel) {
                 subjectsConfig = (sharedModel.materias || []).map(m => ({
-                    name: m.nome, type: m.tipo || 'Básico', weight: m.peso !== undefined ? Number(m.peso) : 1
+                    name: m.nome, type: m.tipo || 'Básico', weight: m.peso !== undefined ? Number(m.peso) : 1,
+                    dificuldade: Number(m.dificuldade) || 3, carga: m.carga || ''
                 }));
                 startDate = sharedModel.inicioCiclo ? parseLocalDateString(sharedModel.inicioCiclo) : null;
                 endDate = sharedModel.fimCiclo ? parseLocalDateString(sharedModel.fimCiclo) : null;
@@ -599,6 +700,37 @@
             return studyHistory
                 .filter(h => h.subject === name && new Date(h.date).getTime() >= sinceMs)
                 .reduce((acc, h) => acc + (h.duration || 0), 0);
+        }
+
+        /** % de acerto em questões da matéria (null se não houver dado suficiente) — mesmo critério do Ciclo de Estudo. */
+        function subjectPerformanceRate(name) {
+            let qTotal = 0, qCorrect = 0;
+            studyHistory.forEach(h => { if (h.subject === name && h.questions) { qTotal += h.questions; qCorrect += (h.correct || 0); } });
+            if (qTotal < 5) return null;
+            return Math.round((qCorrect / qTotal) * 100);
+        }
+
+        /** Mesma fórmula do Ciclo de Estudo (peso do edital × dificuldade pessoal, reduzido em modo revisão). */
+        function effectiveWeight(s) {
+            const raw = Math.max(1, Math.round(s.weight || 0));
+            const dificuldade = Number(s.dificuldade) || 3;
+            let w = Math.max(1, Math.round(raw * (dificuldade / 3)));
+            const syl = subjectSyllabusInfo(s.name);
+            if (syl.total > 0 && (syl.done / syl.total) >= 0.9) w = Math.max(1, Math.ceil(w / 2));
+            return w;
+        }
+
+        /** Atualiza um campo (dificuldade/carga) de uma matéria direto no modelo compartilhado. */
+        function updateSubjectField(name, field, value) {
+            if (!sharedModel || !Array.isArray(sharedModel.materias)) return;
+            const m = sharedModel.materias.find(x => x.nome === name);
+            if (!m) return;
+            m[field] = field === 'dificuldade' ? Number(value) : value;
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            loadAllData();
+            renderSubjectDistribution();
+            renderWeeklyPriorities();
+            showToast('Matéria atualizada.', 'success');
         }
 
         function formatHM(seconds) {
@@ -648,24 +780,28 @@
         }
 
         function renderWeeklyPriorities() {
-            const weeklyHours = getRoutineSlots().reduce((a, b) => a + b, 0);
+            const weeklyHours = Math.max(0, getRoutineSlots().reduce((a, b) => a + b, 0) - getDiscursivaHoras());
             const box = document.getElementById('weekly-priorities-box');
             if (!weeklyHours) {
                 box.innerHTML = `<p style="color:var(--ink-3); font-size:0.85rem; margin:0;">Preencha sua rotina semanal acima pra receber recomendações.</p>`;
                 return;
             }
-            const totalWeight = subjectsConfig.reduce((a, s) => a + (s.weight || 1), 0) || 1;
+            const totalWeight = subjectsConfig.reduce((a, s) => a + effectiveWeight(s), 0) || 1;
             const sevenDaysAgoMs = Date.now() - 7 * 86400000;
 
             const rows = subjectsConfig.map(s => {
-                const idealHours = ((s.weight || 1) / totalWeight) * weeklyHours;
+                const idealHours = (effectiveWeight(s) / totalWeight) * weeklyHours;
                 const doneHours = subjectRecentSeconds(s.name, sevenDaysAgoMs) / 3600;
                 const syl = subjectSyllabusInfo(s.name);
                 const sylPct = syl.total > 0 ? Math.round((syl.done / syl.total) * 100) : null;
-                return { name: s.name, idealHours, doneHours, gapHours: idealHours - doneHours, sylPct };
-            }).sort((a, b) => b.gapHours - a.gapHours);
+                const rate = subjectPerformanceRate(s.name);
+                // Método clássico de ciclo de estudos: prioriza não só quem estudou pouco, mas quem
+                // erra muito nas questões — soma uma "urgência extra" quando a taxa de acerto é baixa.
+                const rateBonus = rate === null ? 0 : (rate < 50 ? 1.5 : (rate < 70 ? 0.75 : 0));
+                return { name: s.name, idealHours, doneHours, gapHours: idealHours - doneHours, sylPct, rate, urgency: (idealHours - doneHours) + rateBonus };
+            }).sort((a, b) => b.urgency - a.urgency);
 
-            const priorities = rows.filter(r => r.gapHours > 0.3).slice(0, 5);
+            const priorities = rows.filter(r => r.urgency > 0.3).slice(0, 5);
 
             if (!priorities.length) {
                 box.innerHTML = `<div class="pace-status ok"><i class="fas fa-circle-check"></i> Você está em dia com a distribuição ideal entre as matérias essa semana. Mantenha o ritmo!</div>`;
@@ -676,9 +812,9 @@
                     <div class="priority-rank">${i + 1}</div>
                     <div class="priority-body">
                         <div class="priority-name">${r.name}</div>
-                        <div class="priority-meta">Estudado nos últimos 7 dias: ${formatHM(r.doneHours * 3600)} · Ideal p/ semana: ~${r.idealHours.toFixed(1)}h${r.sylPct !== null ? ` · Conteúdo: ${r.sylPct}%` : ''}</div>
+                        <div class="priority-meta">Estudado nos últimos 7 dias: ${formatHM(r.doneHours * 3600)} · Ideal p/ semana: ~${r.idealHours.toFixed(1)}h${r.sylPct !== null ? ` · Conteúdo: ${r.sylPct}%` : ''}${r.rate !== null ? ` · Acerto em questões: ${r.rate}%` : ''}</div>
                     </div>
-                    <div class="priority-gap">+${r.gapHours.toFixed(1)}h</div>
+                    <div class="priority-gap">+${Math.max(0, r.gapHours).toFixed(1)}h</div>
                 </div>`).join('');
         }
 
@@ -733,16 +869,23 @@
             }
         }
 
+        function getDiscursivaHoras() {
+            if (!sharedModel || !sharedModel.temDiscursiva) return 0;
+            return Number(sharedModel.horasDiscursivaSemana) || 0;
+        }
+
         function renderPace() {
-            const weeklyHours = getRoutineSlots().reduce((a, b) => a + b, 0);
+            const rawWeeklyHours = getRoutineSlots().reduce((a, b) => a + b, 0);
+            const discursivaHoras = getDiscursivaHoras();
+            const weeklyHours = Math.max(0, rawWeeklyHours - discursivaHoras);
 
             const today = new Date(); today.setHours(0,0,0,0);
             const weeksLeft = Math.max(0, (endDate - today) / (86400000 * 7));
             const availableHours = Math.round(weeksLeft * weeklyHours);
 
-            // Estimativa simples de "horas necessárias": 1h por bloco de peso, somado por matéria,
+            // Estimativa simples de "horas necessárias": 1h por bloco de peso efetivo, somado por matéria,
             // multiplicado por um fator de cobertura (assume ~4 blocos por matéria pra cobrir o conteúdo 1x + revisar).
-            const totalWeight = subjectsConfig.reduce((a, s) => a + (s.weight || 1), 0);
+            const totalWeight = subjectsConfig.reduce((a, s) => a + effectiveWeight(s), 0);
             const estimatedHoursNeeded = totalWeight * 4;
 
             const box = document.getElementById('pace-status-box');
@@ -752,25 +895,40 @@
                 return;
             }
             const ratio = availableHours / Math.max(1, estimatedHoursNeeded);
-            let cls = 'ok', icon = 'circle-check', msg = `Ótimo ritmo: ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas de estudo.`;
-            if (ratio < 0.7) { cls = 'bad'; icon = 'triangle-exclamation'; msg = `Ritmo apertado: só ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas. Considere aumentar as horas semanais.`; }
-            else if (ratio < 1) { cls = 'warn'; icon = 'circle-exclamation'; msg = `Ritmo razoável: ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas — dá pra cumprir com foco.`; }
+            const discursivaNote = discursivaHoras > 0 ? ` (já descontadas ${discursivaHoras}h/semana de discursiva)` : '';
+            let cls = 'ok', icon = 'circle-check', msg = `Ótimo ritmo: ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas de estudo${discursivaNote}.`;
+            if (ratio < 0.7) { cls = 'bad'; icon = 'triangle-exclamation'; msg = `Ritmo apertado: só ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas${discursivaNote}. Considere aumentar as horas semanais.`; }
+            else if (ratio < 1) { cls = 'warn'; icon = 'circle-exclamation'; msg = `Ritmo razoável: ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas${discursivaNote} — dá pra cumprir com foco.`; }
             box.className = 'pace-status ' + cls;
             box.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
         }
 
         function renderSubjectDistribution() {
-            const totalWeight = subjectsConfig.reduce((a, s) => a + (s.weight || 1), 0) || 1;
+            const totalWeight = subjectsConfig.reduce((a, s) => a + effectiveWeight(s), 0) || 1;
             const tbody = document.getElementById('subj-dist-tbody');
             tbody.innerHTML = subjectsConfig.map(s => {
-                const pct = Math.round(((s.weight || 1) / totalWeight) * 100);
+                const pct = Math.round((effectiveWeight(s) / totalWeight) * 100);
                 const studied = subjectStudiedSeconds(s.name);
                 const syl = subjectSyllabusInfo(s.name);
                 const sylPct = syl.total > 0 ? Math.round((syl.done / syl.total) * 100) : 0;
+                const dificuldade = Number(s.dificuldade) || 3;
+                const escaped = s.name.replace(/'/g, "\\'");
                 return `
                 <tr>
                     <td class="subj-dist-name">${s.name}</td>
                     <td>${s.weight}</td>
+                    <td>
+                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'dificuldade', this.value)">
+                            ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === dificuldade ? 'selected' : ''}>${n}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'carga', this.value)">
+                            <option value="" ${!s.carga ? 'selected' : ''}>—</option>
+                            <option value="pesada" ${s.carga === 'pesada' ? 'selected' : ''}>Pesada</option>
+                            <option value="leve" ${s.carga === 'leve' ? 'selected' : ''}>Leve</option>
+                        </select>
+                    </td>
                     <td>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <div class="subj-dist-bar-track"><div class="subj-dist-bar-fill" style="width:${pct}%"></div></div>
@@ -814,6 +972,7 @@
 
             renderCountdown();
             renderRoutine();
+            renderCyclePrefs();
             renderPhases();
             renderPace();
             renderWeeklyPriorities();

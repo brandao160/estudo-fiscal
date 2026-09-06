@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         /* ═══════════════════════════════════════════════════════════════
            CICLO DE ESTUDO — Design inspirado em Estratégia Concursos
@@ -166,36 +167,40 @@
             color: var(--ink);
             font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
             font-size: 15px; line-height: 1.55;
-            display: flex; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
             transition: background 0.2s, color 0.2s;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ─── SIDEBAR ──────────────────────────────────────────────── */
-        .sidebar, .glass-panel {
-            width: 248px;
+        /* ─── TOP HEADER (navegação + ações) ──────────────────────── */
+        .app-header, .glass-panel {
+            display: flex; flex-direction: column; align-items: stretch;
             background: var(--sidebar-bg) !important;
-            border-right: 1px solid var(--sidebar-border) !important;
-            padding: 16px 10px 20px;
-            display: flex; flex-direction: column; gap: 3px;
-            flex-shrink: 0; overflow-y: auto;
+            border-bottom: 1px solid var(--sidebar-border) !important;
+            flex-shrink: 0;
             color: var(--sidebar-text);
             scrollbar-color: rgba(249,115,22,0.2) transparent;
             box-shadow: none !important;
+            position: relative; z-index: 100;
         }
-        [data-theme="light"] .sidebar,
+        [data-theme="light"] .app-header,
         [data-theme="light"] .glass-panel {
-            box-shadow: 1px 0 0 var(--sidebar-border) !important;
+            box-shadow: 0 1px 0 var(--sidebar-border) !important;
+        }
+        .app-header-row {
+            display: flex; align-items: center; gap: 14px;
+            padding: 8px 20px;
+        }
+        .app-header-row + .app-header-row {
+            border-top: 1px solid var(--sidebar-border);
         }
 
         /* BRAND / LOGO */
         .brand {
-            display: flex; align-items: center; gap: 10px;
-            padding: 4px 10px 16px;
+            display: flex; align-items: center; gap: 8px;
             font-family: 'Nunito', sans-serif;
-            font-size: 1.1rem; font-weight: 900; letter-spacing: -0.3px;
-            border-bottom: 1px solid var(--sidebar-border);
-            margin-bottom: 6px;
+            font-size: 1.05rem; font-weight: 900; letter-spacing: -0.3px;
+            flex-shrink: 0;
         }
         .brand span {
             background: linear-gradient(135deg, #F97316 0%, #DC2626 100%);
@@ -205,7 +210,7 @@
         .brand i {
             color: #F97316 !important;
             -webkit-text-fill-color: #F97316 !important;
-            font-size: 1.15rem;
+            font-size: 1.1rem;
         }
         [data-theme="light"] .brand span {
             background: linear-gradient(135deg, #EA6F0F, #B91C1C);
@@ -215,12 +220,12 @@
         [data-theme="light"] .brand i { color: #EA6F0F !important; -webkit-text-fill-color: #EA6F0F !important; }
 
         /* PERFIS */
-        .profile-switcher { display: flex; gap: 4px; padding: 0 10px 10px; align-items: center; }
+        .profile-switcher { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
         .profile-switcher select {
-            flex: 1; min-width: 0; background: var(--sidebar-card-bg); color: var(--sidebar-text);
+            background: var(--sidebar-card-bg); color: var(--sidebar-text);
             border: 1px solid var(--sidebar-border); border-radius: var(--r);
-            padding: 6px 8px; font-size: 0.78rem; font-family: 'Source Sans 3', sans-serif;
-            font-weight: 700; cursor: pointer;
+            padding: 6px 8px; font-size: 0.76rem; font-family: 'Source Sans 3', sans-serif;
+            font-weight: 700; cursor: pointer; max-width: 130px;
         }
         .profile-icon-btn {
             background: transparent; border: 1px solid var(--sidebar-border); color: var(--sidebar-muted);
@@ -230,25 +235,22 @@
         }
         .profile-icon-btn:hover { color: var(--accent); border-color: var(--accent); }
 
-        /* NAV */
-        .menu-title {
-            padding: 14px 10px 4px;
-            font-family: 'Nunito', sans-serif;
-            font-size: 0.65rem; text-transform: uppercase;
-            letter-spacing: 1.8px; color: var(--sidebar-muted); font-weight: 800;
+        /* NAV (horizontal) */
+        .topnav-menu {
+            display: flex; align-items: center; gap: 2px; flex: 1;
+            overflow-x: auto; scrollbar-width: none; min-width: 0;
         }
-        [data-theme="light"] .menu-title { color: var(--ink-4) !important; }
-
-        .nav-menu { display: flex; flex-direction: column; gap: 1px; }
+        .topnav-menu::-webkit-scrollbar { display: none; }
 
         .nav-item {
-            padding: 9px 12px; border-radius: var(--r);
-            cursor: pointer; display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; border-radius: var(--r);
+            cursor: pointer; display: flex; align-items: center; gap: 8px;
             color: var(--sidebar-muted);
             transition: background 0.15s, color 0.15s;
             font-family: 'Source Sans 3', sans-serif;
-            font-weight: 600; font-size: 0.88rem;
+            font-weight: 600; font-size: 0.85rem;
             text-decoration: none; position: relative;
+            white-space: nowrap; flex-shrink: 0;
         }
         .nav-item:hover { background: var(--sidebar-hover); color: var(--accent); }
         .nav-item.active {
@@ -258,46 +260,37 @@
         }
         .nav-item.active::before {
             content: '';
-            position: absolute; left: 0; top: 50%;
-            transform: translateY(-50%);
-            width: 3px; height: 18px;
+            position: absolute; left: 10px; right: 10px; bottom: 0;
+            height: 2px;
             background: var(--accent);
-            border-radius: 0 3px 3px 0;
+            border-radius: 2px 2px 0 0;
         }
         [data-theme="light"] .nav-item { color: var(--ink-3); }
         [data-theme="light"] .nav-item:hover { background: var(--sidebar-hover); color: var(--accent); }
         [data-theme="light"] .nav-item.active { color: var(--accent); }
-        .nav-item i { width: 17px; text-align: center; font-size: 0.85rem; color: inherit; }
+        .nav-item i { width: 15px; text-align: center; font-size: 0.82rem; color: inherit; }
         .nav-item:active { transform: scale(0.97); }
 
-        /* MINI STATS */
-        .stats-container { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
-        .mini-stat {
-            background: var(--sidebar-card-bg);
-            border: 1px solid var(--sidebar-border);
-            border-radius: var(--r); padding: 9px 12px;
-            transition: background 0.14s;
+        /* ESTATÍSTICAS compactas no header */
+        .header-stats { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+        .header-stat { text-align: center; line-height: 1.25; }
+        .header-stat-label {
+            font-size: 0.6rem; color: var(--sidebar-muted);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            font-family: 'Nunito', sans-serif; font-weight: 700; white-space: nowrap;
         }
-        .mini-stat:hover { background: var(--sidebar-hover); }
-        .mini-stat-label {
-            font-size: 0.68rem; color: var(--sidebar-muted);
-            margin-bottom: 2px; text-transform: uppercase;
-            letter-spacing: 0.5px; font-family: 'Nunito', sans-serif; font-weight: 700;
-        }
-        .mini-stat-value {
-            font-size: 1.05rem; font-weight: 700;
+        .header-stat-value {
+            font-size: 0.92rem; font-weight: 800;
             color: var(--sidebar-text);
             font-family: 'Nunito', sans-serif;
         }
-        [data-theme="light"] .mini-stat-label { color: var(--ink-3) !important; }
-        [data-theme="light"] .mini-stat-value { color: var(--ink) !important; }
-        [data-theme="light"] .mini-stat { background: rgba(0,0,0,0.03) !important; border-color: var(--sidebar-border) !important; }
-        [data-theme="light"] .mini-stat:hover { background: rgba(249,115,22,0.06) !important; }
+        [data-theme="light"] .header-stat-label { color: var(--ink-3) !important; }
+        [data-theme="light"] .header-stat-value { color: var(--ink) !important; }
 
         .progress-circle {
-            width: 100%; height: 3px;
+            width: 54px; height: 3px; margin: 3px auto 0;
             background: var(--sidebar-border);
-            border-radius: 99px; overflow: hidden; margin-top: 7px;
+            border-radius: 99px; overflow: hidden;
         }
         .progress-fill {
             height: 100%;
@@ -308,7 +301,22 @@
 
         #streak-stat { color: var(--accent) !important; }
 
-        /* SIDEBAR ACTION BUTTONS */
+        /* SUB-NAVEGAÇÃO "Dados & Backup" (barra sempre visível, não escondida em menu) */
+        .subnav-row { padding-top: 6px; padding-bottom: 6px; }
+        .subnav-toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .subnav-btn {
+            background: transparent; border: 1px solid var(--sidebar-border); color: var(--sidebar-muted);
+            border-radius: var(--r-full); cursor: pointer; padding: 5px 11px;
+            font-size: 0.76rem; font-family: 'Source Sans 3', sans-serif; font-weight: 600;
+            display: flex; align-items: center; gap: 6px; white-space: nowrap;
+            transition: background 0.14s, color 0.14s, border-color 0.14s;
+        }
+        .subnav-btn:hover { background: var(--sidebar-hover); color: var(--accent); border-color: rgba(249,115,22,0.35); }
+        .subnav-btn i { font-size: 0.74rem; }
+        [data-theme="light"] .subnav-btn { color: var(--ink-3) !important; border-color: var(--sidebar-border) !important; }
+        [data-theme="light"] .subnav-btn:hover { background: rgba(249,115,22,0.06) !important; color: var(--accent) !important; }
+
+        /* Reaproveitado por telas que ainda usam o botão de ação vertical (nenhuma no momento) */
         .btn-sidebar-action {
             width: 100%; padding: 8px 12px;
             background: transparent;
@@ -318,7 +326,7 @@
             font-size: 0.82rem; font-family: 'Source Sans 3', sans-serif; font-weight: 600;
             display: flex; align-items: center; gap: 8px;
             transition: background 0.14s, color 0.14s, border-color 0.14s;
-            text-align: left; margin-bottom: 3px;
+            text-align: left;
         }
         .btn-sidebar-action:hover {
             background: var(--sidebar-hover);
@@ -328,6 +336,23 @@
         .btn-sidebar-action i { width: 15px; text-align: center; color: var(--accent); font-size: 0.78rem; }
         [data-theme="light"] .btn-sidebar-action { color: var(--ink-3) !important; border-color: var(--sidebar-border) !important; }
         [data-theme="light"] .btn-sidebar-action:hover { background: rgba(249,115,22,0.06) !important; color: var(--accent) !important; }
+
+        .btn-save-progress {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary)) !important;
+            border-radius: var(--r-md) !important;
+            border: none !important;
+            color: #fff !important;
+            font-family: 'Nunito', sans-serif !important;
+            font-weight: 900 !important;
+            box-shadow: 0 4px 14px rgba(249,115,22,0.3) !important;
+            padding: 8px 16px !important; cursor: pointer !important; font-size: 0.82rem !important;
+            display: flex; align-items: center; gap: 6px; white-space: nowrap;
+            transition: all 0.2s ease !important;
+        }
+        .btn-save-progress:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 20px rgba(249,115,22,0.45) !important;
+        }
 
         /* ─── MAIN CONTENT ─────────────────────────────────────────── */
         .main-content {
@@ -1112,6 +1137,37 @@
         .wizard-choice b { color: var(--ink); font-size: 0.92rem; font-family: 'Nunito', sans-serif; }
         .wizard-choice span { font-size: 0.78rem; color: var(--ink-3); }
 
+        /* ─── IMPORTAR EDITAL EM PDF (IA) ───────────────────────────── */
+        .edital-mode-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .edital-mode-tab {
+            flex: 1; padding: 9px 12px; border-radius: var(--r);
+            background: var(--surface-alt); border: 1px solid var(--border); color: var(--ink-2);
+            font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.14s;
+            display: flex; align-items: center; justify-content: center; gap: 7px;
+        }
+        .edital-mode-tab:hover { border-color: var(--accent); }
+        .edital-mode-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+        .edital-ai-warning {
+            display: flex; gap: 10px; align-items: flex-start;
+            background: var(--amber-soft); border: 1px solid rgba(234,179,8,0.3);
+            border-radius: var(--r); padding: 10px 12px; margin-bottom: 16px;
+            font-size: 0.8rem; color: var(--ink-2); line-height: 1.5;
+        }
+        .edital-ai-warning i { color: var(--amber); margin-top: 2px; flex-shrink: 0; }
+        .edital-ai-warning a { color: var(--accent); font-weight: 700; }
+        #edital-ai-key-input, #edital-ai-model-select, #edital-ai-pdf-input {
+            width: 100%; box-sizing: border-box;
+        }
+        .edital-ai-status {
+            margin-top: 12px; padding: 10px 12px; border-radius: var(--r);
+            background: var(--surface-alt); border: 1px solid var(--border);
+            font-size: 0.82rem; color: var(--ink-2); display: flex; align-items: center; gap: 8px;
+        }
+        .edital-ai-status.error { background: var(--red-soft); color: var(--red); border-color: rgba(239,68,68,0.3); }
+        .edital-ai-status.success { background: var(--green-soft); color: var(--green); border-color: rgba(34,197,94,0.3); }
+        .edital-ai-status i.fa-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
         /* ─── LIST FILTER INPUTS ───────────────────────────────────── */
         #list-filters select,
         #list-filters input[type="date"] {
@@ -1164,22 +1220,6 @@
             font-family: 'Nunito', sans-serif;
         }
 
-        /* ─── SALVAR PROGRESSO BUTTON override ─────────────────────── */
-        .sidebar > div > button[onclick*="saveSelfContainedHTML"] {
-            background: linear-gradient(135deg, var(--accent), var(--accent-secondary)) !important;
-            border-radius: var(--r-md) !important;
-            border: none !important;
-            color: #fff !important;
-            font-family: 'Nunito', sans-serif !important;
-            font-weight: 900 !important;
-            box-shadow: 0 4px 14px rgba(249,115,22,0.3) !important;
-            transition: all 0.2s ease !important;
-        }
-        .sidebar > div > button[onclick*="saveSelfContainedHTML"]:hover {
-            transform: translateY(-1px) !important;
-            box-shadow: 0 6px 20px rgba(249,115,22,0.45) !important;
-        }
-
         /* ─── TIME STATS CHARTS ────────────────────────────────────── */
         .kpi-cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
         .kpi-card {
@@ -1194,7 +1234,8 @@
 
         /* ─── RESPONSIVE ───────────────────────────────────────────── */
         @media (max-width: 768px) {
-            .sidebar { display: none; }
+            .app-header { padding: 8px 12px; gap: 10px; }
+            .header-stats { display: none; }
             .content-area { padding: 14px; }
             .top-bar { padding: 10px 14px; }
         }
@@ -1218,99 +1259,102 @@
     <div id="toast-container"></div>
     
 
-    <!-- Sidebar -->
-    <nav class="sidebar glass-panel">
-        <div class="brand">
-            <i class="fas fa-book-reader"></i>
-            <span>Ciclo de Estudo</span>
-        </div>
-
-        <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
-
-        <div class="menu-title">Navegação</div>
-        <div class="nav-menu">
-            <a href="https://cicloestudo.com.br/resumo" class="nav-item" style="text-decoration: none; color: inherit;">
-                <i class="fas fa-pencil-alt"></i>
-                <span>Meus Resumos</span>
-            </a>
-            <div class="nav-item active" onclick="switchTab('cycle')">
-                <i class="fas fa-bullseye"></i>
+    <!-- Top Header -->
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
                 <span>Ciclo de Estudo</span>
             </div>
-            <div class="nav-item" onclick="switchTab('subjects')">
-                <i class="fas fa-chart-pie"></i>
-                <span>Matérias & Progresso</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('list')">
-                <i class="fas fa-list"></i>
-                <span>Lista Completa</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('syllabus')">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Conteúdo Programático</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('time-stats')">
-                <i class="fas fa-chart-pie"></i>
-                <span>Tempo de Estudo</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('history')">
-                <i class="fas fa-history"></i>
-                <span>Histórico</span>
-            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
         </div>
 
-        <div class="menu-title">Estatísticas</div>
-        <div class="stats-container">
-            <div class="mini-stat">
-                <div class="mini-stat-label">Dias até a Prova</div>
-                <div class="mini-stat-value" id="days-left-stat">0</div>
-            </div>
-            
-            <div class="mini-stat">
-                <div class="mini-stat-label">Progresso Geral</div>
-                <div class="mini-stat-value" id="total-progress-stat">0%</div>
-                <div class="progress-circle">
-                    <div class="progress-fill" id="total-progress-bar"></div>
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <div class="nav-item" onclick="switchTab('subjects')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </div>
+                <div class="nav-item active" onclick="switchTab('cycle')">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </div>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <div class="nav-item" onclick="switchTab('list')">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('syllabus')">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('time-stats')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </div>
+                <div class="nav-item" onclick="switchTab('history')">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </div>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
                 </div>
             </div>
 
-            <div class="mini-stat">
-                <div class="mini-stat-label">Sequência Atual 🔥</div>
-                <div class="mini-stat-value" id="streak-stat">0 dias</div>
-            </div>
+            <nav class="subnav-toolbar">
+                <button id="btn-export-xlsx" class="subnav-btn" onclick="exportCurrentModelXLSX()">
+                    <i class="fas fa-file-export"></i> Exportar Atual
+                </button>
+                <button id="btn-import-xlsx" class="subnav-btn" onclick="triggerImportModelXLSX()">
+                    <i class="fas fa-file-import"></i> Importar Excel
+                </button>
+                <input type="file" id="import-model-xlsx-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importModelXLSX(this)">
+                <button class="subnav-btn" onclick="openEditalAIModal()" style="color: var(--accent);">
+                    <i class="fas fa-wand-magic-sparkles"></i> Importar Edital PDF
+                </button>
+                <button id="generate-cycle-button" class="subnav-btn" onclick="generateCycleFromModel()">
+                    <i class="fas fa-sync-alt"></i> Gerar Ciclo
+                </button>
+                <button class="subnav-btn" onclick="triggerImportProgress()">
+                    <i class="fas fa-upload"></i> Carregar Progresso
+                </button>
+                <input type="file" id="import-progress-input" accept=".html,.json,text/html,application/json" style="display:none" onchange="importProgressFile(this)">
+                <button class="subnav-btn" onclick="resetSchedule()" style="color: var(--red);">
+                    <i class="fas fa-trash"></i> Limpar Ciclo
+                </button>
+            </nav>
+
+            <div style="flex:1;"></div>
+
+            <button class="btn-save-progress" onclick="saveSelfContainedHTML()" title="Baixa uma cópia do site com seus dados salvos">
+                <i class="fas fa-save"></i> Salvar
+            </button>
         </div>
-
-        <div class="menu-title">Dados & Backup</div>
-        <div style="padding: 0 5px; display: flex; flex-direction: column; gap: 4px;">
-            <button id="btn-export-xlsx" class="btn-sidebar-action" onclick="exportCurrentModelXLSX()">
-                <i class="fas fa-file-export"></i> Exportar Modelo Atual
-            </button>
-            <button id="btn-import-xlsx" class="btn-sidebar-action" onclick="triggerImportModelXLSX()">
-                <i class="fas fa-file-import"></i> Importar Modelo Excel
-            </button>
-            <input type="file" id="import-model-xlsx-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importModelXLSX(this)">
-
-            <button id="generate-cycle-button" class="btn-sidebar-action" onclick="generateCycleFromModel()">
-                <i class="fas fa-sync-alt"></i> Gerar Ciclo de Estudo
-            </button>
-
-            <button class="btn-sidebar-action" onclick="triggerImportProgress()">
-                <i class="fas fa-upload"></i> Carregar Progresso
-            </button>
-            <input type="file" id="import-progress-input" accept=".html,.json,text/html,application/json" style="display:none" onchange="importProgressFile(this)">
-
-            <button class="btn-sidebar-action" onclick="resetSchedule()" style="color: #ff6b6b; border-color: rgba(255, 107, 107, 0.2);">
-                <i class="fas fa-sync-alt"></i> Limpar Ciclo Gerado
-            </button>
-        </div>
-
-        <div style="margin-top: 15px; padding: 0 5px;">
-            <button onclick="saveSelfContainedHTML()" style="width: 100%; padding: 15px; background: #00c853; border: none; color: #fff; border-radius: 15px; cursor: pointer; font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3); transition: all 0.3s ease;">
-                <i class="fas fa-save"></i> Salvar Progresso
-            </button>
-            <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 10px;">Baixa uma cópia do site com seus dados salvos.</p>
-        </div>
-    </nav>
+    </header>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -1675,6 +1719,69 @@
         </div>
     </div>
 
+    <!-- IMPORTAR EDITAL EM PDF COM IA (experimental) -->
+    <div class="modal-overlay" id="edital-ai-modal">
+        <div class="modal" style="width: 660px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-wand-magic-sparkles" style="color: var(--accent);"></i> Importar Edital em PDF</div>
+                <button class="close-modal" onclick="closeEditalAIModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.86rem; color: var(--ink-2); margin: 0 0 14px;">
+                    Envie o PDF do edital para extrair as matérias e o conteúdo programático automaticamente, sem montar planilha. Duas formas de processar:
+                </p>
+
+                <div class="edital-mode-tabs">
+                    <button class="edital-mode-tab active" id="edital-mode-tab-free" onclick="setEditalMode('free')">
+                        <i class="fas fa-gift"></i> Sem IA (grátis)
+                    </button>
+                    <button class="edital-mode-tab" id="edital-mode-tab-ai" onclick="setEditalMode('ai')">
+                        <i class="fas fa-wand-magic-sparkles"></i> Com IA (pago)
+                    </button>
+                </div>
+
+                <label class="note-label" for="edital-ai-pdf-input">PDF do edital</label>
+                <input type="file" id="edital-ai-pdf-input" accept="application/pdf" class="note-input" style="margin-bottom:14px;">
+
+                <div id="edital-mode-free-panel">
+                    <div class="edital-ai-warning" style="background: var(--surface-alt); border-color: var(--border);">
+                        <i class="fas fa-circle-info" style="color: var(--ink-3);"></i>
+                        <div>
+                            Lê o PDF com regras de padrão (títulos, numeração) — de graça e na hora, sem enviar nada pra fora do seu navegador. Funciona melhor em editais com formatação "arrumada" (uma matéria/tópico por linha). Não sabe julgar importância: todas as matérias específicas saem com peso 2 e as básicas com peso 1 — ajuste depois se quiser, editando a planilha exportada.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="edital-mode-ai-panel" style="display:none;">
+                    <div class="edital-ai-warning">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <div>
+                            Experimental: precisa da sua própria chave de API da Anthropic (Claude). A chave fica salva só neste navegador e a chamada vai direto do seu navegador para a Anthropic — este site não vê nem guarda sua chave. Cada PDF processado consome créditos da sua conta Anthropic.
+                            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Criar/gerenciar chave →</a>
+                        </div>
+                    </div>
+
+                    <label class="note-label" for="edital-ai-key-input">Sua chave de API da Anthropic</label>
+                    <input type="password" id="edital-ai-key-input" class="note-input" placeholder="sk-ant-..." style="margin-bottom:12px;" oninput="saveEditalAIKey(this.value)">
+
+                    <label class="note-label" for="edital-ai-model-select">Modelo</label>
+                    <select id="edital-ai-model-select" class="note-input" style="margin-bottom:4px;">
+                        <option value="claude-opus-5">Claude Opus 5 — mais capaz, mais caro</option>
+                        <option value="claude-sonnet-5" selected>Claude Sonnet 5 — bom equilíbrio (recomendado)</option>
+                        <option value="claude-haiku-4-5">Claude Haiku 4.5 — mais barato e rápido</option>
+                    </select>
+                </div>
+
+                <div id="edital-ai-status" class="edital-ai-status" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditalAIModal()">Cancelar</button>
+                <button class="btn btn-primary" id="edital-free-process-btn" onclick="processEditalPDFHeuristic()"><i class="fas fa-gift"></i> Processar sem IA (Grátis)</button>
+                <button class="btn btn-primary" id="edital-ai-process-btn" onclick="processEditalPDF()" style="display:none;"><i class="fas fa-wand-magic-sparkles"></i> Processar com IA</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /* --- TOAST LOGIC --- */
         function showToast(message, type = 'info') {
@@ -2012,6 +2119,25 @@
             }
         }
 
+        /**
+         * Se o perfil ativo nunca teve um modelo salvo (nunca importou Excel/PDF), grava o modelo
+         * padrão (matérias/syllabus/datas de exemplo já usados nesta página) em `estudoFiscalModel`.
+         * Sem isso, outras páginas (ex: planejamento.html), que só leem localStorage e não têm os
+         * dados de exemplo embutidos, veriam "nenhuma matéria" mesmo com o Ciclo de Estudo mostrando
+         * as 19 matérias de exemplo — quebrando a promessa de que as páginas "conversam" entre si.
+         */
+        function persistDefaultModelIfMissing() {
+            if (localStorage.getItem(K('estudoFiscalModel'))) return;
+            const model = {
+                concurso: '', orgao: '',
+                inicioCiclo: startDate.toISOString().slice(0, 10),
+                fimCiclo: endDate.toISOString().slice(0, 10),
+                slotsPorDia,
+                materias: subjectsConfig.map(s => ({ nome: s.name, tipo: s.type, peso: s.weight, tickets: s.tickets || s.weight })),
+                syllabus: syllabusData
+            };
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(model));
+        }
 
         // --- GENERATE CYCLE ---
         let fullSchedule = []; // Array of objects: { date, tasks: [] }
@@ -2786,32 +2912,36 @@
                 showToast(`Só havia ${fresh.length} matéria(s) sem estudo nos últimos 7 dias — completei com quem você estudou há mais tempo.`, 'info');
             }
 
-            buildTodayCycleFromSubjects(selected);
+            buildTodayCycleFromSubjects(selected, { oneBlockEach: true });
         }
 
         /**
          * Monta o ciclo de HOJE a partir de uma lista de matérias já escolhidas (objetos do
-         * subjectsConfig), respeitando o peso de cada uma e aplicando a variedade semanal /
-         * priorização por desempenho fraco. Usado tanto pelo seletor manual quanto pelo "por quantidade".
+         * subjectsConfig). Por padrão respeita o peso de cada uma (peso = quantas vezes aparece
+         * hoje) e aplica a variedade semanal / priorização por desempenho fraco — usado pelo
+         * seletor manual. Com `opts.oneBlockEach`, cada matéria entra exatamente 1 vez (usado pelo
+         * "Gerar por quantidade", onde a quantidade escolhida deve bater com o nº de blocos gerados).
          */
-        function buildTodayCycleFromSubjects(picked) {
+        function buildTodayCycleFromSubjects(picked, opts) {
+            opts = opts || {};
             const dayObj = getOrCreateTodayDayObj();
             const WEEK_WINDOW = 6; // dias corridos anteriores considerados "a semana"
 
-            // Contagem-base = peso (frequência desejada no ciclo)
+            // Contagem-base: 1 bloco por matéria (modo "por quantidade") ou peso = frequência (modo manual).
             let counts = {};
-            picked.forEach(s => { counts[s.name] = Math.max(1, Math.round(s.weight || 1)); });
+            picked.forEach(s => { counts[s.name] = opts.oneBlockEach ? 1 : Math.max(1, Math.round(s.weight || 1)); });
 
             // Score de prioridade: quanto MENOR, mais a matéria "merece" aparecer/ganhar bloco —
             // combina "pouco vista na semana" com "desempenho fraco em questões" (matéria carente).
+            // No modo "1 bloco cada" isso só define a ORDEM da fila, nunca redistribui blocos.
             let priority = {};
-            if (picked.length >= 3) {
-                picked.forEach(s => {
-                    const recent = countRecentDayAppearances(s.name, WEEK_WINDOW);
-                    const perf = getSubjectPerformanceRate(s.name);
-                    const perfPenalty = perf === null ? 0 : (perf < 60 ? 2 : (perf < 80 ? 1 : 0));
-                    priority[s.name] = recent - perfPenalty;
-                });
+            picked.forEach(s => {
+                const recent = countRecentDayAppearances(s.name, WEEK_WINDOW);
+                const perf = getSubjectPerformanceRate(s.name);
+                const perfPenalty = perf === null ? 0 : (perf < 60 ? 2 : (perf < 80 ? 1 : 0));
+                priority[s.name] = recent - perfPenalty;
+            });
+            if (!opts.oneBlockEach && picked.length >= 3) {
                 // Matéria "superexposta" (apareceu em 4+ dos últimos 6 dias) cede 1 bloco de hoje
                 // para quem tem prioridade mais alta (pouco vista e/ou desempenho fraco).
                 const recentCount = {};
@@ -5457,9 +5587,372 @@
             reader.readAsArrayBuffer(file);
             input.value = '';
         }
-        
-        
-        
+
+        // --- IMPORTAR EDITAL EM PDF COM IA (experimental) ---
+        // Chama a API da Anthropic diretamente do navegador, com a chave do próprio usuário
+        // (nunca passa pelo nosso servidor/site). Reaproveita validateModel()/applyImportedModel()
+        // do fluxo de importação Excel para manter o mesmo padrão de validação e aplicação.
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        function openEditalAIModal() {
+            const modal = document.getElementById('edital-ai-modal');
+            if (!modal) return;
+            const savedKey = localStorage.getItem(K('estudoFiscalAnthropicKey')) || '';
+            const keyInput = document.getElementById('edital-ai-key-input');
+            if (keyInput) keyInput.value = savedKey;
+            setEditalAIStatus('', '');
+            setEditalMode('free');
+            modal.classList.add('open');
+        }
+
+        function closeEditalAIModal() {
+            const modal = document.getElementById('edital-ai-modal');
+            if (modal) modal.classList.remove('open');
+        }
+
+        /** Alterna entre o modo grátis (heurística local) e o modo com IA (Anthropic API). */
+        function setEditalMode(mode) {
+            const isFree = mode === 'free';
+            document.getElementById('edital-mode-tab-free').classList.toggle('active', isFree);
+            document.getElementById('edital-mode-tab-ai').classList.toggle('active', !isFree);
+            document.getElementById('edital-mode-free-panel').style.display = isFree ? 'block' : 'none';
+            document.getElementById('edital-mode-ai-panel').style.display = isFree ? 'none' : 'block';
+            document.getElementById('edital-free-process-btn').style.display = isFree ? 'inline-flex' : 'none';
+            document.getElementById('edital-ai-process-btn').style.display = isFree ? 'none' : 'inline-flex';
+            setEditalAIStatus('', '');
+        }
+
+        function saveEditalAIKey(value) {
+            if (value) localStorage.setItem(K('estudoFiscalAnthropicKey'), value);
+            else localStorage.removeItem(K('estudoFiscalAnthropicKey'));
+        }
+
+        function setEditalAIStatus(html, kind) {
+            const el = document.getElementById('edital-ai-status');
+            if (!el) return;
+            if (!html) { el.style.display = 'none'; el.innerHTML = ''; return; }
+            el.style.display = 'flex';
+            el.className = 'edital-ai-status' + (kind ? ' ' + kind : '');
+            el.innerHTML = html;
+        }
+
+        /**
+         * Extrai o texto de todas as páginas de um PDF usando pdf.js, reconstruindo quebras de
+         * linha a partir da posição vertical de cada item (pdf.js não devolve linhas prontas).
+         * Isso é usado tanto pelo modo IA quanto pelo parser heurístico (que depende de linhas
+         * para reconhecer títulos de matéria e tópicos numerados).
+         */
+        async function extractPdfText(file) {
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                setEditalAIStatus(`<i class="fas fa-spinner"></i> Lendo página ${i} de ${pdf.numPages}...`, '');
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                let lastY = null;
+                content.items.forEach(it => {
+                    const y = it.transform ? it.transform[5] : null;
+                    if (lastY !== null && y !== null && Math.abs(y - lastY) > 1) {
+                        fullText += '\n';
+                    } else if (fullText && !fullText.endsWith('\n') && !fullText.endsWith(' ')) {
+                        fullText += ' ';
+                    }
+                    fullText += it.str;
+                    if (y !== null) lastY = y;
+                });
+                fullText += '\n\n';
+            }
+            return fullText;
+        }
+
+        // --- PARSER HEURÍSTICO (modo grátis, sem IA) ---
+        /** Deixa cada palavra com inicial maiúscula, mantendo conectivos comuns em minúsculo. */
+        function toTitleCasePt(str) {
+            const stop = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'a', 'o', 'as', 'os', 'para', 'com', 'no', 'na']);
+            return str.toLowerCase().split(' ').map((w, i) => {
+                if (i > 0 && stop.has(w)) return w;
+                return w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+            }).join(' ');
+        }
+
+        /** Colapsa espaços/tabs repetidos (comuns na extração do pdf.js) em um único espaço. */
+        function normalizeEditalSpaces(text) {
+            return text.replace(/[ \t]+/g, ' ');
+        }
+
+        // Palavras que aparecem como "Nome :" mas não são matéria (notas/observações dentro do texto).
+        const EDITAL_HEADER_BLOCKLIST = new Set(['observação', 'observacao', 'obs', 'nota', 'importante', 'atenção', 'atencao']);
+
+        // Padrão real de "conteúdo programático" de edital: "Nome da Matéria : descrição corrida dos
+        // tópicos (às vezes numerados '1.', às vezes não), tudo em um único parágrafo por matéria" —
+        // não é uma linha por tópico. O nome da matéria vem em Title Case, curto, seguido de dois-pontos.
+        const EDITAL_HEADER_RE = /^([A-ZÀ-Ý][A-Za-zÀ-ÿ0-9,()\/\-]*(?:\s+[A-Za-zÀ-ÿ0-9,()\/\-]+){0,7})\s*:\s*(.*)$/;
+
+        /**
+         * Uma linha só pode iniciar uma NOVA matéria se a linha anterior realmente terminou uma frase
+         * (pontuação de fechamento) — se ela termina só em número de lista ("... 11.") ou no meio de uma
+         * frase (sem pontuação), o "Nome :" encontrado é apenas um tópico numerado dentro do parágrafo
+         * da matéria anterior, não uma matéria nova.
+         */
+        function editalPrevLineEndsSentence(line) {
+            const trimmed = (line || '').trim();
+            if (!trimmed) return true;
+            if (/\d{1,3}\.?\s*$/.test(trimmed)) return false;
+            return /[.;:]$/.test(trimmed);
+        }
+
+        /**
+         * Parser "burro" (sem IA): usa padrões de texto comuns em editais brasileiros para montar a
+         * mesma estrutura de `model` usada pela importação de Excel/IA. Restringe a leitura à seção de
+         * "Conteúdo Programático" (geralmente um anexo) para não confundir matéria com título
+         * administrativo do edital (ex: "Das Inscrições", "Dos Recursos"). Não tem noção real de
+         * importância — pesos são uma regra fixa (Básico=1, Específico=2).
+         */
+        function parseEditalHeuristically(rawText) {
+            let text = normalizeEditalSpaces(rawText);
+            let sectionWarning = null;
+
+            // Restringe ao último bloco "Conteúdo Programático" do documento (o anexo em si — mecionar
+            // esse termo antes, num sumário ou regra de prova, é comum e não deve ser usado como início).
+            const startRe = /conte[uú]do\s+program[aá]tico/gi;
+            let startIdx = -1, sm;
+            while ((sm = startRe.exec(text))) startIdx = sm.index;
+            if (startIdx === -1) {
+                sectionWarning = 'Não encontrei uma seção "Conteúdo Programático" clara nesse PDF — tentei ler o documento inteiro. Revise o resultado com atenção, pode ter vindo lixo de outras partes do edital.';
+            } else {
+                const rest = text.slice(startIdx);
+                const endMatch = rest.slice(80).match(/anexo\s+i{2,3}\b/i);
+                text = endMatch ? rest.slice(0, 80 + endMatch.index) : rest;
+            }
+
+            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+            const catBasicoRe = /conhecimentos?\s+(b[aá]sicos?|gerais?)/i;
+            const catEspecificoRe = /conhecimentos?\s+espec[ií]ficos?/i;
+
+            let currentCategory = 'Basico';
+            let currentSubject = null;
+            let prevLineEndedSentence = true; // início de seção conta como fronteira
+            const materiasMap = new Map(); // nome -> { nome, tipo, peso, contentParts: [] }
+
+            lines.forEach(line => {
+                if (catBasicoRe.test(line)) { currentCategory = 'Basico'; currentSubject = null; prevLineEndedSentence = true; return; }
+                if (catEspecificoRe.test(line)) { currentCategory = 'Especifico'; currentSubject = null; prevLineEndedSentence = true; return; }
+
+                const hm = line.match(EDITAL_HEADER_RE);
+                const candidateName = hm ? hm[1].trim() : '';
+                const isValidHeader = hm && candidateName.length <= 60
+                    && !EDITAL_HEADER_BLOCKLIST.has(candidateName.toLowerCase())
+                    && prevLineEndedSentence;
+
+                if (isValidHeader) {
+                    const nome = toTitleCasePt(candidateName);
+                    if (!materiasMap.has(nome)) {
+                        materiasMap.set(nome, { nome, tipo: currentCategory, peso: currentCategory === 'Especifico' ? 2 : 1, contentParts: [] });
+                    }
+                    currentSubject = nome;
+                    if (hm[2]) materiasMap.get(nome).contentParts.push(hm[2]);
+                } else if (currentSubject) {
+                    materiasMap.get(currentSubject).contentParts.push(line);
+                }
+
+                prevLineEndedSentence = editalPrevLineEndsSentence(line);
+            });
+
+            const materias = [];
+            const byCategory = {};
+            materiasMap.forEach(m => {
+                const contentText = m.contentParts.join(' ');
+                const topics = contentText
+                    .split(/\.\s+/)
+                    .map(t => t.replace(/^\d{1,3}\.?\s*/, '').replace(/\.$/, '').trim())
+                    .filter(t => t.length > 3)
+                    // Cargos diferentes às vezes repetem a mesma matéria com o mesmo texto —
+                    // sem isso o tópico apareceria duplicado na lista.
+                    .filter((t, i, arr) => arr.indexOf(t) === i);
+                materias.push({ nome: m.nome, tipo: m.tipo, peso: m.peso });
+                const catLabel = m.tipo === 'Especifico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos';
+                if (!byCategory[catLabel]) byCategory[catLabel] = [];
+                byCategory[catLabel].push({ name: m.nome, topics });
+            });
+            const syllabus = Object.keys(byCategory).map(cat => ({ category: cat, subjects: byCategory[cat] }));
+
+            return { concurso: '', orgao: '', materias, syllabus, _sectionWarning: sectionWarning };
+        }
+
+        async function processEditalPDFHeuristic() {
+            const fileInput = document.getElementById('edital-ai-pdf-input');
+            const file = fileInput.files[0];
+            if (!file) { setEditalAIStatus('Escolha o arquivo PDF do edital.', 'error'); return; }
+
+            const btnFree = document.getElementById('edital-free-process-btn');
+            const btnAI = document.getElementById('edital-ai-process-btn');
+            btnFree.disabled = true; btnAI.disabled = true;
+
+            try {
+                setEditalAIStatus('<i class="fas fa-spinner"></i> Lendo o PDF...', '');
+                const text = await extractPdfText(file);
+                const extractedModel = parseEditalHeuristically(text);
+
+                if (!extractedModel.materias.length) {
+                    setEditalAIStatus('Não consegui identificar matérias nesse PDF no modo grátis (formatação pouco padrão pro parser). Tente o modo "Com IA" ou monte a planilha manualmente.', 'error');
+                    return;
+                }
+
+                const { errors, warnings } = validateModel(extractedModel);
+                if (errors.length > 0) {
+                    setEditalAIStatus('Não consegui montar um modelo válido: ' + errors.join(' '), 'error');
+                    return;
+                }
+                const allWarnings = warnings.slice();
+                if (extractedModel._sectionWarning) allWarnings.push(extractedModel._sectionWarning);
+                allWarnings.push('Modo grátis (sem IA): pesos foram definidos por uma regra fixa (Básico=1, Específico=2) — não é uma avaliação real de importância. Ajuste depois exportando, editando e reimportando a planilha.');
+                allWarnings.push('Revise a lista de matérias abaixo antes de continuar estudando — o parser pode ocasionalmente pegar um trecho que não é matéria de verdade.');
+                delete extractedModel._sectionWarning;
+                const proceed = confirm(`Encontrei ${extractedModel.materias.length} matéria(s):\n${extractedModel.materias.map(m => '- ' + m.nome).join('\n')}\n\nAvisos:\n\n${allWarnings.join('\n')}\n\nAplicar mesmo assim?`);
+                if (!proceed) { setEditalAIStatus('Importação cancelada.', ''); return; }
+
+                applyImportedModel(extractedModel);
+                setEditalAIStatus(`<i class="fas fa-check"></i> Pronto! ${extractedModel.materias.length} matéria(s) importada(s) (modo grátis).`, 'success');
+                showToast('Edital importado (modo grátis) com sucesso!', 'success');
+                setTimeout(closeEditalAIModal, 1500);
+            } catch (err) {
+                setEditalAIStatus('Erro: ' + err.message, 'error');
+                console.error('Erro no parser heurístico do edital:', err);
+            } finally {
+                btnFree.disabled = false; btnAI.disabled = false;
+            }
+        }
+
+        /** Monta o prompt de extração estruturada do edital. */
+        function buildEditalPrompt(editalText) {
+            return `Você vai ler o conteúdo programático de um edital de concurso público brasileiro e extrair uma estrutura de dados em JSON para um app de ciclo de estudos.
+
+Regras:
+- Separe as matérias em "Basico" (conhecimentos básicos/gerais) e "Especifico" (conhecimentos específicos do cargo).
+- Para cada matéria, sugira um "peso" de 1 a 3 baseado na quantidade e complexidade dos tópicos e na importância típica para o cargo (3 = matéria extensa/central, 1 = matéria curta/secundária).
+- Extraia os tópicos de cada matéria como uma lista de strings, exatamente como aparecem no edital (pode resumir levemente se estiverem muito longos, mas mantenha o conteúdo).
+- Se não conseguir identificar concurso/órgão, deixe como string vazia.
+- Responda APENAS com um objeto JSON válido, sem nenhum texto antes ou depois, no formato exato abaixo:
+
+{
+  "concurso": "string",
+  "orgao": "string",
+  "materias": [
+    { "nome": "string", "tipo": "Basico ou Especifico", "peso": 1 }
+  ],
+  "syllabus": [
+    { "category": "Conhecimentos Básicos ou Conhecimentos Específicos", "subjects": [ { "name": "string (igual ao nome da matéria)", "topics": ["string", "..."] } ] }
+  ]
+}
+
+Texto do edital:
+"""
+${editalText}
+"""`;
+        }
+
+        /** Chama a API de Mensagens da Anthropic diretamente do navegador com a chave do usuário. */
+        async function callClaudeForEdital(apiKey, model, promptText) {
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model,
+                    max_tokens: 8000,
+                    messages: [{ role: 'user', content: promptText }]
+                })
+            });
+            if (!res.ok) {
+                let detail = '';
+                try { detail = (await res.json()).error?.message || ''; } catch (e) {}
+                if (res.status === 401) throw new Error('Chave de API inválida ou sem permissão. ' + detail);
+                if (res.status === 429) throw new Error('Limite de uso da API atingido. Tente novamente em instantes. ' + detail);
+                throw new Error(`Erro da API Anthropic (${res.status}). ${detail}`);
+            }
+            const data = await res.json();
+            const textBlock = (data.content || []).find(b => b.type === 'text');
+            if (!textBlock) throw new Error('A IA não retornou texto na resposta.');
+            return textBlock.text;
+        }
+
+        /** Extrai um objeto JSON de um texto que pode vir com ```json cercas ou texto solto ao redor. */
+        function extractJSONFromText(text) {
+            let cleaned = text.trim();
+            const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+            if (fenced) cleaned = fenced[1].trim();
+            const firstBrace = cleaned.indexOf('{');
+            const lastBrace = cleaned.lastIndexOf('}');
+            if (firstBrace === -1 || lastBrace === -1) throw new Error('Resposta da IA não contém um JSON reconhecível.');
+            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+            return JSON.parse(cleaned);
+        }
+
+        const EDITAL_AI_MAX_CHARS = 350000; // ~ margem generosa para caber no contexto do modelo
+
+        async function processEditalPDF() {
+            const apiKey = document.getElementById('edital-ai-key-input').value.trim();
+            const model = document.getElementById('edital-ai-model-select').value;
+            const fileInput = document.getElementById('edital-ai-pdf-input');
+            const file = fileInput.files[0];
+
+            if (!apiKey) { setEditalAIStatus('Cole sua chave de API da Anthropic antes de processar.', 'error'); return; }
+            if (!file) { setEditalAIStatus('Escolha o arquivo PDF do edital.', 'error'); return; }
+
+            const btn = document.getElementById('edital-ai-process-btn');
+            btn.disabled = true;
+
+            try {
+                setEditalAIStatus('<i class="fas fa-spinner"></i> Lendo o PDF...', '');
+                let editalText = await extractPdfText(file);
+                let truncated = false;
+                if (editalText.length > EDITAL_AI_MAX_CHARS) {
+                    editalText = editalText.slice(0, EDITAL_AI_MAX_CHARS);
+                    truncated = true;
+                }
+
+                setEditalAIStatus('<i class="fas fa-spinner"></i> A IA está lendo o conteúdo programático (pode levar um tempinho)...', '');
+                const aiText = await callClaudeForEdital(apiKey, model, buildEditalPrompt(editalText));
+
+                let extractedModel;
+                try {
+                    extractedModel = extractJSONFromText(aiText);
+                } catch (parseErr) {
+                    setEditalAIStatus('A IA respondeu, mas não consegui interpretar o resultado como dados válidos. Tente novamente ou tente outro modelo.', 'error');
+                    console.error('Resposta da IA (não-JSON):', aiText);
+                    return;
+                }
+
+                const { errors, warnings } = validateModel(extractedModel);
+                if (errors.length > 0) {
+                    setEditalAIStatus('A IA não conseguiu extrair matérias válidas: ' + errors.join(' '), 'error');
+                    return;
+                }
+                const allWarnings = warnings.slice();
+                if (truncated) allWarnings.push('O PDF era muito extenso e foi lido parcialmente (pode faltar conteúdo do final do edital).');
+                if (allWarnings.length > 0) {
+                    const proceed = confirm('Avisos sobre a extração da IA:\n\n' + allWarnings.join('\n') + '\n\nAplicar mesmo assim?');
+                    if (!proceed) { setEditalAIStatus('Importação cancelada.', ''); return; }
+                }
+
+                applyImportedModel(extractedModel);
+                setEditalAIStatus(`<i class="fas fa-check"></i> Pronto! ${extractedModel.materias.length} matéria(s) importada(s) pela IA.`, 'success');
+                showToast('Edital importado pela IA com sucesso!', 'success');
+                setTimeout(closeEditalAIModal, 1500);
+            } catch (err) {
+                setEditalAIStatus('Erro: ' + err.message, 'error');
+                console.error('Erro ao processar edital com IA:', err);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         function resetSchedule() {
             if(confirm("Tem certeza? Isso irá gerar um NOVO cronograma aleatório e apagar o progresso visual do calendário (histórico e syllabus serão mantidos).")) {
                 localStorage.removeItem(K('estudoFiscalScheduleStructure'));
@@ -5543,6 +6036,7 @@
             setGenerateButtonState(hasSchedule ? 'success' : 'pending');
             // Garante reidratação do cronograma e aplicação de status
             loadModelFromStorage();
+            persistDefaultModelIfMissing();
             applySavedStatusToSchedule();
             renderCalendar();
             renderSubjects();
@@ -5570,6 +6064,12 @@
             const onboardingSeen = localStorage.getItem('estudoFiscalOnboardingSeen') === 'true';
             if (!hasOwnModel && !onboardingSeen) {
                 setTimeout(openOnboardingWizard, 600);
+            }
+
+            // Deep-link de outras páginas (ex: planejamento.html) para uma aba específica.
+            const hashTab = location.hash.slice(1);
+            if (tabOrder.includes(hashTab) && hashTab !== currentTab) {
+                switchTab(hashTab);
             }
         }
         

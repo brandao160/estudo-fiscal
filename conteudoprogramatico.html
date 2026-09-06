@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conteúdo Programático · Ciclo Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="core.css">
+</head>
+<body>
+    <script id="persistence-data">window.HARDCODED_DATA = null;</script>
+    <div id="toast-container"></div>
+
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+        </div>
+
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i>
+                    <span>Início</span>
+                </a>
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <a href="materias.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </a>
+                <a href="cicloestudo.html" class="nav-item">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </a>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <a href="listacompleta.html" class="nav-item">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </div>
+                <a href="tempoestudo.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </a>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
+                </div>
+            </div>
+
+            <div style="flex:1;"></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Conteúdo Programático</h1>
+                <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="view-syllabus" class="view-section active">
+                <div class="subject-card" style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0;">Conteúdo Programático - Estudo Fiscal</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+                        Baseado no planejamento pessoal (2025/2026). Marque os tópicos conforme concluir o estudo.
+                    </p>
+                </div>
+                <div id="syllabus-container" class="syllabus-container">
+                    <!-- JS generated -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="core.js"></script>
+    <script>
+        function toggleSyllabusItem(subjectName, topicIndex, checked) {
+            if (!syllabusProgress[subjectName]) {
+                syllabusProgress[subjectName] = [];
+            }
+            if (syllabusProgress[subjectName].length <= topicIndex) {
+                // Fill gaps
+                for(let i=0; i<=topicIndex; i++) {
+                    if(typeof syllabusProgress[subjectName][i] === 'undefined') syllabusProgress[subjectName][i] = false;
+                }
+            }
+            syllabusProgress[subjectName][topicIndex] = checked;
+            localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(syllabusProgress));
+            
+            // Update UI partially to prevent closing accordion
+            updateSyllabusUI(subjectName);
+        }
+
+        function updateSyllabusUI(subjectName) {
+            const savedTopics = syllabusProgress[subjectName] || [];
+            
+            // Find syllabus data
+            let syllabusSubject = null;
+            for(const section of syllabusData) {
+                const found = section.subjects.find(s => s.name === subjectName);
+                if(found) {
+                    syllabusSubject = found;
+                    break;
+                }
+            }
+            if(!syllabusSubject) return;
+
+            // Find config for weight
+            const config = subjectsConfig.find(s => s.name === subjectName);
+            const weight = config ? config.weight : 1;
+
+            let completedCount = 0;
+            syllabusSubject.topics.forEach((_, idx) => {
+                if (savedTopics[idx]) completedCount++;
+            });
+            const percent = Math.round((completedCount / syllabusSubject.topics.length) * 100);
+            
+            const sanitizedName = subjectName.replace(/\s+/g, '_').replace(/[^\w]/g, '');
+            
+            // Update Meta Text
+            const metaEl = document.getElementById(`meta-${sanitizedName}`);
+            if(metaEl) {
+                metaEl.innerHTML = `
+                    <span class="tag ${'badge-w' + (weight || 1)}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                        Peso ${weight}
+                    </span>
+                    • ${completedCount}/${syllabusSubject.topics.length} tópicos (${percent}%)
+                `;
+            }
+            
+            // Update Progress Bar
+            const progEl = document.getElementById(`prog-${sanitizedName}`);
+            if(progEl) {
+                progEl.style.width = `${percent}%`;
+            }
+        }
+
+        window.toggleAccordion = function(header) {
+            const content = header.nextElementSibling;
+            content.classList.toggle('open');
+            const icon = header.querySelector('.accordion-icon');
+            icon.textContent = content.classList.contains('open') ? '▼' : '▶';
+        }
+
+        function renderSyllabus() {
+            const container = document.getElementById('syllabus-container');
+            container.innerHTML = '';
+
+            syllabusData.forEach(section => {
+                const secTitle = document.createElement('h4');
+                secTitle.textContent = section.category;
+                secTitle.style.margin = '20px 0 10px 0';
+                secTitle.style.color = 'var(--accent-color)';
+                container.appendChild(secTitle);
+
+                section.subjects.forEach(sub => {
+                    const config = subjectsConfig.find(s => s.name === sub.name);
+                    const weight = config ? config.weight : 1;
+                    const savedTopics = syllabusProgress[sub.name] || [];
+                    
+                    let completedCount = 0;
+                    sub.topics.forEach((_, idx) => {
+                        if (savedTopics[idx]) completedCount++;
+                    });
+                    const percent = Math.round((completedCount / sub.topics.length) * 100);
+                    
+                    const sanitizedName = sub.name.replace(/\s+/g, '_').replace(/[^\w]/g, '');
+
+                    const card = document.createElement('div');
+                    card.className = 'syllabus-category';
+                    
+                    card.innerHTML = `
+                        <div class="syllabus-header" onclick="toggleAccordion(this)">
+                            <div class="syllabus-title-group">
+                                <span class="accordion-icon">▶</span>
+                                <div>
+                                    <div class="syllabus-title">${sub.name}</div>
+                                    <div class="syllabus-meta" id="meta-${sanitizedName}">
+                                        <span class="tag ${'badge-w' + (weight || 1)}" style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                                            Peso ${weight}
+                                        </span>
+                                        • ${completedCount}/${sub.topics.length} tópicos (${percent}%)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress-mini">
+                                <div class="progress-mini-fill" id="prog-${sanitizedName}" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                        <div class="syllabus-content">
+                            ${sub.topics.map((topic, idx) => {
+                                const dueDate = reviewSchedule[reviewKey(sub.name, idx)];
+                                let reviewBadge = '';
+                                if (dueDate) {
+                                    const isDue = dueDate <= todayISO();
+                                    reviewBadge = `<span class="review-badge ${isDue ? 'due' : ''}" title="Revisão agendada" onclick="clearTopicReview('${sub.name.replace(/'/g,"\\'")}', ${idx})">
+                                        <i class="fas fa-bell"></i> ${isDue ? 'Revisar!' : new Date(dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                    </span>`;
+                                }
+                                return `
+                                <div class="topic-item">
+                                    <input type="checkbox" class="topic-checkbox"
+                                        ${savedTopics[idx] ? 'checked' : ''}
+                                        onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
+                                    <span class="topic-text">${topic}</span>
+                                    ${reviewBadge}
+                                    <span class="review-add">
+                                        <button title="Revisar em 7 dias" onclick="scheduleTopicReview('${sub.name.replace(/'/g,"\\'")}', ${idx}, 7)">7d</button>
+                                        <button title="Revisar em 30 dias" onclick="scheduleTopicReview('${sub.name.replace(/'/g,"\\'")}', ${idx}, 30)">30d</button>
+                                    </span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            });
+        }
+
+
+
+        function init() {
+            initCoreData();
+            renderSyllabus();
+        }
+        initTheme();
+        hydrateFromDisk().then(() => { init(); });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciclo de Estudo · Ciclo Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="core.css">
+</head>
+<body>
+    <script id="persistence-data">window.HARDCODED_DATA = null;</script>
+    <div id="toast-container"></div>
+
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+        </div>
+
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i>
+                    <span>Início</span>
+                </a>
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <a href="materias.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </div>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <a href="listacompleta.html" class="nav-item">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </a>
+                <a href="conteudoprogramatico.html" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </a>
+                <a href="tempoestudo.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </a>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
+                </div>
+            </div>
+
+            <div style="flex:1;"></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Ciclo de Estudo</h1>
+                <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="view-cycle" class="view-section active">
+                <div id="cycle-summary-bar-container"><!-- JS generated --></div>
+                <div id="cycle-week-strip-container"><!-- JS generated --></div>
+                <div id="cycle-list-container"><!-- JS generated --></div>
+                <div id="cycle-today-log-container"><!-- JS generated --></div>
+                <div id="cycle-reviews-container"><!-- JS generated --></div>
+                <div id="cycle-builder-container"><!-- JS generated --></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- NOTE MODAL -->
+    <div id="note-modal">
+        <div class="note-modal-content">
+            <div class="note-header">
+                <span>Como foi, Estudante? Lembre-se de anotar em que página parou do PDF/Vídeo Aula</span>
+                <button onclick="cancelNote()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:1.2rem;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="note-body">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1;">
+                        <label class="note-label">Questões Feitas</label>
+                        <input type="number" id="note-questions-total" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="note-label">Acertos</label>
+                        <input type="number" id="note-questions-correct" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
+                    </div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:flex-start; font-size:0.78rem; color:var(--text-secondary, #999); margin-bottom:10px; line-height:1.4;">
+                    <i class="fas fa-lightbulb" style="color:var(--accent-color); margin-top:2px;"></i>
+                    <span>Antes de fechar: resolva 5-10 questões dessa matéria e dê uma revisada rápida nos pontos principais — reforça muito mais do que só ler.</span>
+                </div>
+                <label class="note-label">Anotações</label>
+                <textarea id="note-textarea" class="note-textarea" placeholder="Faça suas anotações aqui!"></textarea>
+            </div>
+            <div class="note-footer">
+                <button class="bar-btn btn-cancel" onclick="cancelNote()"><i class="fas fa-times"></i> Cancelar</button>
+                <button class="bar-btn btn-save" onclick="saveNote()"><i class="fas fa-check"></i> Atualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKY TIMER BAR -->
+    <div id="active-study-bar">
+        <div class="bar-subject-info">
+            <div id="bar-subject-name" class="bar-subject-name">Subject Name</div>
+            <div class="bar-timer">
+                <i class="fas fa-stopwatch"></i>
+                <span id="bar-timer-display">0h 0m 0s</span>
+            </div>
+            <div class="bar-progress">
+                <div id="bar-progress-fill" class="bar-progress-fill"></div>
+            </div>
+            <span id="bar-target-label" class="bar-target"></span>
+        </div>
+        <div class="bar-controls">
+            <button class="bar-btn btn-cancel" onclick="openFocusMode()" title="Modo Foco (tela cheia)">
+                <i class="fas fa-expand"></i> Modo Foco
+            </button>
+            <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
+                <i class="fas fa-pause"></i> Pausar
+            </button>
+            <button class="bar-btn btn-save" onclick="finishSession()">
+                <i class="fas fa-check"></i> Salvar
+            </button>
+            <button class="bar-btn btn-cancel" onclick="cancelSession()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+
+    <!-- MODO FOCO (tela cheia, sem distração) -->
+    <div id="focus-mode-overlay">
+        <div class="focus-subject" id="focus-subject-name">Matéria</div>
+        <div class="focus-timer" id="focus-timer-display">00:00:00</div>
+        <div class="focus-progress"><div class="focus-progress-fill" id="focus-progress-fill"></div></div>
+        <div class="focus-target" id="focus-target-label"></div>
+        <div class="focus-controls">
+            <button class="bar-btn btn-continue" onclick="togglePauseResume()"><i class="fas fa-pause" id="focus-pause-icon"></i> Pausar</button>
+            <button class="bar-btn btn-save" onclick="finishSession()"><i class="fas fa-check"></i> Salvar</button>
+            <button class="bar-btn btn-cancel" onclick="closeFocusMode()"><i class="fas fa-compress"></i> Sair do Modo Foco</button>
+        </div>
+    </div>
+
+
+    <script src="core.js"></script>
+    <script>
+        /**
+         * Renderiza a tela principal "Ciclo de Estudo": fila de matérias de hoje +
+         * construtor para indicar quais matérias entram no ciclo.
+         */
+        function renderDailyCycle() {
+            const listEl = document.getElementById('cycle-list-container');
+            const summaryEl = document.getElementById('cycle-summary-bar-container');
+            const builderEl = document.getElementById('cycle-builder-container');
+            const logEl = document.getElementById('cycle-today-log-container');
+            const weekEl = document.getElementById('cycle-week-strip-container');
+            const reviewsEl = document.getElementById('cycle-reviews-container');
+            if (!listEl || !summaryEl || !builderEl || !logEl || !weekEl || !reviewsEl) return; // view ainda não montada
+
+            const dayObj = getOrCreateTodayDayObj();
+            const tasks = dayObj.tasks || [];
+
+            const todayLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+                .replace(/^\w/, c => c.toUpperCase());
+
+            if (!subjectsConfig || subjectsConfig.length === 0) {
+                summaryEl.innerHTML = '';
+                listEl.innerHTML = '';
+                logEl.innerHTML = '';
+                weekEl.innerHTML = '';
+                reviewsEl.innerHTML = '';
+                builderEl.innerHTML = `
+                    <div class="cycle-empty">
+                        <i class="fas fa-book-open"></i>
+                        <h3>Nenhuma matéria cadastrada</h3>
+                        <p>Cadastre suas matérias em "Tabela de Matérias" para montar o seu ciclo diário de estudo.</p>
+                        <button class="btn btn-primary" onclick="openUsageTutorial()"><i class="fas fa-graduation-cap"></i> Ver Tutorial de Utilização</button>
+                    </div>`;
+                return;
+            }
+
+            // --- Resumo do dia (planejado vs. realizado) ---
+            const done = tasks.filter(t => deriveTaskStatus(t) === 'concluido').length;
+            const totalTime = tasks.reduce((acc, t) => acc + (t.timeSpent || 0), 0);
+            const plannedTime = tasks.reduce((acc, t) => acc + (t.durationTarget || 3600), 0);
+            const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+            const gapSeconds = Math.max(0, plannedTime - totalTime);
+            summaryEl.innerHTML = tasks.length ? `
+                <div class="cycle-summary-bar">
+                    <div class="cycle-summary-title"><i class="fas fa-bullseye"></i> ${todayLabel}</div>
+                    <div class="cycle-summary-bar-track"><div class="cycle-summary-bar-fill" style="width:${pct}%"></div></div>
+                    <div class="cycle-summary-stats">
+                        <div class="cycle-summary-stat"><b>${done}/${tasks.length}</b><span>Blocos concluídos</span></div>
+                        <div class="cycle-summary-stat"><b>${formatHM(totalTime)} / ${formatHM(plannedTime)}</b><span>Feito / Planejado</span></div>
+                        <div class="cycle-summary-stat"><b class="${gapSeconds > 0 ? 'gap-pending' : 'gap-done'}">${gapSeconds > 0 ? formatHM(gapSeconds) : '✓'}</b><span>${gapSeconds > 0 ? 'Falta hoje' : 'Meta batida'}</span></div>
+                    </div>
+                </div>` : '';
+
+            // --- Tira-teima da semana (últimos 7 dias, hoje incluso) ---
+            {
+                const todayMid = new Date(); todayMid.setHours(0,0,0,0);
+                const cells = [];
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date(todayMid); d.setDate(d.getDate() - i);
+                    const dObj = fullSchedule.find(day => {
+                        const a = new Date(day.date); a.setHours(0,0,0,0);
+                        return a.getTime() === d.getTime();
+                    });
+                    const dayTasks = dObj ? dObj.tasks : [];
+                    const subjects = [...new Set(dayTasks.map(t => t.subject))];
+                    const doneCount = dayTasks.filter(t => deriveTaskStatus(t) === 'concluido').length;
+                    const isToday = i === 0;
+                    cells.push(`
+                        <div class="week-cell ${isToday ? 'is-today' : ''}" title="${subjects.join(', ') || 'Nada planejado'}">
+                            <div class="week-cell-day">${d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</div>
+                            <div class="week-cell-count">${subjects.length || '–'}</div>
+                            <div class="week-cell-sub">${dayTasks.length ? `${doneCount}/${dayTasks.length}` : ''}</div>
+                        </div>`);
+                }
+                weekEl.innerHTML = `
+                    <div class="week-strip">
+                        <div class="week-strip-title">Últimos 7 dias</div>
+                        <div class="week-strip-cells">${cells.join('')}</div>
+                    </div>`;
+            }
+
+            // --- Fila de matérias de hoje ---
+            if (tasks.length === 0) {
+                listEl.innerHTML = `
+                    <div class="cycle-empty">
+                        <i class="fas fa-mug-hot"></i>
+                        <h3>Nada no ciclo de hoje ainda</h3>
+                        <p>Escolha abaixo as matérias que você vai estudar hoje e clique em "Gerar Ciclo de Hoje".</p>
+                    </div>`;
+            } else {
+                const activeTaskId = (activeSession && dayObj.date.getTime() === (activeSession.dayDate && activeSession.dayDate.getTime())) ? tasks[activeSession.taskIndex]?.id : null;
+                listEl.innerHTML = `<div class="cycle-list">` + tasks.map((task, index) => {
+                    const status = deriveTaskStatus(task);
+                    const isActive = task.id === activeTaskId;
+                    const isDone = status === 'concluido' && !isActive;
+                    const target = task.durationTarget || 3600;
+                    const spent = task.timeSpent || 0;
+                    const percent = Math.min(100, Math.round((spent / target) * 100));
+                    const statusChipClass = status === 'concluido' ? 'ok' : (status === 'nao_concluido' ? 'ic' : 'ns');
+                    const statusLabel = status === 'concluido' ? 'Concluído' : (status === 'nao_concluido' ? 'Em andamento' : 'Não iniciado');
+                    const actionLabel = spent > 0 ? 'Continuar' : 'Iniciar Estudo';
+                    return `
+                        <div class="cycle-card ${isActive ? 'is-active' : ''} ${isDone ? 'is-done' : ''}">
+                            <div class="cycle-num">${isDone ? '<i class=\"fas fa-check\"></i>' : index + 1}</div>
+                            <div class="cycle-card-body">
+                                <div class="cycle-card-top">
+                                    <span class="cycle-card-name">${task.subject}</span>
+                                    <span class="tag-${task.type === 'Específico' ? 'spec' : 'basic'}">${task.type}</span>
+                                    <span class="status-pill ${statusChipClass}">${statusLabel}</span>
+                                </div>
+                                <div class="cycle-card-track"><div class="cycle-card-fill" style="width:${percent}%"></div></div>
+                                <div class="cycle-card-meta">${formatTime(spent)} de ${formatTime(target)} · Peso ${task.weight || 1}</div>
+                            </div>
+                            <div class="cycle-card-actions">
+                                ${isActive
+                                    ? `<span class="status-pill ic"><i class="fas fa-stopwatch"></i> Estudando</span>`
+                                    : `<button class="start-btn" onclick="startCycleTask('${task.id}')"><i class="fas fa-play"></i> ${actionLabel}</button>`}
+                                <button class="cycle-remove-btn" title="Remover de hoje" onclick="removeCycleTask('${task.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                }).join('') + `</div>`;
+            }
+
+            // --- O que estudei hoje (log real, baseado no Histórico) ---
+            const now = new Date();
+            const todayHistory = studyHistory.filter(h => {
+                const d = new Date(h.date);
+                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+            }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (todayHistory.length === 0) {
+                logEl.innerHTML = `
+                    <div class="cycle-log-section">
+                        <h3><i class="fas fa-clipboard-check"></i> O que estudei hoje</h3>
+                        <p class="cycle-log-empty">Nenhuma sessão salva ainda hoje. Assim que você clicar em "Salvar" no cronômetro, a matéria aparece aqui.</p>
+                    </div>`;
+            } else {
+                const bySubject = {};
+                todayHistory.forEach(h => { bySubject[h.subject] = (bySubject[h.subject] || 0) + (h.duration || 0); });
+                const totalToday = Object.values(bySubject).reduce((a, b) => a + b, 0);
+                logEl.innerHTML = `
+                    <div class="cycle-log-section">
+                        <h3><i class="fas fa-clipboard-check"></i> O que estudei hoje <span class="cycle-log-total">${formatHM(totalToday)}</span></h3>
+                        <div class="cycle-log-list">
+                            ${todayHistory.map(h => `
+                                <div class="cycle-log-item">
+                                    <div class="cycle-log-item-top">
+                                        <span class="cycle-log-subject">${h.subject}</span>
+                                        <span class="cycle-log-time">${new Date(h.date).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})} · ${formatHM(h.duration)}</span>
+                                    </div>
+                                    ${h.note ? `<div class="cycle-log-note">"${h.note}"</div>` : ''}
+                                    ${h.questions ? `<div class="cycle-log-note">Questões: ${h.correct || 0}/${h.questions}</div>` : ''}
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            // --- Revisões espaçadas pendentes ---
+            const dueReviews = getDueReviews();
+            if (dueReviews.length === 0) {
+                reviewsEl.innerHTML = '';
+            } else {
+                reviewsEl.innerHTML = `
+                    <div class="cycle-log-section">
+                        <h3><i class="fas fa-bell"></i> Revisões pendentes <span class="cycle-log-total" style="background: var(--amber-soft); color: var(--amber);">${dueReviews.length}</span></h3>
+                        <div class="cycle-log-list">
+                            ${dueReviews.map(r => `
+                                <div class="cycle-log-item" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                                    <div>
+                                        <div class="cycle-log-subject">${r.subjectName}</div>
+                                        <div class="cycle-log-note" style="font-style:normal;">${r.topicText}</div>
+                                    </div>
+                                    <button class="btn btn-secondary" onclick="addSubjectTaskToday('${r.subjectName.replace(/'/g,"\\'")}'); clearTopicReview('${r.subjectName.replace(/'/g,"\\'")}', ${r.topicIndex})">
+                                        <i class="fas fa-plus"></i> Adicionar a hoje
+                                    </button>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            // --- Construtor do ciclo (indicar matérias) ---
+            const optionsHtml = subjectsConfig.map(s =>
+                `<option value="${s.name}">${s.name} (Peso ${s.weight})</option>`
+            ).join('');
+
+            selectedDailyCount = null;
+            builderEl.innerHTML = `
+                <div class="cycle-add-row">
+                    <select id="cycle-add-subject-select">${optionsHtml}</select>
+                    <button class="btn btn-secondary" onclick="addAdHocSubjectToday()"><i class="fas fa-plus"></i> Adicionar matéria a hoje</button>
+                </div>
+                <div class="cycle-builder">
+                    <h3><i class="fas fa-shuffle"></i> Gerar por quantidade</h3>
+                    <p>Escolha só quantas matérias você quer estudar hoje — o sistema escolhe quais, evitando repetir matéria que você já estudou nos últimos 7 dias (só repete se não sobrar matéria "fresca" suficiente).</p>
+                    <div class="cycle-count-buttons">
+                        ${[1,2,3,4,5,6,7,8].map(n => `<button class="count-pick" data-count="${n}" onclick="selectDailyCount(${n})">${n}</button>`).join('')}
+                    </div>
+                    <button class="btn btn-primary" onclick="generateCycleByCount()"><i class="fas fa-shuffle"></i> Gerar Ciclo por Quantidade</button>
+                </div>
+                <div class="cycle-builder">
+                    <h3><i class="fas fa-sliders-h"></i> Ou escolha as matérias manualmente</h3>
+                    <p>Marque as matérias que você indica para o ciclo diário. O ciclo é montado seguindo o peso de cada matéria (matérias de peso maior aparecem mais vezes).</p>
+                    <p class="cycle-builder-tip"><i class="fas fa-lightbulb"></i> Dica do método do Ciclo de Estudos: não existe "dia fixo" para cada matéria — você estuda a próxima da fila e troca de matéria a cada 1h–1h15 de foco, com uma pausa curta entre os blocos.</p>
+                    <div class="cycle-builder-grid" id="cycle-builder-picks">
+                        ${subjectsConfig.map((s, i) => `
+                            <label class="cycle-pick" id="cycle-pick-${i}">
+                                <input type="checkbox" value="${s.name}" checked onchange="document.getElementById('cycle-pick-${i}').classList.toggle('checked', this.checked)">
+                                <span>${s.name}</span>
+                                <small>P${s.weight}</small>
+                            </label>`).join('')}
+                    </div>
+                    <button class="btn btn-primary" onclick="generateTodayCycleFromPicks()"><i class="fas fa-sync-alt"></i> Gerar Ciclo de Hoje</button>
+                </div>`;
+            document.querySelectorAll('.cycle-pick').forEach(el => el.classList.add('checked'));
+        }
+
+
+        function generateTodayCycleFromPicks() {
+            const checked = Array.from(document.querySelectorAll('#cycle-builder-picks input:checked')).map(el => el.value);
+            if (checked.length === 0) {
+                showToast('Selecione ao menos uma matéria para gerar o ciclo de hoje.', 'warning');
+                return;
+            }
+            if (activeSession) {
+                showToast('Finalize ou cancele a sessão ativa antes de gerar um novo ciclo.', 'warning');
+                return;
+            }
+            const picked = subjectsConfig.filter(s => checked.includes(s.name));
+            buildTodayCycleFromSubjects(picked);
+        }
+
+        // --- GERAR POR QUANTIDADE (evita repetir matéria estudada nos últimos 7 dias) ---
+        let selectedDailyCount = null;
+
+        function selectDailyCount(n) {
+            selectedDailyCount = n;
+            document.querySelectorAll('.count-pick').forEach(el => {
+                el.classList.toggle('active', Number(el.dataset.count) === n);
+            });
+        }
+
+        /** Data da sessão mais recente já estudada dessa matéria (null se nunca estudada). */
+        function lastStudiedDate(subjectName) {
+            let latest = null;
+            studyHistory.forEach(h => {
+                if (h.subject !== subjectName) return;
+                const d = new Date(h.date);
+                if (!latest || d > latest) latest = d;
+            });
+            return latest;
+        }
+
+        /** true se há sessão de estudo real registrada para a matéria nos últimos `days` dias. */
+        function wasStudiedInLastDays(subjectName, days) {
+            const last = lastStudiedDate(subjectName);
+            if (!last) return false;
+            return (Date.now() - last.getTime()) < days * 24 * 60 * 60 * 1000;
+        }
+
+        /**
+         * Gera o ciclo de hoje escolhendo automaticamente `selectedDailyCount` matérias:
+         * prioriza quem NÃO foi estudado nos últimos 7 dias; só repete matéria recente
+         * se não sobrar matéria "fresca" suficiente para completar a quantidade escolhida.
+         */
+        function generateCycleByCount() {
+            if (!selectedDailyCount) {
+                showToast('Escolha quantas matérias você quer estudar hoje.', 'warning');
+                return;
+            }
+            if (activeSession) {
+                showToast('Finalize ou cancele a sessão ativa antes de gerar um novo ciclo.', 'warning');
+                return;
+            }
+            if (!subjectsConfig.length) return;
+            const n = Math.min(selectedDailyCount, subjectsConfig.length);
+
+            const fresh = subjectsConfig.filter(s => !wasStudiedInLastDays(s.name, 7));
+            const stale = subjectsConfig.filter(s => wasStudiedInLastDays(s.name, 7));
+
+            // Entre as frescas, prioriza quem tem pior desempenho; desempata por peso maior.
+            fresh.sort((a, b) => {
+                const pa = getSubjectPerformanceRate(a.name);
+                const pb = getSubjectPerformanceRate(b.name);
+                const ra = pa === null ? 50 : pa;
+                const rb = pb === null ? 50 : pb;
+                if (ra !== rb) return ra - rb;
+                return (b.weight || 1) - (a.weight || 1);
+            });
+
+            let selected = fresh.slice(0, n);
+            if (selected.length < n) {
+                // Não há matéria fresca suficiente: completa com quem foi estudado há mais tempo.
+                stale.sort((a, b) => {
+                    const la = lastStudiedDate(a.name);
+                    const lb = lastStudiedDate(b.name);
+                    return (la ? la.getTime() : 0) - (lb ? lb.getTime() : 0);
+                });
+                const missing = n - selected.length;
+                selected = selected.concat(stale.slice(0, missing));
+                showToast(`Só havia ${fresh.length} matéria(s) sem estudo nos últimos 7 dias — completei com quem você estudou há mais tempo.`, 'info');
+            }
+
+            buildTodayCycleFromSubjects(selected, { oneBlockEach: true });
+        }
+
+        /**
+         * Monta o ciclo de HOJE a partir de uma lista de matérias já escolhidas (objetos do
+         * subjectsConfig). Por padrão respeita o peso de cada uma (peso = quantas vezes aparece
+         * hoje) e aplica a variedade semanal / priorização por desempenho fraco — usado pelo
+         * seletor manual. Com `opts.oneBlockEach`, cada matéria entra exatamente 1 vez (usado pelo
+         * "Gerar por quantidade", onde a quantidade escolhida deve bater com o nº de blocos gerados).
+         */
+        function buildTodayCycleFromSubjects(picked, opts) {
+            opts = opts || {};
+            const dayObj = getOrCreateTodayDayObj();
+            const WEEK_WINDOW = 6; // dias corridos anteriores considerados "a semana"
+
+            // Contagem-base: 1 bloco por matéria (modo "por quantidade") ou peso efetivo = frequência (modo manual).
+            let counts = {};
+            picked.forEach(s => { counts[s.name] = opts.oneBlockEach ? 1 : effectiveWeight(s); });
+
+            // Score de prioridade: quanto MENOR, mais a matéria "merece" aparecer/ganhar bloco —
+            // combina "pouco vista na semana" com "desempenho fraco em questões" (matéria carente).
+            // No modo "1 bloco cada" isso só define a ORDEM da fila, nunca redistribui blocos.
+            let priority = {};
+            picked.forEach(s => {
+                const recent = countRecentDayAppearances(s.name, WEEK_WINDOW);
+                const perf = getSubjectPerformanceRate(s.name);
+                const perfPenalty = perf === null ? 0 : (perf < 60 ? 2 : (perf < 80 ? 1 : 0));
+                priority[s.name] = recent - perfPenalty;
+            });
+            if (!opts.oneBlockEach && picked.length >= 3) {
+                // Matéria "superexposta" (apareceu em 4+ dos últimos 6 dias) cede 1 bloco de hoje
+                // para quem tem prioridade mais alta (pouco vista e/ou desempenho fraco).
+                const recentCount = {};
+                picked.forEach(s => { recentCount[s.name] = countRecentDayAppearances(s.name, WEEK_WINDOW); });
+                const overexposed = picked.filter(s => recentCount[s.name] >= 4 && counts[s.name] > 1);
+                overexposed.forEach(s => {
+                    const candidates = picked.filter(other => other.name !== s.name);
+                    if (candidates.length === 0) return;
+                    candidates.sort((a, b) => priority[a.name] - priority[b.name]);
+                    const beneficiary = candidates[0];
+                    counts[s.name] -= 1;
+                    counts[beneficiary.name] += 1;
+                });
+            }
+
+            // Intercala as matérias: prioriza quem tem mais blocos restantes hoje e, em empate,
+            // quem tem maior prioridade (pouco vista na semana / desempenho fraco).
+            let order = [];
+            let lastSub = null;
+            let lastCarga = null;
+            let totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
+            for (let i = 0; i < totalBlocks; i++) {
+                let candidates = picked.filter(s => counts[s.name] > 0);
+                if (candidates.length === 0) break;
+                let valid = candidates.filter(s => s.name !== lastSub);
+                if (valid.length === 0) valid = candidates;
+                valid.sort((a, b) => {
+                    const byCount = counts[b.name] - counts[a.name];
+                    if (byCount !== 0) return byCount;
+                    return (priority[a.name] || 0) - (priority[b.name] || 0);
+                });
+                // Entre opções de mesma prioridade, prefere alternar carga cognitiva (pesada/leve)
+                const pick = pickAlternatingCarga(valid, lastCarga, s => `${counts[s.name]}|${priority[s.name] || 0}`);
+                order.push(pick);
+                counts[pick.name]--;
+                lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
+            }
+
+            dayObj.tasks = order.map((s, i) => ({
+                id: `task-cycle-${Date.now()}-${i}`,
+                subject: s.name,
+                type: s.type,
+                weight: s.weight,
+                completed: false,
+                timeSpent: 0,
+                durationTarget: 3600,
+                note: ''
+            }));
+
+            persistSchedule();
+            renderDailyCycle();
+            showToast('Ciclo de hoje gerado com sucesso!', 'success');
+        }
+
+        /**
+         * Adiciona uma matéria avulsa (ad-hoc) ao ciclo de hoje.
+         */
+        /**
+         * Adiciona uma matéria (por nome) como bloco avulso no ciclo de hoje.
+         * Compartilhado pelo seletor manual e pelas revisões espaçadas pendentes.
+         */
+        function addSubjectTaskToday(subjectName) {
+            const subConfig = subjectsConfig.find(s => s.name === subjectName);
+            const dayObj = getOrCreateTodayDayObj();
+            dayObj.tasks.push({
+                id: `task-adhoc-${Date.now()}`,
+                subject: subjectName,
+                type: subConfig ? subConfig.type : 'Básico',
+                weight: subConfig ? subConfig.weight : 1,
+                completed: false,
+                timeSpent: 0,
+                durationTarget: 3600,
+                note: ''
+            });
+            persistSchedule();
+            renderDailyCycle();
+            showToast(`"${subjectName}" adicionada ao ciclo de hoje.`, 'success');
+        }
+
+        function addAdHocSubjectToday() {
+            const select = document.getElementById('cycle-add-subject-select');
+            if (!select || !select.value) return;
+            addSubjectTaskToday(select.value);
+        }
+
+        /**
+         * Remove uma matéria do ciclo de hoje (não afeta o histórico já salvo).
+         */
+        function removeCycleTask(taskId) {
+            if (activeSession) {
+                const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+                if (dayObj && dayObj.tasks[activeSession.taskIndex] && dayObj.tasks[activeSession.taskIndex].id === taskId) {
+                    showToast('Não é possível remover a matéria em estudo agora.', 'warning');
+                    return;
+                }
+            }
+            const dayObj = getOrCreateTodayDayObj();
+            dayObj.tasks = dayObj.tasks.filter(t => t.id !== taskId);
+            persistSchedule();
+            renderDailyCycle();
+        }
+
+        /**
+         * Inicia o contador de estudo para uma matéria do ciclo de hoje.
+         */
+        function startCycleTask(taskId) {
+            if (activeSession) {
+                showToast('Já existe uma sessão ativa. Finalize-a primeiro.', 'warning');
+                return;
+            }
+            const dayObj = getOrCreateTodayDayObj();
+            const index = dayObj.tasks.findIndex(t => t.id === taskId);
+            if (index === -1) return;
+            const task = dayObj.tasks[index];
+
+            task._inProgress = true;
+            const saved = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+            if (!saved[task.id]) saved[task.id] = {};
+            saved[task.id].status = 'nao_concluido';
+            saved[task.id].note = task.note || '';
+            saved[task.id].timeSpent = task.timeSpent || 0;
+            saved[task.id].durationTarget = task.durationTarget || 3600;
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(saved));
+
+            activeSession = {
+                dayDate: dayObj.date,
+                taskIndex: index,
+                subject: task.subject,
+                startTime: Date.now(),
+                elapsedAtStart: task.timeSpent || 0,
+                elapsedSession: 0,
+                paused: false,
+                interval: null,
+                target: Number(task.durationTarget || 3600),
+                alarmPlayed: false,
+                lastResumeEpochMs: Date.now()
+            };
+
+            const bar = document.getElementById('active-study-bar');
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
+
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
+            updateBarTimer();
+            resumeTimer();
+            window.addEventListener('keydown', barKeyHandler);
+            renderDailyCycle();
+        }
+
+
+        const ACTIVE_SESSION_STORAGE_KEY = 'estudoFiscalActiveSession';
+        const OPEN_NOTE_ON_LOAD_KEY = 'estudoFiscalOpenNoteOnLoad';
+        const CANCEL_SESSION_ON_LOAD_KEY = 'estudoFiscalCancelSessionOnLoad';
+
+        let activeSession = null;
+
+        function persistActiveSessionToStorage() {
+            if (!activeSession) return;
+            const payload = {
+                dayDateMs: activeSession.dayDate ? activeSession.dayDate.getTime() : null,
+                taskIndex: activeSession.taskIndex,
+                subject: activeSession.subject,
+                startTime: activeSession.startTime,
+                elapsedAtStart: activeSession.elapsedAtStart,
+                elapsedSession: activeSession.elapsedSession,
+                paused: !!activeSession.paused,
+                target: activeSession.target,
+                alarmPlayed: !!activeSession.alarmPlayed,
+                lastResumeEpochMs: activeSession.lastResumeEpochMs || null
+            };
+            localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify(payload));
+        }
+
+        function clearActiveSessionStorage() {
+            localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+        }
+
+        function restoreActiveSessionFromStorage() {
+            const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+            if (!raw) return;
+            let data;
+            try { data = JSON.parse(raw); } catch (e) { return; }
+            if (!data || !data.subject || data.taskIndex === null || data.taskIndex === undefined) return;
+
+            activeSession = {
+                dayDate: data.dayDateMs ? new Date(data.dayDateMs) : null,
+                taskIndex: data.taskIndex,
+                subject: data.subject,
+                startTime: Number(data.startTime || Date.now()),
+                elapsedAtStart: Number(data.elapsedAtStart || 0),
+                elapsedSession: Number(data.elapsedSession || 0),
+                paused: !!data.paused,
+                interval: null,
+                target: Number(data.target || 3600),
+                alarmPlayed: !!data.alarmPlayed,
+                lastResumeEpochMs: data.lastResumeEpochMs ? Number(data.lastResumeEpochMs) : null
+            };
+
+            const bar = document.getElementById('active-study-bar');
+            if (!bar) return;
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
+
+            updateBarTimer();
+            if (activeSession.paused) {
+                clearInterval(activeSession.interval);
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-play"></i> Continuar';
+            } else {
+                if (activeSession.lastResumeEpochMs) {
+                    const delta = Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000);
+                    if (delta > 0) activeSession.elapsedSession += delta;
+                }
+                resumeTimer();
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-pause"></i> Pausar';
+            }
+            window.addEventListener('keydown', barKeyHandler);
+        }
+
+        // Triggered when "ESTUDANDO" is selected in modal
+        function startActiveSession(index) {
+            // Close modal first
+            closeModal();
+
+            const task = currentDayTasksDraft[index]; // Note: this is draft, but we need the real task or at least ID
+            // Since we close modal, we should use the real data. 
+            // But wait, user might have modified other things in modal.
+            // Let's assume selecting "ESTUDANDO" saves the state and starts session.
+            
+            // To be safe, we need to know WHICH real task this is.
+            // currentDayTasksDraft[index] corresponds to fullSchedule's day tasks.
+            const dayObj = fullSchedule.find(d => d.date.getTime() === currentModalDate.getTime());
+            const realTask = dayObj.tasks[index];
+            // Marca em progresso e persiste status "Não Concluído" imediatamente
+            realTask._inProgress = true;
+            const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+            if(!savedData[realTask.id]) savedData[realTask.id] = {};
+            savedData[realTask.id].status = 'nao_concluido';
+            savedData[realTask.id].note = realTask.note || '';
+            savedData[realTask.id].timeSpent = realTask.timeSpent || 0;
+            savedData[realTask.id].durationTarget = realTask.durationTarget || 3600;
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+            renderCalendar();
+            renderList();
+
+            // If there's already a session, pause it? Or stop?
+            if(activeSession) {
+                alert("Já existe uma sessão ativa. Finalize-a primeiro.");
+                return;
+            }
+
+            activeSession = {
+                dayDate: currentModalDate,
+                taskIndex: index,
+                subject: realTask.subject,
+                startTime: Date.now(),
+                elapsedAtStart: realTask.timeSpent || 0, // seconds
+                elapsedSession: 0,
+                paused: false,
+                interval: null,
+                target: Number(realTask.durationTarget || 3600),
+                alarmPlayed: false,
+                lastResumeEpochMs: Date.now()
+            };
+
+            // Show Bar
+            const bar = document.getElementById('active-study-bar');
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
+            
+            // Request Notification Permission
+            if("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
+            updateBarTimer();
+            resumeTimer();
+            window.addEventListener('keydown', barKeyHandler);
+        }
+
+        function togglePauseResume() {
+            if(!activeSession) return;
+            let label;
+            if(activeSession.paused) {
+                resumeTimer();
+                label = '<i class="fas fa-pause"></i> Pausar';
+            } else {
+                pauseTimer();
+                label = '<i class="fas fa-play"></i> Continuar';
+            }
+            document.getElementById('btn-pause-resume').innerHTML = label;
+            const focusBtn = document.getElementById('focus-pause-icon')?.closest('button');
+            if (focusBtn) focusBtn.innerHTML = label;
+        }
+
+        function resumeTimer() {
+            if(!activeSession) return;
+            activeSession.paused = false;
+            activeSession.lastResumeEpochMs = Date.now();
+            clearInterval(activeSession.interval);
+            activeSession.interval = setInterval(updateBarTimer, 1000);
+            persistActiveSessionToStorage();
+        }
+
+        function playAlarm() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                
+                const ctx = new AudioContext();
+                const now = ctx.currentTime;
+                
+                // 3 beeps
+                [0, 0.8, 1.6].forEach(offset => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    // Sound config
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, now + offset); // A5
+                    osc.frequency.exponentialRampToValueAtTime(440, now + offset + 0.4);
+                    
+                    gain.gain.setValueAtTime(0.1, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.4);
+                    
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.5);
+                });
+            } catch(e) {
+                console.error("Erro ao tocar alarme:", e);
+            }
+        }
+
+        function pauseTimer() {
+            if(!activeSession) return;
+            activeSession.paused = true;
+            clearInterval(activeSession.interval);
+            const delta = activeSession.lastResumeEpochMs ? Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000) : 0;
+            if(delta > 0) activeSession.elapsedSession += delta;
+            activeSession.lastResumeEpochMs = null;
+            persistActiveSessionToStorage();
+        }
+
+        // --- MODO FOCO ---
+        function openFocusMode() {
+            if (!activeSession) return;
+            const overlay = document.getElementById('focus-mode-overlay');
+            if (!overlay) return;
+            document.getElementById('focus-subject-name').textContent = activeSession.subject;
+            overlay.classList.add('open');
+            updateBarTimer();
+        }
+
+        function closeFocusMode() {
+            const overlay = document.getElementById('focus-mode-overlay');
+            if (overlay) overlay.classList.remove('open');
+        }
+
+        function isFocusModeOpen() {
+            const overlay = document.getElementById('focus-mode-overlay');
+            return !!(overlay && overlay.classList.contains('open'));
+        }
+
+        function updateBarTimer() {
+            if(!activeSession) return;
+            const liveDelta = activeSession.paused || !activeSession.lastResumeEpochMs ? 0 : Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000);
+            const total = activeSession.elapsedAtStart + activeSession.elapsedSession + liveDelta;
+            document.getElementById('bar-timer-display').textContent = formatTime(total);
+            const target = Math.max(1, Number(activeSession.target || 3600));
+            const pct = Math.min(100, Math.round((total / target) * 100));
+            const fill = document.getElementById('bar-progress-fill');
+            if(fill) fill.style.width = pct + '%';
+            const label = document.getElementById('bar-target-label');
+            if(label) label.textContent = `/ Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
+            if (isFocusModeOpen()) {
+                const ft = document.getElementById('focus-timer-display');
+                const ffill = document.getElementById('focus-progress-fill');
+                const flabel = document.getElementById('focus-target-label');
+                if (ft) ft.textContent = formatTime(total);
+                if (ffill) ffill.style.width = pct + '%';
+                if (flabel) flabel.textContent = `Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
+            }
+            if(!activeSession.alarmPlayed && total >= target) {
+                activeSession.alarmPlayed = true;
+                playAlarm();
+                const timerEl = document.getElementById('bar-timer-display');
+                if(timerEl) {
+                    timerEl.style.color = '#10b981';
+                    timerEl.style.textShadow = '0 0 10px #10b981';
+                    setTimeout(() => {
+                         timerEl.style.color = '#fff';
+                         timerEl.style.textShadow = 'none';
+                    }, 5000);
+                }
+                if("Notification" in window && Notification.permission === "granted") {
+                    new Notification("Meta Batida!", { body: "Você completou sua meta de estudo!" });
+                }
+            }
+        }
+
+        function finishSession() {
+            if(!activeSession) return;
+            pauseTimer();
+            closeFocusMode();
+            // Open Note Modal
+            document.getElementById('note-modal').classList.add('open');
+            // Clear textarea and inputs
+            document.getElementById('note-textarea').value = '';
+            document.getElementById('note-questions-total').value = '';
+            document.getElementById('note-questions-correct').value = '';
+        }
+
+        function cancelSession(skipConfirm) {
+            if(skipConfirm || confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) {
+                pauseTimer();
+                closeFocusMode();
+                document.getElementById('active-study-bar').classList.remove('visible');
+                // Reverte status para o derivado do tempo atual (provavelmente "Não Iniciado")
+                if(activeSession) {
+                    const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+                    if(dayObj) {
+                        const task = dayObj.tasks[activeSession.taskIndex];
+                        delete task._inProgress;
+                        const d = deriveTaskStatus(task);
+                        const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+                        if(!savedData[task.id]) savedData[task.id] = {};
+                        savedData[task.id].status = d;
+                        savedData[task.id].note = task.note || '';
+                        savedData[task.id].timeSpent = task.timeSpent || 0;
+                        savedData[task.id].durationTarget = task.durationTarget || 3600;
+                        localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+                    }
+                }
+                renderCalendar();
+                renderList();
+                activeSession = null;
+                clearActiveSessionStorage();
+                window.removeEventListener('keydown', barKeyHandler);
+            }
+        }
+
+        function cancelNote() {
+            document.getElementById('note-modal').classList.remove('open');
+            // Resume timer if cancelled?
+            // User might want to go back to timer.
+            // Let's keep timer paused.
+        }
+
+        function saveNote() {
+            if(!activeSession) return;
+            
+            const note = document.getElementById('note-textarea').value;
+            const qTotal = parseInt(document.getElementById('note-questions-total').value) || 0;
+            const qCorrect = parseInt(document.getElementById('note-questions-correct').value) || 0;
+            
+            if (qCorrect > qTotal) {
+                alert('O número de acertos não pode ser maior que o total de questões.');
+                return;
+            }
+
+            const now = new Date();
+            
+            // 1. Add to History
+            const historyItem = {
+                id: Date.now().toString(),
+                date: now.toISOString(), // ISO string for sorting
+                subject: activeSession.subject,
+                duration: activeSession.elapsedSession, // Only what was studied NOW
+                startTime: activeSession.startTime,
+                note: note,
+                questions: qTotal,
+                correct: qCorrect
+            };
+            
+            studyHistory.unshift(historyItem); // Add to top
+            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
+
+            // 2. Update Cycle Task (Total Time)
+            const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+            if(dayObj) {
+                const task = dayObj.tasks[activeSession.taskIndex];
+                task.timeSpent = (task.timeSpent || 0) + activeSession.elapsedSession;
+                delete task._inProgress;
+                
+                // Determine Status based on Target
+                // Default target is 3600s (1h) if not set.
+                // If durationTarget was saved in memory (task object), use it.
+                // Note: durationTarget might need to be loaded from savedData if not in task object yet (init).
+                // But we load savedData at init.
+                const target = task.durationTarget || 3600;
+                const derivedStatus = deriveTaskStatus(task);
+                task.completed = (derivedStatus === 'concluido');
+
+                // Append note?
+                if(note) {
+                    const timeString = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    task.note = (task.note ? task.note + '\n' : '') + `[${timeString}] ${note}`;
+                }
+                
+                // Save to Global Data (Using Generic Key)
+                const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+                if(!savedData[task.id]) savedData[task.id] = {};
+                savedData[task.id].status = derivedStatus; 
+                savedData[task.id].note = task.note;
+                savedData[task.id].timeSpent = task.timeSpent;
+                savedData[task.id].durationTarget = task.durationTarget || 3600;
+                localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+                localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
+                syncToDisk();
+            }
+
+            // 3. Cleanup
+            document.getElementById('note-modal').classList.remove('open');
+            document.getElementById('active-study-bar').classList.remove('visible');
+            activeSession = null;
+            clearActiveSessionStorage();
+
+            // 4. Refresh
+            renderHistory();
+            renderCalendar();
+            renderTimeStats();
+            updateStats();
+            window.removeEventListener('keydown', barKeyHandler);
+        }
+
+        function barKeyHandler(e) {
+            if(!activeSession) return;
+            const target = e.target;
+            if (
+                target &&
+                (
+                    target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.tagName === 'SELECT' ||
+                    target.isContentEditable
+                )
+            ) {
+                return;
+            }
+            if(e.key === ' ') {
+                e.preventDefault();
+                togglePauseResume();
+            } else if(e.key === 'Enter') {
+                e.preventDefault();
+                finishSession();
+            } else if(e.key === 'Escape') {
+                e.preventDefault();
+                if (isFocusModeOpen()) closeFocusMode();
+                else cancelSession();
+            }
+        }
+
+
+
+        function init() {
+            initCoreData();
+            renderDailyCycle();
+            restoreActiveSessionFromStorage();
+        }
+        initTheme();
+        hydrateFromDisk().then(() => { init(); });
+    </script>
+</body>
+</html>

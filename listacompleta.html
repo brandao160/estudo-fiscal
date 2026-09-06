@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Completa · Ciclo Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="core.css">
+</head>
+<body>
+    <script id="persistence-data">window.HARDCODED_DATA = null;</script>
+    <div id="toast-container"></div>
+
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+        </div>
+
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i>
+                    <span>Início</span>
+                </a>
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <a href="materias.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </a>
+                <a href="cicloestudo.html" class="nav-item">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </a>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </div>
+                <a href="conteudoprogramatico.html" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </a>
+                <a href="tempoestudo.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </a>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
+                </div>
+            </div>
+
+            <div style="flex:1;"></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Cronograma Completo</h1>
+                <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="view-list" class="view-section active">
+                <div id="list-filters" style="display:flex; gap:10px; align-items:flex-end; margin-bottom:10px;">
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Status</label>
+                        <select id="filter-status" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;">
+                            <option value="">Todos</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="feito">Feito</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Matéria</label>
+                        <select id="filter-subject" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;"></select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Início</label>
+                        <input id="filter-start" type="date" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <label style="font-size:0.8rem; color: var(--text-muted);">Fim</label>
+                        <input id="filter-end" type="date" style="background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                    </div>
+                    <button onclick="clearListFilters()" style="margin-left:auto; background: transparent; border:1px solid var(--border-color); color:#fff; padding:6px 10px; border-radius:6px;">Limpar</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Dia</th>
+                            <th>Matéria</th>
+                            <th>Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-tbody">
+                        <!-- JS generated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="core.js"></script>
+    <script>
+        let viewDate = new Date();
+
+        // --- LIST VIEW ---
+        function renderList() {
+            // Render only first 100 or create pagination if needed. For now render all but careful with DOM.
+            // Let's render only the upcoming days + past uncompleted? No, user asked for full cycle.
+            // To avoid lag, let's render a limited set or just simple table.
+            // For now, let's stick to the first 200 rows to prevent freezing, or implement simple load more.
+            // Actually, let's just render all, browser can handle ~2000 simple rows usually.
+            
+            const tbody = document.getElementById('list-tbody');
+            // Check if already rendered to avoid re-rendering heavy DOM constantly
+            if(tbody.children.length > 0 && !document.getElementById('view-list').classList.contains('active')) return;
+
+            tbody.innerHTML = '';
+            
+            // Limit to first 100 for performance initially, or maybe logic to show current week?
+            // Let's show current month tasks.
+            const currentMonthTasks = fullSchedule.filter(d => 
+                d.date.getMonth() === viewDate.getMonth() && 
+                d.date.getFullYear() === viewDate.getFullYear()
+            );
+
+            // Flatten
+            let rows = [];
+            fullSchedule.forEach(d => {
+                d.tasks.forEach(t => {
+                    rows.push({ date: d.date, task: t });
+                });
+            });
+
+            // Apply filters
+            const f = window.listFilters || {};
+            rows = rows.filter(row => {
+                const statusOk = !f.status || (f.status === 'feito' ? row.task.completed : !row.task.completed);
+                const subjectOk = !f.subject || row.task.subject === f.subject;
+                const startOk = !f.start || row.date >= f.start;
+                const endOk = !f.end || row.date <= f.end;
+                return statusOk && subjectOk && startOk && endOk;
+            });
+
+            // Let's just render the first 100 and maybe a "Load more" button if needed, 
+            // but for now let's render today +/- 15 days?
+            // Or just render all. It's about 150 days * 5-8 tasks = ~1000 rows. It's fine.
+            
+            // Optimization: Render string HTML first then inject
+            let html = '';
+            rows.forEach(row => {
+                const st = deriveTaskStatus(row.task);
+                const label = st === 'concluido' ? 'Concluído' : (st === 'nao_concluido' ? 'Não Concluído' : 'Não Iniciado');
+                const color = st === 'concluido' ? 'var(--success-color)' : (st === 'nao_concluido' ? 'var(--warning-color)' : 'var(--accent-color)');
+                html += `
+                    <tr>
+                        <td>
+                            <span style="color: ${color}">
+                                <i class="fas fa-circle"></i> ${label}
+                            </span>
+                        </td>
+                        <td>${row.date.toLocaleDateString('pt-BR')}</td>
+                        <td>${row.date.toLocaleDateString('pt-BR', {weekday: 'short'})}</td>
+                        <td>${row.task.subject}</td>
+                        <td>${row.task.type}</td>
+                    </tr>
+                `;
+            });
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="color: var(--text-muted); padding: 20px;">Nenhum item no cronograma. Gere o ciclo para listar as tarefas.</td></tr>';
+            } else {
+                tbody.innerHTML = html;
+            }
+        }
+
+        /**
+         * Inicializa e aplica filtros da Lista Completa.
+         */
+        function initListFilters() {
+            window.listFilters = { status: '', subject: '', start: null, end: null };
+            const subjSelect = document.getElementById('filter-subject');
+            if (subjSelect) {
+                subjSelect.innerHTML = '<option value="">Todas</option>' + subjectsConfig.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+            }
+            const statusSelect = document.getElementById('filter-status');
+            const startInput = document.getElementById('filter-start');
+            const endInput = document.getElementById('filter-end');
+            if (statusSelect) statusSelect.onchange = () => { window.listFilters.status = statusSelect.value; renderList(); };
+            if (subjSelect) subjSelect.onchange = () => { window.listFilters.subject = subjSelect.value; renderList(); };
+            if (startInput) startInput.onchange = () => { window.listFilters.start = startInput.value ? new Date(startInput.value) : null; renderList(); };
+            if (endInput) endInput.onchange = () => { window.listFilters.end = endInput.value ? new Date(endInput.value) : null; renderList(); };
+        }
+        function clearListFilters() {
+            const statusSelect = document.getElementById('filter-status');
+            const subjSelect = document.getElementById('filter-subject');
+            const startInput = document.getElementById('filter-start');
+            const endInput = document.getElementById('filter-end');
+            if (statusSelect) statusSelect.value = '';
+            if (subjSelect) subjSelect.value = '';
+            if (startInput) startInput.value = '';
+            if (endInput) endInput.value = '';
+            window.listFilters = { status: '', subject: '', start: null, end: null };
+            renderList();
+        }
+
+
+
+        function init() {
+            initCoreData();
+            renderList();
+        }
+        initTheme();
+        hydrateFromDisk().then(() => { init(); });
+    </script>
+</body>
+</html>

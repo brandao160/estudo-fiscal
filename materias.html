@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matérias · Ciclo Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="core.css">
+</head>
+<body>
+    <script id="persistence-data">window.HARDCODED_DATA = null;</script>
+    <div id="toast-container"></div>
+
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+        </div>
+
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i>
+                    <span>Início</span>
+                </a>
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </div>
+                <a href="cicloestudo.html" class="nav-item">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </a>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <a href="listacompleta.html" class="nav-item">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </a>
+                <a href="conteudoprogramatico.html" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </a>
+                <a href="tempoestudo.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </a>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
+                </div>
+            </div>
+
+            <div style="flex:1;"></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Progresso por Matéria</h1>
+                <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="view-subjects" class="view-section active">
+                <div class="subjects-grid" id="subjects-container">
+                    <!-- JS generated -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="core.js"></script>
+    <script>
+        // --- SUBJECTS VIEW ---
+        function renderSubjects() {
+            const container = document.getElementById('subjects-container');
+            container.innerHTML = '';
+
+            subjectsConfig.forEach(sub => {
+                // Calculate stats: blocos (quantidade de sessões planejadas) vs tempo real estudado
+                let total = 0;
+                let done = 0;
+                let secondsSpent = 0;
+                let secondsTarget = 0;
+
+                fullSchedule.forEach(day => {
+                    day.tasks.forEach(t => {
+                        if(t.subject === sub.name) {
+                            total++;
+                            if(t.completed) done++;
+                            secondsSpent += (t.timeSpent || 0);
+                            secondsTarget += (t.durationTarget || 3600);
+                        }
+                    });
+                });
+
+                const percent = secondsTarget === 0 ? 0 : Math.min(100, Math.round((secondsSpent / secondsTarget) * 100));
+
+                // Calculate Question Performance
+                let qTotal = 0;
+                let qCorrect = 0;
+                studyHistory.forEach(h => {
+                    if (h.subject === sub.name && h.questions) {
+                        qTotal += h.questions;
+                        qCorrect += (h.correct || 0);
+                    }
+                });
+                const qRate = qTotal === 0 ? 0 : Math.round((qCorrect / qTotal) * 100);
+                const qColor = qRate >= 80 ? '#10b981' : (qRate >= 60 ? '#f59e0b' : '#ef4444');
+
+                const card = document.createElement('div');
+                card.className = 'subject-card';
+                card.dataset.weight = sub.weight || 1;
+                card.innerHTML = `
+                    <div class="subject-header">
+                        <div class="subject-title">${sub.name}</div>
+                        <div class="subject-badge ${'badge-w' + (sub.weight || 1)}">Peso ${sub.weight}</div>
+                    </div>
+                    <div class="subject-stat">
+                        <span>Tempo estudado</span>
+                        <span>${formatHM(secondsSpent)} de ${formatHM(secondsTarget)}</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>Blocos concluídos</span>
+                        <span>${done}/${total} (${percent}%)</span>
+                    </div>
+
+                    <!-- Performance -->
+                     <div class="subject-stat" style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                        <span>Desempenho</span>
+                        <span style="color: ${qTotal > 0 ? qColor : 'var(--text-muted)'}; font-weight: bold;">
+                            ${qTotal > 0 ? qRate + '%' : '-'} 
+                            <span style="font-size:0.7em; font-weight:normal; color:var(--text-muted);">(${qCorrect}/${qTotal})</span>
+                        </span>
+                    </div>
+
+                    <div class="progress-circle">
+                        <div class="progress-fill" style="width: ${percent}%"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+
+
+        function init() {
+            initCoreData();
+            renderSubjects();
+        }
+        initTheme();
+        hydrateFromDisk().then(() => { init(); });
+    </script>
+</body>
+</html>

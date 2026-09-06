@@ -99,6 +99,10 @@
                     <i class="fas fa-bullseye"></i>
                     <span>Ciclo de Estudo</span>
                 </a>
+                <a href="cicloestudolivre.html" class="nav-item">
+                    <i class="fas fa-hand-pointer"></i>
+                    <span>Ciclo Livre</span>
+                </a>
                 <a href="resumo.html" class="nav-item">
                     <i class="fas fa-pencil-alt"></i>
                     <span>Meus Resumos</span>
@@ -169,7 +173,7 @@
             <div id="view-home" class="view-section active">
                 <div class="home-hero">
                     <h2><i class="fas fa-flag-checkered"></i> Antes de começar, prepare seu ciclo</h2>
-                    <p>Envie sua planilha (ou o PDF do edital) e gere o cronograma do seu ciclo de estudo. Depois disso, use o menu acima para navegar entre Planejamento, Matérias, Ciclo de Estudo, Resumos e o restante.</p>
+                    <p>Envie sua planilha (ou o PDF do edital) e gere o cronograma do seu ciclo de estudo. Depois disso, use o menu acima para navegar entre Planejamento, Matérias, Ciclo de Estudo, Ciclo Livre, Resumos e o restante.</p>
                 </div>
 
                 <div class="home-summary-row">
@@ -233,6 +237,14 @@
                     </div>
                     <div class="home-action-btn"><button class="btn btn-primary" onclick="triggerImportProgress()">Carregar Progresso</button><input type="file" id="import-progress-input" accept=".html,.json,text/html,application/json" style="display:none" onchange="importProgressFile(this)"></div>
                 </div>
+                <div class="home-action-row">
+                    <div class="home-action-icon"><i class="fas fa-download"></i></div>
+                    <div class="home-action-info">
+                        <h3>Salvar Progresso</h3>
+                        <p>Baixe um backup completo (.html) com todos os seus dados para guardar ou transferir de dispositivo.</p>
+                    </div>
+                    <div class="home-action-btn"><button class="btn btn-primary" onclick="saveSelfContainedHTML()">Salvar Progresso</button></div>
+                </div>
                 <div class="home-action-row home-action-danger">
                     <div class="home-action-icon"><i class="fas fa-trash"></i></div>
                     <div class="home-action-info">
@@ -294,8 +306,8 @@
                     <div class="excel-tutorial-step">
                         <div class="excel-tutorial-num">4</div>
                         <div>
-                            <b>Monte o Ciclo de Estudo do dia</b>
-                            <p>Não existe mais calendário fixo: na aba <i>"Ciclo de Estudo"</i>, marque as matérias de hoje e clique em <i>"Gerar Ciclo de Hoje"</i>. A fila é montada pelo peso de cada matéria, e o sistema evita repetir demais a mesma matéria em relação aos últimos dias — só repete de perto quando você mesmo marcou poucas matérias.</p>
+                            <b>Escolha automático ou livre</b>
+                            <p>Clique em <i>"Gerar Ciclo"</i> aqui no Início e o sistema monta sozinho um calendário completo (peso maior = aparece mais vezes) — acompanhe dia a dia na aba <i>"Ciclo de Estudo"</i>. Se preferir escolher você mesmo as matérias de cada dia, use a aba <i>"Ciclo Livre"</i> e clique em <i>"Gerar Ciclo de Hoje"</i>.</p>
                         </div>
                     </div>
                     <div class="excel-tutorial-step">
@@ -325,7 +337,7 @@
             </div>
             <div class="modal-body">
                 <div class="wizard-step" data-wizard-step="1">
-                    <p class="wizard-lead">Esse app te ajuda a montar e estudar um ciclo de matérias todo dia, sem calendário fixo. Vamos configurar rapidinho?</p>
+                    <p class="wizard-lead">Esse app te ajuda a montar e estudar um ciclo de matérias todo dia — num calendário automático ou escolhendo você mesmo. Vamos configurar rapidinho?</p>
                     <label class="note-label" for="wizard-concurso-input">Qual concurso/prova você está estudando? (opcional)</label>
                     <input id="wizard-concurso-input" class="note-input" type="text" placeholder="Ex: SEFAZ-GO, Auditor Fiscal...">
                 </div>
@@ -346,7 +358,7 @@
                 </div>
                 <div class="wizard-step" data-wizard-step="3" style="display:none;">
                     <p class="wizard-lead"><i class="fas fa-circle-check" style="color: var(--green);"></i> Tudo pronto! Agora é só gerar o ciclo de hoje.</p>
-                    <p style="font-size:0.85rem; color: var(--ink-3);">Na aba "Ciclo de Estudo", marque as matérias de hoje e clique em "Gerar Ciclo de Hoje". Você pode rever o passo a passo completo a qualquer momento no botão "Tutorial de Utilização".</p>
+                    <p style="font-size:0.85rem; color: var(--ink-3);">Clique em "Gerar Ciclo" no Início para o calendário automático, ou vá na aba "Ciclo Livre" e clique em "Gerar Ciclo de Hoje" pra escolher você mesmo. Você pode rever o passo a passo completo a qualquer momento no botão "Tutorial de Utilização".</p>
                 </div>
             </div>
             <div class="modal-footer">

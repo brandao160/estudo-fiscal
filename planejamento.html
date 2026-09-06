@@ -283,6 +283,9 @@
                 <a href="cicloestudo.html" class="nav-item">
                     <i class="fas fa-bullseye"></i><span>Ciclo de Estudo</span>
                 </a>
+                <a href="cicloestudolivre.html" class="nav-item">
+                    <i class="fas fa-hand-pointer"></i><span>Ciclo Livre</span>
+                </a>
                 <a href="resumo.html" class="nav-item">
                     <i class="fas fa-pencil-alt"></i><span>Meus Resumos</span>
                 </a>
@@ -399,7 +402,7 @@
 
             <div class="plan-card">
                 <h2><i class="fas fa-scale-balanced"></i> Distribuição por matéria</h2>
-                <p class="plan-card-sub">Quanto do seu tempo total cada matéria deveria consumir (peso do edital × dificuldade pessoal), comparado com o quanto do conteúdo programático já foi concluído. Dificuldade e carga cognitiva são editáveis aqui e usadas de verdade pelo gerador do Ciclo de Estudo.</p>
+                <p class="plan-card-sub">Quanto do seu tempo total cada matéria deveria consumir (peso do edital × dificuldade pessoal), comparado com o quanto do conteúdo programático já foi concluído. Peso, dificuldade e carga cognitiva são editáveis aqui e usados de verdade pelo gerador do Ciclo de Estudo — inclusive reajustando automaticamente o calendário já gerado, a partir de hoje.</p>
                 <div style="overflow-x:auto;">
                     <table class="subj-dist-table">
                         <thead>
@@ -416,6 +419,12 @@
                         <tbody id="subj-dist-tbody"><!-- JS generated --></tbody>
                     </table>
                 </div>
+            </div>
+
+            <div class="plan-card" style="text-align:center;">
+                <h2><i class="fas fa-sync-alt"></i> Gerar Ciclo</h2>
+                <p class="plan-card-sub">Já ajustou peso, dificuldade e carga de cada matéria acima? Gere (ou regenere) seu Ciclo de Estudo completo agora, com esses valores.</p>
+                <button class="btn btn-primary" onclick="generateCycleFromPlanejamento()"><i class="fas fa-sync-alt"></i> Gerar Ciclo</button>
             </div>
 
         </div>
@@ -723,17 +732,165 @@
             return w;
         }
 
-        /** Atualiza um campo (dificuldade/carga) de uma matéria direto no modelo compartilhado. */
+        /**
+         * Tenta escolher, dentre `valid` (já ordenado por prioridade), um candidato com "carga"
+         * cognitiva diferente da última escolhida — mesma lógica do Ciclo de Estudo (core.js),
+         * copiada aqui porque esta página não carrega core.js.
+         */
+        function pickAlternatingCarga(valid, lastCarga, rankKey) {
+            if (!lastCarga || valid.length < 2) return valid[0];
+            const top = valid[0];
+            if (top.carga !== lastCarga) return top;
+            const topRank = rankKey(top);
+            const alt = valid.find(s => s.carga && s.carga !== lastCarga && rankKey(s) === topRank);
+            return alt || top;
+        }
+
+        /**
+         * Reconstrói o calendário do "Ciclo de Estudo" a partir de HOJE (inclusive) em diante,
+         * usando peso/dificuldade/carga atuais — dias passados ficam intocados (histórico e
+         * progresso já registrados nunca são mexidos). Chamada sempre que o usuário ajusta Peso,
+         * Dificuldade ou Carga aqui, pra esses ajustes realmente valerem no ciclo automático
+         * (sem isso, um cronograma já gerado nunca via essas mudanças de novo).
+         */
+        function regenerateFutureSchedule() {
+            if (!sharedModel) return false;
+            const raw = localStorage.getItem(K('estudoFiscalScheduleStructure'));
+            if (!raw) return false; // nenhum ciclo gerado ainda — nada a reconstruir
+            let schedule;
+            try { schedule = JSON.parse(raw); } catch (e) { return false; }
+            if (!Array.isArray(schedule) || !schedule.length) return false;
+
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            // Conta quantos blocos já foram consumidos em dias passados, pra continuar a
+            // sequência do ciclo mestre a partir do mesmo ponto (não reinicia do zero).
+            let consumedBlocks = 0;
+            schedule.forEach(day => {
+                const d = new Date(day.date); d.setHours(0, 0, 0, 0);
+                if (d.getTime() < today.getTime()) consumedBlocks += (day.tasks || []).length;
+            });
+
+            // Reconstrói o ciclo mestre com peso/dificuldade/carga atuais (mesmo algoritmo do core.js).
+            const counts = {};
+            subjectsConfig.forEach(s => {
+                if (Math.round(s.weight || 0) > 0) counts[s.name] = effectiveWeight(s);
+            });
+            const totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
+            let masterCycle = [];
+            let lastSub = null, lastCarga = null;
+            for (let i = 0; i < totalBlocks; i++) {
+                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
+                if (!candidates.length) break;
+                let valid = candidates.filter(s => s.name !== lastSub);
+                if (!valid.length) valid = candidates;
+                valid.sort((a, b) => counts[b.name] - counts[a.name]);
+                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
+                masterCycle.push(pick);
+                counts[pick.name]--;
+                lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
+            }
+            if (!masterCycle.length) return false;
+
+            const slots = getRoutineSlots(); // seg..dom
+            let cycleIndex = consumedBlocks;
+            let touchedDays = 0;
+            schedule.forEach(day => {
+                const d = new Date(day.date); d.setHours(0, 0, 0, 0);
+                if (d.getTime() < today.getTime()) return; // preserva o passado
+                const dayIdxMonFirst = (d.getDay() + 6) % 7;
+                const hours = slots[dayIdxMonFirst] || 0;
+                const newTasks = [];
+                for (let h = 0; h < hours; h++) {
+                    const sub = masterCycle[cycleIndex % masterCycle.length];
+                    newTasks.push({
+                        id: `task-${d.getTime()}-${h}-r${Date.now()}`,
+                        subject: sub.name, type: sub.type, weight: sub.weight, completed: false
+                    });
+                    cycleIndex++;
+                }
+                day.tasks = newTasks;
+                touchedDays++;
+            });
+
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));
+            return touchedDays > 0;
+        }
+
+        /**
+         * Gera o Ciclo de Estudo do zero (mesmo botão/ação de "Início"), usando o peso/dificuldade/
+         * carga/rotina atuais — pra o usuário poder ajustar tudo aqui em Planejamento e já gerar,
+         * sem precisar voltar pra Início. Substitui qualquer ciclo já gerado (mesmo comportamento
+         * do botão "Gerar Ciclo" de Início: começa do zero a partir de "Início do Ciclo").
+         */
+        function generateCycleFromPlanejamento() {
+            if (!sharedModel) {
+                showToast('Nenhum modelo carregado ainda — importe uma planilha ou o PDF do edital em "Início".', 'warning');
+                return;
+            }
+            if (!subjectsConfig.length) {
+                showToast('Cadastre suas matérias antes de gerar o ciclo.', 'warning');
+                return;
+            }
+
+            const counts = {};
+            subjectsConfig.forEach(s => { if (Math.round(s.weight || 0) > 0) counts[s.name] = effectiveWeight(s); });
+            const totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
+            if (!totalBlocks) {
+                showToast('Nenhuma matéria com peso ativo pra gerar o ciclo.', 'warning');
+                return;
+            }
+
+            let masterCycle = [];
+            let lastSub = null, lastCarga = null;
+            for (let i = 0; i < totalBlocks; i++) {
+                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
+                if (!candidates.length) break;
+                let valid = candidates.filter(s => s.name !== lastSub);
+                if (!valid.length) valid = candidates;
+                valid.sort((a, b) => counts[b.name] - counts[a.name]);
+                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
+                masterCycle.push(pick);
+                counts[pick.name]--;
+                lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
+            }
+            if (!masterCycle.length) return;
+
+            const slots = getRoutineSlots();
+            const schedule = [];
+            let cycleIndex = 0;
+            let cur = new Date(startDate);
+            while (cur <= endDate) {
+                const dayIdxMonFirst = (cur.getDay() + 6) % 7;
+                const hours = slots[dayIdxMonFirst] || 0;
+                const tasks = [];
+                for (let h = 0; h < hours; h++) {
+                    const sub = masterCycle[cycleIndex % masterCycle.length];
+                    tasks.push({ id: `task-${cur.getTime()}-${h}`, subject: sub.name, type: sub.type, weight: sub.weight, completed: false });
+                    cycleIndex++;
+                }
+                schedule.push({ date: new Date(cur), tasks });
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));
+            showToast('Ciclo gerado! Confira em "Ciclo de Estudo".', 'success');
+        }
+
+        /** Atualiza um campo (peso/dificuldade/carga) de uma matéria direto no modelo compartilhado. */
         function updateSubjectField(name, field, value) {
             if (!sharedModel || !Array.isArray(sharedModel.materias)) return;
             const m = sharedModel.materias.find(x => x.nome === name);
             if (!m) return;
-            m[field] = field === 'dificuldade' ? Number(value) : value;
+            m[field] = (field === 'dificuldade' || field === 'peso') ? Number(value) : value;
             localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
             loadAllData();
+            const adjustedCycle = regenerateFutureSchedule();
             renderSubjectDistribution();
             renderWeeklyPriorities();
-            showToast('Matéria atualizada.', 'success');
+            showToast(adjustedCycle ? 'Matéria atualizada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Matéria atualizada.', 'success');
         }
 
         function formatHM(seconds) {
@@ -919,7 +1076,11 @@
                 return `
                 <tr>
                     <td class="subj-dist-name">${s.name}</td>
-                    <td>${s.weight}</td>
+                    <td>
+                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'peso', this.value)">
+                            ${[1,2,3].map(n => `<option value="${n}" ${n === Math.round(s.weight) ? 'selected' : ''}>${n}</option>`).join('')}
+                        </select>
+                    </td>
                     <td>
                         <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'dificuldade', this.value)">
                             ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === dificuldade ? 'selected' : ''}>${n}</option>`).join('')}

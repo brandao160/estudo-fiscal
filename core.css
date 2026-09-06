@@ -1248,12 +1248,72 @@
         .kpi-label { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; color: var(--ink-3); margin-bottom: 4px; font-family: 'Nunito', sans-serif; }
         .kpi-value { font-size: 1.4rem; font-weight: 900; color: var(--ink); font-family: 'Nunito', sans-serif; }
 
+        /* ─── CALENDÁRIO (Ciclo de Estudo automático) ─────────────── */
+        .calendar-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+        }
+        .calendar-toolbar-nav { display: flex; align-items: center; gap: 10px; }
+        .calendar-month-label {
+            margin: 0; font-family: 'Nunito', sans-serif; font-size: 1.1rem; font-weight: 800;
+            color: var(--ink); min-width: 180px; text-align: center; text-transform: capitalize;
+        }
+        .calendar-nav-btn, .calendar-today-btn {
+            background: var(--surface); border: 1px solid var(--border); color: var(--ink);
+            width: 36px; height: 36px; border-radius: var(--r); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+            transition: all 0.14s;
+        }
+        .calendar-today-btn { width: auto; padding: 0 14px; font-weight: 700; font-size: 0.82rem; gap: 6px; }
+        .calendar-nav-btn:hover, .calendar-today-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .calendar-legend { display: flex; gap: 16px; align-items: center; font-size: 0.78rem; color: var(--ink-3); flex-wrap: wrap; }
+        .calendar-legend-item { display: flex; align-items: center; gap: 6px; }
+        .calendar-legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+        .calendar-table {
+            border: 1px solid var(--border); border-radius: var(--r-lg);
+            overflow: hidden; background: var(--surface);
+        }
+        .calendar-table-head, .calendar-table-body {
+            display: grid; grid-template-columns: repeat(7, 1fr);
+        }
+        .calendar-table-head { background: var(--ink-3); }
+        .calendar-weekday {
+            text-align: left; padding: 10px 12px; font-size: 0.74rem; font-weight: 700;
+            color: #fff; font-family: 'Nunito', sans-serif;
+            border-right: 1px solid rgba(255,255,255,0.14);
+        }
+        .calendar-weekday:last-child { border-right: none; }
+        .calendar-cell {
+            background: var(--surface); min-height: 92px; padding: 8px;
+            cursor: pointer; transition: background 0.14s; position: relative;
+            display: flex; flex-direction: column; gap: 6px;
+            border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+        }
+        .calendar-cell:nth-child(7n) { border-right: none; }
+        .calendar-cell:hover { background: var(--surface-alt); }
+        .calendar-cell.is-outside { background: var(--surface-alt); }
+        .calendar-cell.is-outside .calendar-cell-day { color: var(--ink-3); }
+        .calendar-cell-top { display: flex; align-items: center; justify-content: space-between; }
+        .calendar-cell-day {
+            font-weight: 700; font-size: 0.86rem; color: var(--ink); font-family: 'Nunito', sans-serif;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+        }
+        .calendar-cell.is-today .calendar-cell-day { background: var(--accent); color: #fff; border-radius: 50%; }
+        .calendar-cell-hours { font-size: 0.66rem; color: var(--ink-3); font-weight: 700; }
+        .calendar-cell-dots { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; }
+        .calendar-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); display: inline-block; }
+        .calendar-dot.done { background: var(--green); }
+        .calendar-dot.pending { background: var(--accent); }
+
         /* ─── RESPONSIVE ───────────────────────────────────────────── */
         @media (max-width: 768px) {
             .app-header { padding: 8px 12px; gap: 10px; }
             .header-stats { display: none; }
             .content-area { padding: 14px; }
             .top-bar { padding: 10px 14px; }
+            .calendar-cell { min-height: 60px; padding: 6px; }
+            .calendar-cell-hours { display: none; }
         }
 
         /* ─── MICRO INTERACTIONS ───────────────────────────────────── */

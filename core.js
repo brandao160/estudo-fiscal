@@ -60,9 +60,25 @@
             return [{ id: 'default', name: 'Principal' }, ...custom];
         }
 
+        /** Concurso salvo no modelo de um perfil específico, sem precisar trocar de perfil ativo. */
+        function getProfileModelConcurso(profileId) {
+            const key = profileId === 'default' ? 'estudoFiscalModel' : 'estudoFiscalModel__' + profileId;
+            try {
+                const model = JSON.parse(localStorage.getItem(key) || 'null');
+                return (model && model.concurso) ? String(model.concurso).trim() : '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        /** Nome exibido de um perfil: o concurso importado na planilha (aba Gerais), se houver; senão o nome do perfil. */
+        function getProfileDisplayName(profile) {
+            return getProfileModelConcurso(profile.id) || profile.name;
+        }
+
         function getActiveProfileName() {
             const p = getProfiles().find(p => p.id === activeProfileId());
-            return p ? p.name : 'Principal';
+            return p ? getProfileDisplayName(p) : 'Principal';
         }
 
         function switchProfile(id) {
@@ -71,11 +87,9 @@
         }
 
         function createProfile() {
-            const name = prompt('Nome do novo perfil (ex: seu nome):');
-            if (!name || !name.trim()) return;
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
             const id = 'p_' + Date.now();
-            custom.push({ id, name: name.trim() });
+            custom.push({ id, name: 'Novo perfil' });
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
             switchProfile(id);
         }
@@ -117,7 +131,7 @@
             const active = activeProfileId();
             el.innerHTML = `
                 <select id="profile-select" onchange="this.value === '__new__' ? createProfile() : switchProfile(this.value)">
-                    ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${p.name}</option>`).join('')}
+                    ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${getProfileDisplayName(p)}</option>`).join('')}
                     <option value="__new__">+ Novo perfil…</option>
                 </select>
                 ${active !== 'default' ? `

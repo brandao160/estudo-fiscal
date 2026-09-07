@@ -398,14 +398,13 @@
                     <div class="cycle-builder-grid" id="cycle-builder-picks">
                         ${subjectsConfig.map((s, i) => `
                             <label class="cycle-pick" id="cycle-pick-${i}">
-                                <input type="checkbox" value="${s.name}" checked onchange="document.getElementById('cycle-pick-${i}').classList.toggle('checked', this.checked)">
+                                <input type="checkbox" value="${s.name}" onchange="document.getElementById('cycle-pick-${i}').classList.toggle('checked', this.checked)">
                                 <span>${s.name}</span>
                                 <small>P${s.weight}</small>
                             </label>`).join('')}
                     </div>
                     <button class="btn btn-primary" onclick="generateTodayCycleFromPicks()"><i class="fas fa-sync-alt"></i> Gerar Ciclo de Hoje</button>
                 </div>`;
-            document.querySelectorAll('.cycle-pick').forEach(el => el.classList.add('checked'));
         }
 
 

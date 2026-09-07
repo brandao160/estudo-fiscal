@@ -5,6 +5,29 @@
    antes do script específico de cada página.
    ========================================================== */
 
+        // ── PWA: manifest + service worker (instalar como app, funcionar offline) ──
+        // resumo.html e planejamento.html não carregam core.js, então têm o mesmo trecho
+        // inline no próprio <script> delas.
+        (function registerPWA() {
+            if (!document.querySelector('link[rel="manifest"]')) {
+                const link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = 'manifest.json';
+                document.head.appendChild(link);
+            }
+            if (!document.querySelector('meta[name="theme-color"]')) {
+                const meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                meta.content = '#F97316';
+                document.head.appendChild(meta);
+            }
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('sw.js').catch(() => {});
+                });
+            }
+        })();
+
         // ── showToast + alert override (index.html L1862-L1892) ──
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
@@ -58,6 +81,91 @@
         function getProfiles() {
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
             return [{ id: 'default', name: 'Principal' }, ...custom];
+        }
+
+        /**
+         * Lista completa das chaves de dados "por perfil" usadas em qualquer página do app
+         * (não só as que a própria página atual usa) — fonte única de verdade tanto pra limpar
+         * um perfil excluído quanto pra montar/restaurar um backup completo (ver saveSelfContainedHTML
+         * em index.html). Se uma página nova guardar algo por perfil, adicionar a chave aqui também.
+         */
+        function getProfileDataKeys() {
+            return [
+                'estudoFiscalData', 'estudoFiscalSyllabus', 'estudoFiscalStudyHistory',
+                'estudoFiscalScheduleStructure', 'estudoFiscalModel', 'estudoFiscalReviews',
+                'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
+                'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
+                'estudoFiscalActiveSession', 'ciclo_cards_v3'
+            ];
+        }
+
+        /**
+         * Aplica um payload de backup no localStorage — aceita tanto o formato novo (multi-perfil,
+         * `{version:2, profiles, activeProfile, data:{[profileId]: {...chaves}}}`, gerado por
+         * collectFullBackupPayload()) quanto o formato antigo (só as 5 chaves básicas de um único
+         * perfil, sem `version`/`data`) pra continuar lendo backups salvos antes dessa mudança.
+         * Usado tanto pela reidratação automática de um HTML autocontido salvo (window.HARDCODED_DATA,
+         * ver hydrateFromDisk/initCoreData) quanto pelo "Carregar Progresso" (index.html).
+         */
+        function applyBackupPayload(payload) {
+            const d = payload || {};
+            if (d.version === 2 && d.data) {
+                Object.keys(d.data).forEach(profileId => {
+                    const bucket = d.data[profileId] || {};
+                    Object.keys(bucket).forEach(base => {
+                        const key = profileId === 'default' ? base : base + '__' + profileId;
+                        if (bucket[base] !== undefined && bucket[base] !== null) {
+                            localStorage.setItem(key, JSON.stringify(bucket[base]));
+                        }
+                    });
+                });
+                if (Array.isArray(d.profiles)) localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(d.profiles));
+                if (d.activeProfile) localStorage.setItem(ACTIVE_PROFILE_KEY, d.activeProfile);
+                if (d.theme) localStorage.setItem('theme', d.theme);
+                if (d.estudoFiscalTutorialSeen) localStorage.setItem('estudoFiscalTutorialSeen', d.estudoFiscalTutorialSeen);
+                if (d.estudoFiscalOnboardingSeen) localStorage.setItem('estudoFiscalOnboardingSeen', d.estudoFiscalOnboardingSeen);
+                if (d.estudoFiscalConcursoName) localStorage.setItem('estudoFiscalConcursoName', d.estudoFiscalConcursoName);
+            } else {
+                // Formato antigo: só os 5 dados básicos, do perfil ATIVO no momento da importação.
+                const restore = (base, val) => { if (val !== undefined && val !== null) localStorage.setItem(K(base), JSON.stringify(val)); };
+                restore('estudoFiscalData', d.estudoFiscalData);
+                restore('estudoFiscalSyllabus', d.estudoFiscalSyllabus);
+                restore('estudoFiscalStudyHistory', d.estudoFiscalStudyHistory);
+                restore('estudoFiscalScheduleStructure', d.estudoFiscalScheduleStructure);
+                restore('estudoFiscalModel', d.estudoFiscalModel);
+            }
+        }
+
+        /**
+         * Monta o payload completo de backup: TODOS os perfis (não só o ativo) + o registro de
+         * perfis + algumas flags globais (tema, nome do concurso do wizard) — usado por
+         * saveSelfContainedHTML() em index.html. Sem isso, "Salvar Progresso" perdia perfis extras,
+         * revisão espaçada e preferências de planejamento ao levar os dados pra outro dispositivo.
+         */
+        function collectFullBackupPayload() {
+            const profiles = getProfiles();
+            const data = {};
+            profiles.forEach(p => {
+                const bucket = {};
+                getProfileDataKeys().forEach(base => {
+                    const key = p.id === 'default' ? base : base + '__' + p.id;
+                    const raw = localStorage.getItem(key);
+                    if (raw !== null) {
+                        try { bucket[base] = JSON.parse(raw); } catch (e) { bucket[base] = raw; }
+                    }
+                });
+                data[p.id] = bucket;
+            });
+            return {
+                version: 2,
+                profiles: JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]'),
+                activeProfile: activeProfileId(),
+                theme: localStorage.getItem('theme'),
+                estudoFiscalTutorialSeen: localStorage.getItem('estudoFiscalTutorialSeen'),
+                estudoFiscalOnboardingSeen: localStorage.getItem('estudoFiscalOnboardingSeen'),
+                estudoFiscalConcursoName: localStorage.getItem('estudoFiscalConcursoName'),
+                data
+            };
         }
 
         /** Concurso salvo no modelo de um perfil específico, sem precisar trocar de perfil ativo. */
@@ -117,8 +225,7 @@
                 return;
             }
             if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil (matérias, ciclo, histórico) serão apagados.`)) return;
-            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun']
-                .forEach(base => localStorage.removeItem(base + '__' + pid));
+            getProfileDataKeys().forEach(base => localStorage.removeItem(base + '__' + pid));
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
             switchProfile('default');
@@ -195,19 +302,7 @@
             // 0) Verifica se há dados hardcoded (modo offline / arquivo salvo)
             if (window.HARDCODED_DATA) {
                 console.log('Carregando dados embutidos (modo offline)...');
-                const d = window.HARDCODED_DATA;
-                
-                // Helper para salvar no localStorage apenas se o dado existir
-                const restore = (key, val) => {
-                    if (val) localStorage.setItem(key, JSON.stringify(val));
-                };
-
-                restore('estudoFiscalData', d.estudoFiscalData);
-                restore('estudoFiscalSyllabus', d.estudoFiscalSyllabus);
-                restore('estudoFiscalStudyHistory', d.estudoFiscalStudyHistory);
-                restore('estudoFiscalScheduleStructure', d.estudoFiscalScheduleStructure);
-                restore('estudoFiscalModel', d.estudoFiscalModel);
-                
+                applyBackupPayload(window.HARDCODED_DATA);
                 showToast('Dados recuperados do arquivo salvo!', 'success');
                 return;
             }
@@ -831,8 +926,13 @@
         function updateStats() {
             const today = new Date();
             const diffTime = endDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-            document.getElementById('days-left-stat').textContent = diffDays > 0 ? diffDays : 0;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const daysLeftEl = document.getElementById('days-left-stat');
+            const daysLeftLabel = daysLeftEl && daysLeftEl.previousElementSibling;
+            daysLeftEl.textContent = diffDays > 0 ? diffDays : 0;
+            if (daysLeftLabel && daysLeftLabel.classList.contains('header-stat-label')) {
+                daysLeftLabel.textContent = diffDays > 0 ? 'Dias até a Prova' : 'Prova Realizada';
+            }
 
             let totalTasks = 0;
             let completedTasks = 0;
@@ -1151,6 +1251,8 @@
         // carregado depois deste arquivo (a última declaração de function vence).
         function renderDailyCycle() {}
         function renderCalendar() { renderDailyCycle(); }
+        function renderCalendarMonth() {}
+        function renderCalendarDayModal() {}
         function renderSubjects() {}
         function renderList() {}
         function renderSyllabus() {}
@@ -1159,9 +1261,408 @@
         function renderHomeStatus() {}
         function setGenerateButtonState() {}
         function initListFilters() {}
+
+
+        // ── sessão ativa de estudo (barra de cronômetro, modo foco, modal de nota) ──
+        // Compartilhado entre cicloestudo.html e cicloestudolivre.html — as duas únicas páginas
+        // com a barra de cronômetro. Cada uma só define o jeito de achar o dayObj do dia (hoje vs.
+        // dia escolhido no calendário) e chama beginActiveSession() com ele; todo o resto (pausar,
+        // modo foco, salvar nota, cancelar, atalhos de teclado, restaurar após F5) é idêntico e
+        // fica só aqui, então um bug de timer se corrige uma vez só, não em dois arquivos.
+        const OPEN_NOTE_ON_LOAD_KEY = 'estudoFiscalOpenNoteOnLoad';
+        const CANCEL_SESSION_ON_LOAD_KEY = 'estudoFiscalCancelSessionOnLoad';
+
+        let activeSession = null;
+
+        function persistActiveSessionToStorage() {
+            if (!activeSession) return;
+            const payload = {
+                dayDateMs: activeSession.dayDate ? activeSession.dayDate.getTime() : null,
+                taskIndex: activeSession.taskIndex,
+                subject: activeSession.subject,
+                startTime: activeSession.startTime,
+                elapsedAtStart: activeSession.elapsedAtStart,
+                elapsedSession: activeSession.elapsedSession,
+                paused: !!activeSession.paused,
+                target: activeSession.target,
+                alarmPlayed: !!activeSession.alarmPlayed,
+                lastResumeEpochMs: activeSession.lastResumeEpochMs || null
+            };
+            localStorage.setItem(K('estudoFiscalActiveSession'), JSON.stringify(payload));
+        }
+
+        function clearActiveSessionStorage() {
+            localStorage.removeItem(K('estudoFiscalActiveSession'));
+        }
+
+        function restoreActiveSessionFromStorage() {
+            const raw = localStorage.getItem(K('estudoFiscalActiveSession'));
+            if (!raw) return;
+            let data;
+            try { data = JSON.parse(raw); } catch (e) { return; }
+            if (!data || !data.subject || data.taskIndex === null || data.taskIndex === undefined) return;
+
+            activeSession = {
+                dayDate: data.dayDateMs ? new Date(data.dayDateMs) : null,
+                taskIndex: data.taskIndex,
+                subject: data.subject,
+                startTime: Number(data.startTime || Date.now()),
+                elapsedAtStart: Number(data.elapsedAtStart || 0),
+                elapsedSession: Number(data.elapsedSession || 0),
+                paused: !!data.paused,
+                interval: null,
+                target: Number(data.target || 3600),
+                alarmPlayed: !!data.alarmPlayed,
+                lastResumeEpochMs: data.lastResumeEpochMs ? Number(data.lastResumeEpochMs) : null
+            };
+
+            const bar = document.getElementById('active-study-bar');
+            if (!bar) return;
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
+
+            updateBarTimer();
+            if (activeSession.paused) {
+                clearInterval(activeSession.interval);
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-play"></i> Continuar';
+            } else {
+                if (activeSession.lastResumeEpochMs) {
+                    const delta = Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000);
+                    if (delta > 0) activeSession.elapsedSession += delta;
+                }
+                resumeTimer();
+                document.getElementById('btn-pause-resume').innerHTML = '<i class="fas fa-pause"></i> Pausar';
+            }
+            window.addEventListener('keydown', barKeyHandler);
+        }
+
+        /**
+         * Inicia a sessão ativa pra uma tarefa que já existe em `dayObj.tasks[index]`. Usado por
+         * startCycleTask() (Ciclo Livre) e startCalendarTask() (Ciclo de Estudo) — a única diferença
+         * entre as duas é como cada uma acha o dayObj, então isso fica de fora daqui.
+         */
+        function beginActiveSession(dayObj, index) {
+            if (activeSession) {
+                showToast('Já existe uma sessão ativa. Finalize-a primeiro.', 'warning');
+                return false;
+            }
+            const task = dayObj.tasks[index];
+            if (!task) return false;
+
+            task._inProgress = true;
+            const saved = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+            if (!saved[task.id]) saved[task.id] = {};
+            saved[task.id].status = 'nao_concluido';
+            saved[task.id].note = task.note || '';
+            saved[task.id].timeSpent = task.timeSpent || 0;
+            saved[task.id].durationTarget = task.durationTarget || 3600;
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(saved));
+
+            activeSession = {
+                dayDate: dayObj.date,
+                taskIndex: index,
+                subject: task.subject,
+                startTime: Date.now(),
+                elapsedAtStart: task.timeSpent || 0,
+                elapsedSession: 0,
+                paused: false,
+                interval: null,
+                target: Number(task.durationTarget || 3600),
+                alarmPlayed: false,
+                lastResumeEpochMs: Date.now()
+            };
+
+            const bar = document.getElementById('active-study-bar');
+            bar.classList.add('visible');
+            document.getElementById('bar-subject-name').textContent = activeSession.subject;
+            document.getElementById('bar-target-label').textContent = `/ Meta: ${Math.floor(activeSession.target/3600)}h ${Math.floor((activeSession.target%3600)/60)}m`;
+
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
+            updateBarTimer();
+            resumeTimer();
+            window.addEventListener('keydown', barKeyHandler);
+            return true;
+        }
+
+        function togglePauseResume() {
+            if(!activeSession) return;
+            let label;
+            if(activeSession.paused) {
+                resumeTimer();
+                label = '<i class="fas fa-pause"></i> Pausar';
+            } else {
+                pauseTimer();
+                label = '<i class="fas fa-play"></i> Continuar';
+            }
+            document.getElementById('btn-pause-resume').innerHTML = label;
+            const focusBtn = document.getElementById('focus-pause-icon')?.closest('button');
+            if (focusBtn) focusBtn.innerHTML = label;
+        }
+
+        function resumeTimer() {
+            if(!activeSession) return;
+            activeSession.paused = false;
+            activeSession.lastResumeEpochMs = Date.now();
+            clearInterval(activeSession.interval);
+            activeSession.interval = setInterval(updateBarTimer, 1000);
+            persistActiveSessionToStorage();
+        }
+
+        function playAlarm() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+
+                const ctx = new AudioContext();
+                const now = ctx.currentTime;
+
+                [0, 0.8, 1.6].forEach(offset => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, now + offset);
+                    osc.frequency.exponentialRampToValueAtTime(440, now + offset + 0.4);
+
+                    gain.gain.setValueAtTime(0.1, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.4);
+
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.5);
+                });
+            } catch(e) {
+                console.error("Erro ao tocar alarme:", e);
+            }
+        }
+
+        function pauseTimer() {
+            if(!activeSession) return;
+            activeSession.paused = true;
+            clearInterval(activeSession.interval);
+            const delta = activeSession.lastResumeEpochMs ? Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000) : 0;
+            if(delta > 0) activeSession.elapsedSession += delta;
+            activeSession.lastResumeEpochMs = null;
+            persistActiveSessionToStorage();
+        }
+
+        function openFocusMode() {
+            if (!activeSession) return;
+            const overlay = document.getElementById('focus-mode-overlay');
+            if (!overlay) return;
+            document.getElementById('focus-subject-name').textContent = activeSession.subject;
+            overlay.classList.add('open');
+            updateBarTimer();
+        }
+
+        function closeFocusMode() {
+            const overlay = document.getElementById('focus-mode-overlay');
+            if (overlay) overlay.classList.remove('open');
+        }
+
+        function isFocusModeOpen() {
+            const overlay = document.getElementById('focus-mode-overlay');
+            return !!(overlay && overlay.classList.contains('open'));
+        }
+
+        function updateBarTimer() {
+            if(!activeSession) return;
+            const liveDelta = activeSession.paused || !activeSession.lastResumeEpochMs ? 0 : Math.floor((Date.now() - activeSession.lastResumeEpochMs) / 1000);
+            const total = activeSession.elapsedAtStart + activeSession.elapsedSession + liveDelta;
+            document.getElementById('bar-timer-display').textContent = formatTime(total);
+            const target = Math.max(1, Number(activeSession.target || 3600));
+            const pct = Math.min(100, Math.round((total / target) * 100));
+            const fill = document.getElementById('bar-progress-fill');
+            if(fill) fill.style.width = pct + '%';
+            const label = document.getElementById('bar-target-label');
+            if(label) label.textContent = `/ Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
+            if (isFocusModeOpen()) {
+                const ft = document.getElementById('focus-timer-display');
+                const ffill = document.getElementById('focus-progress-fill');
+                const flabel = document.getElementById('focus-target-label');
+                if (ft) ft.textContent = formatTime(total);
+                if (ffill) ffill.style.width = pct + '%';
+                if (flabel) flabel.textContent = `Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
+            }
+            if(!activeSession.alarmPlayed && total >= target) {
+                activeSession.alarmPlayed = true;
+                playAlarm();
+                const timerEl = document.getElementById('bar-timer-display');
+                if(timerEl) {
+                    timerEl.style.color = '#10b981';
+                    timerEl.style.textShadow = '0 0 10px #10b981';
+                    setTimeout(() => {
+                         timerEl.style.color = '#fff';
+                         timerEl.style.textShadow = 'none';
+                    }, 5000);
+                }
+                if("Notification" in window && Notification.permission === "granted") {
+                    new Notification("Meta Batida!", { body: "Você completou sua meta de estudo!" });
+                }
+            }
+        }
+
+        function finishSession() {
+            if(!activeSession) return;
+            pauseTimer();
+            closeFocusMode();
+            document.getElementById('note-modal').classList.add('open');
+            document.getElementById('note-textarea').value = '';
+            document.getElementById('note-questions-total').value = '';
+            document.getElementById('note-questions-correct').value = '';
+        }
+
+        function cancelSession(skipConfirm) {
+            if(skipConfirm || confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) {
+                pauseTimer();
+                closeFocusMode();
+                document.getElementById('active-study-bar').classList.remove('visible');
+                if(activeSession) {
+                    const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+                    if(dayObj) {
+                        const task = dayObj.tasks[activeSession.taskIndex];
+                        delete task._inProgress;
+                        const d = deriveTaskStatus(task);
+                        const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+                        if(!savedData[task.id]) savedData[task.id] = {};
+                        savedData[task.id].status = d;
+                        savedData[task.id].note = task.note || '';
+                        savedData[task.id].timeSpent = task.timeSpent || 0;
+                        savedData[task.id].durationTarget = task.durationTarget || 3600;
+                        localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+                    }
+                }
+                renderCalendar();
+                renderList();
+                renderCalendarMonth();
+                renderCalendarDayModal();
+                activeSession = null;
+                clearActiveSessionStorage();
+                window.removeEventListener('keydown', barKeyHandler);
+            }
+        }
+
+        function cancelNote() {
+            document.getElementById('note-modal').classList.remove('open');
+        }
+
+        function saveNote() {
+            if(!activeSession) return;
+
+            const note = document.getElementById('note-textarea').value;
+            const qTotal = parseInt(document.getElementById('note-questions-total').value) || 0;
+            const qCorrect = parseInt(document.getElementById('note-questions-correct').value) || 0;
+
+            if (qCorrect > qTotal) {
+                alert('O número de acertos não pode ser maior que o total de questões.');
+                return;
+            }
+
+            const now = new Date();
+
+            const historyItem = {
+                id: Date.now().toString(),
+                date: now.toISOString(),
+                subject: activeSession.subject,
+                duration: activeSession.elapsedSession,
+                startTime: activeSession.startTime,
+                note: note,
+                questions: qTotal,
+                correct: qCorrect
+            };
+
+            studyHistory.unshift(historyItem);
+            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
+
+            const dayObj = fullSchedule.find(d => d.date.getTime() === activeSession.dayDate.getTime());
+            if(dayObj) {
+                const task = dayObj.tasks[activeSession.taskIndex];
+                task.timeSpent = (task.timeSpent || 0) + activeSession.elapsedSession;
+                delete task._inProgress;
+
+                const derivedStatus = deriveTaskStatus(task);
+                task.completed = (derivedStatus === 'concluido');
+
+                if(note) {
+                    const timeString = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    task.note = (task.note ? task.note + '\n' : '') + `[${timeString}] ${note}`;
+                }
+
+                const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+                if(!savedData[task.id]) savedData[task.id] = {};
+                savedData[task.id].status = derivedStatus;
+                savedData[task.id].note = task.note;
+                savedData[task.id].timeSpent = task.timeSpent;
+                savedData[task.id].durationTarget = task.durationTarget || 3600;
+                localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+                localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
+                syncToDisk();
+            }
+
+            document.getElementById('note-modal').classList.remove('open');
+            document.getElementById('active-study-bar').classList.remove('visible');
+            activeSession = null;
+            clearActiveSessionStorage();
+
+            renderHistory();
+            renderCalendar();
+            renderList();
+            renderTimeStats();
+            renderCalendarMonth();
+            renderCalendarDayModal();
+            updateStats();
+            window.removeEventListener('keydown', barKeyHandler);
+        }
+
+        function barKeyHandler(e) {
+            if(!activeSession) return;
+            const target = e.target;
+            if (
+                target &&
+                (
+                    target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.tagName === 'SELECT' ||
+                    target.isContentEditable
+                )
+            ) {
+                return;
+            }
+            if(e.key === ' ') {
+                e.preventDefault();
+                togglePauseResume();
+            } else if(e.key === 'Enter') {
+                e.preventDefault();
+                finishSession();
+            } else if(e.key === 'Escape') {
+                e.preventDefault();
+                if (isFocusModeOpen()) closeFocusMode();
+                else cancelSession();
+            }
+        }
+
+        /**
+         * Sinalizadores deixados pela barrinha de cronômetro "espelho" do resumo.html (que não tem
+         * o modal de nota) quando a pessoa clica em Finalizar/Cancelar por lá e é redirecionada de
+         * volta pra uma página que tem o modal de verdade.
+         */
+        function checkPendingSessionActionOnLoad() {
+            if (localStorage.getItem(OPEN_NOTE_ON_LOAD_KEY) === 'true') {
+                localStorage.removeItem(OPEN_NOTE_ON_LOAD_KEY);
+                if (activeSession) finishSession();
+            } else if (localStorage.getItem(CANCEL_SESSION_ON_LOAD_KEY) === 'true') {
+                localStorage.removeItem(CANCEL_SESSION_ON_LOAD_KEY);
+                if (activeSession) cancelSession(true);
+            }
+        }
         function initCalibrationPanel() {}
         function setupOfflineFallbacks() {}
-        function restoreActiveSessionFromStorage() {}
         function openOnboardingWizard() {}
 
         // ── bootstrap de dados compartilhado ──
@@ -1172,12 +1673,7 @@
             renderProfileSwitcher();
             if (window.HARDCODED_DATA) {
                 console.log('Carregando dados embutidos (Self-Contained Mode)...');
-                const d = window.HARDCODED_DATA;
-                if (d.estudoFiscalData) localStorage.setItem(K('estudoFiscalData'), JSON.stringify(d.estudoFiscalData));
-                if (d.estudoFiscalSyllabus) localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(d.estudoFiscalSyllabus));
-                if (d.estudoFiscalStudyHistory) localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(d.estudoFiscalStudyHistory));
-                if (d.estudoFiscalScheduleStructure) localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(d.estudoFiscalScheduleStructure));
-                if (d.estudoFiscalModel) localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(d.estudoFiscalModel));
+                applyBackupPayload(window.HARDCODED_DATA);
                 showToast('Dados restaurados do arquivo salvo!', 'success');
             }
 

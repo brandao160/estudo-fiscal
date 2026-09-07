@@ -548,6 +548,9 @@
         }
         .cycle-builder-tip i { color: var(--accent); margin-top: 2px; }
 
+        .cycle-builder-quick-actions { display: flex; gap: 8px; margin: 0 0 12px; }
+        .cycle-builder-quick-actions .btn { padding: 6px 12px; font-size: 0.8rem; }
+
         .cycle-count-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 16px; }
         .count-pick {
             width: 42px; height: 42px; border-radius: 50%;

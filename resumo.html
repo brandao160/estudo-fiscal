@@ -1105,15 +1105,15 @@
             <a href="cicloestudolivre.html" class="nav-item">
                 <i class="fas fa-hand-pointer"></i><span>Ciclo Livre</span>
             </a>
-            <div class="nav-item" id="menu-resumos" onclick="switchMainView('syllabus')">
+            <div class="nav-item active" id="menu-resumos">
                 <i class="fas fa-pencil-alt"></i><span>Meus Resumos</span>
             </div>
             <a href="listacompleta.html" class="nav-item">
                 <i class="fas fa-list"></i><span>Lista Completa</span>
             </a>
-            <div class="nav-item active" id="menu-syllabus" onclick="switchMainView('syllabus')">
+            <a href="conteudoprogramatico.html" class="nav-item" id="menu-syllabus">
                 <i class="fas fa-list-check"></i><span>Conteúdo Programático</span>
-            </div>
+            </a>
             <a href="tempoestudo.html" class="nav-item">
                 <i class="fas fa-chart-pie"></i><span>Tempo de Estudo</span>
             </a>
@@ -1309,17 +1309,26 @@
         const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
         return [{ id: 'default', name: 'Principal' }, ...custom];
     }
+    /** Concurso salvo no modelo de um perfil específico (mesma lógica de core.js). */
+    function getProfileModelConcurso(profileId) {
+        const key = profileId === 'default' ? 'estudoFiscalModel' : 'estudoFiscalModel__' + profileId;
+        try {
+            const model = JSON.parse(localStorage.getItem(key) || 'null');
+            return (model && model.concurso) ? String(model.concurso).trim() : '';
+        } catch (e) { return ''; }
+    }
+    function getProfileDisplayName(profile) {
+        return getProfileModelConcurso(profile.id) || profile.name;
+    }
     function getActiveProfileName() {
         const p = getProfiles().find(p => p.id === activeProfileId());
-        return p ? p.name : 'Principal';
+        return p ? getProfileDisplayName(p) : 'Principal';
     }
     function switchProfile(id) { localStorage.setItem(ACTIVE_PROFILE_KEY, id); location.reload(); }
     function createProfile() {
-        const name = prompt('Nome do novo perfil (ex: seu nome):');
-        if (!name || !name.trim()) return;
         const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
         const id = 'p_' + Date.now();
-        custom.push({ id, name: name.trim() });
+        custom.push({ id, name: 'Novo perfil' });
         localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
         switchProfile(id);
     }
@@ -1339,7 +1348,7 @@
         const pid = activeProfileId();
         if (pid === 'default') { alert('O perfil "Principal" não pode ser excluído.'); return; }
         if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil (matérias, ciclo, resumos) serão apagados.`)) return;
-        ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','ciclo_cards_v3','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun']
+        ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','ciclo_cards_v3','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession']
             .forEach(base => localStorage.removeItem(base + '__' + pid));
         const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
         localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
@@ -1352,7 +1361,7 @@
         const active = activeProfileId();
         el.innerHTML = `
             <select id="profile-select" onchange="this.value === '__new__' ? createProfile() : switchProfile(this.value)">
-                ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${p.name}</option>`).join('')}
+                ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${getProfileDisplayName(p)}</option>`).join('')}
                 <option value="__new__">+ Novo perfil…</option>
             </select>
             ${active !== 'default' ? `
@@ -1424,15 +1433,15 @@
     /**
      * MAIN VIEW SWITCHER
      */
-    // Nota: "Meus Resumos" e "Conteúdo Programático" apontam para a mesma view (view-syllabus) —
-    // é ali que os resumos são escritos/lidos, por matéria/tópico; não existe (ainda) uma lista
-    // separada "todos os resumos". Se isso for pedido no futuro, é uma view nova de verdade.
+    // Nota: esta página (resumo.html) é onde os resumos são escritos/lidos, por matéria/tópico —
+    // "Conteúdo Programático" no menu agora é um link de verdade pra conteudoprogramatico.html
+    // (antes apontava pra essa mesma view por engano); aqui o item ativo é sempre "Meus Resumos".
     function switchMainView(view) {
         document.querySelectorAll('.main-view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.topnav-menu .nav-item').forEach(m => m.classList.remove('active'));
 
         document.getElementById('view-syllabus').classList.add('active');
-        document.getElementById('menu-syllabus').classList.add('active');
+        document.getElementById('menu-resumos').classList.add('active');
         document.getElementById('current-subject-title').innerText = "Conteúdo Programático";
         renderSyllabus();
     }
@@ -2036,7 +2045,6 @@
         alert("Backup do Sistema gerado! Substitua o arquivo no seu GitHub com este novo arquivo baixado para salvar permanentemente.");
     }
 
-    const ACTIVE_SESSION_STORAGE_KEY = 'estudoFiscalActiveSession';
     const OPEN_NOTE_ON_LOAD_KEY = 'estudoFiscalOpenNoteOnLoad';
     const CANCEL_SESSION_ON_LOAD_KEY = 'estudoFiscalCancelSessionOnLoad';
 
@@ -2051,7 +2059,7 @@
     }
 
     function loadActiveStudySession() {
-        const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+        const raw = localStorage.getItem(K('estudoFiscalActiveSession'));
         if (!raw) return null;
         try { return JSON.parse(raw); } catch (e) { return null; }
     }
@@ -2110,7 +2118,7 @@
         if (session.paused) {
             session.paused = false;
             session.lastResumeEpochMs = Date.now();
-            localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify(session));
+            localStorage.setItem(K('estudoFiscalActiveSession'), JSON.stringify(session));
             updateActiveStudyBar();
         } else {
             const last = session.lastResumeEpochMs ? Number(session.lastResumeEpochMs) : null;
@@ -2118,21 +2126,41 @@
             session.elapsedSession = Number(session.elapsedSession || 0) + Math.max(0, delta);
             session.paused = true;
             session.lastResumeEpochMs = null;
-            localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, JSON.stringify(session));
+            localStorage.setItem(K('estudoFiscalActiveSession'), JSON.stringify(session));
             updateActiveStudyBar();
         }
     }
 
     function goFinishSession() {
         localStorage.setItem(OPEN_NOTE_ON_LOAD_KEY, 'true');
-        window.location.href = 'index.html';
+        window.location.href = 'cicloestudolivre.html';
     }
 
     function goCancelSession() {
         if (!confirm('Deseja cancelar a sessão atual? O tempo não será salvo.')) return;
         localStorage.setItem(CANCEL_SESSION_ON_LOAD_KEY, 'true');
-        window.location.href = 'index.html';
+        window.location.href = 'cicloestudolivre.html';
     }
+
+    // --- PWA: manifest + service worker (mesmo trecho de core.js, aqui inline pois esta
+    // página não carrega core.js) ---
+    (function registerPWA() {
+        if (!document.querySelector('link[rel="manifest"]')) {
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = 'manifest.json';
+            document.head.appendChild(link);
+        }
+        if (!document.querySelector('meta[name="theme-color"]')) {
+            const meta = document.createElement('meta');
+            meta.name = 'theme-color';
+            meta.content = '#F97316';
+            document.head.appendChild(meta);
+        }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+        }
+    })();
 
     // --- THEME LOGIC (mesmo padrão do Ciclo de Estudo: light por padrão, toggle para dark) ---
     function updateThemeIcon(theme) {

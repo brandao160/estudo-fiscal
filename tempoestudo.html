@@ -115,6 +115,12 @@
                         </div>
                     </div>
                     <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0; text-align: center;">Evolução (últimos 14 dias)</h3>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="weeklyTrendChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
                         <h3 style="margin: 0 0 20px 0;">Tempo Total por Matéria</h3>
                         <div id="time-stats-list" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- JS Generated -->
@@ -330,6 +336,65 @@
                     });
                 }
             }
+
+            renderWeeklyTrendChart();
+        }
+
+        let weeklyTrendChart = null;
+
+        /**
+         * Gráfico de evolução: horas estudadas por dia nos últimos 14 dias, a partir do
+         * studyHistory real (timestamps de sessões salvas) — complementa a pizza de distribuição
+         * total (que não mostra quando o tempo foi estudado, só o total acumulado por matéria).
+         */
+        function renderWeeklyTrendChart() {
+            const ctx = document.getElementById('weeklyTrendChart');
+            if (!ctx || typeof Chart === 'undefined') return;
+
+            const days = [];
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date(today); d.setDate(d.getDate() - i);
+                days.push(d);
+            }
+
+            const secondsByDay = days.map(d => {
+                const dayStart = d.getTime();
+                const dayEnd = dayStart + 86400000;
+                return studyHistory.reduce((sum, h) => {
+                    const t = new Date(h.date).getTime();
+                    return (t >= dayStart && t < dayEnd) ? sum + (h.duration || 0) : sum;
+                }, 0);
+            });
+
+            const labels = days.map(d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+            const hours = secondsByDay.map(s => Math.round((s / 3600) * 10) / 10);
+            const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+            const gridColor = getComputedStyle(document.body).getPropertyValue('--border-color').trim();
+
+            if (weeklyTrendChart) weeklyTrendChart.destroy();
+            weeklyTrendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Horas estudadas',
+                        data: hours,
+                        backgroundColor: '#F97316',
+                        borderRadius: 4,
+                        maxBarThickness: 28
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } }
+                    }
+                }
+            });
         }
 
         /**

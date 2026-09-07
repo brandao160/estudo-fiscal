@@ -865,14 +865,10 @@
          * This allows the user to download a self-contained copy of their progress.
          */
         function saveSelfContainedHTML() {
-            // 1. Gather all data
-            const persistencePayload = {
-                estudoFiscalData: JSON.parse(localStorage.getItem(K('estudoFiscalData')) || '{}'),
-                estudoFiscalSyllabus: JSON.parse(localStorage.getItem(K('estudoFiscalSyllabus')) || '{}'),
-                estudoFiscalStudyHistory: JSON.parse(localStorage.getItem(K('estudoFiscalStudyHistory')) || '[]'),
-                estudoFiscalScheduleStructure: JSON.parse(localStorage.getItem(K('estudoFiscalScheduleStructure')) || '[]'),
-                estudoFiscalModel: JSON.parse(localStorage.getItem(K('estudoFiscalModel')) || 'null')
-            };
+            // 1. Gather all data — TODOS os perfis (não só o ativo) + registro de perfis + tema/flags
+            // globais, pra um backup de verdade "leve isso pra outro dispositivo" (ver
+            // collectFullBackupPayload em core.js).
+            const persistencePayload = collectFullBackupPayload();
 
             // 2. Get current HTML
             let htmlContent = document.documentElement.outerHTML;
@@ -923,13 +919,7 @@
          * Restaura progresso a partir de um payload de dados válido.
          */
         function restoreProgressFromPayload(payload) {
-            const d = payload || {};
-            const restore = (key, val) => { if (val !== undefined && val !== null) localStorage.setItem(key, JSON.stringify(val)); };
-            restore('estudoFiscalData', d.estudoFiscalData);
-            restore('estudoFiscalSyllabus', d.estudoFiscalSyllabus);
-            restore('estudoFiscalStudyHistory', d.estudoFiscalStudyHistory);
-            restore('estudoFiscalScheduleStructure', d.estudoFiscalScheduleStructure);
-            restore('estudoFiscalModel', d.estudoFiscalModel);
+            applyBackupPayload(payload);
             try { sessionStorage.setItem('logged_in', 'true'); } catch(e) {}
             // Força recarregar estrutura e UI
             fullSchedule = [];

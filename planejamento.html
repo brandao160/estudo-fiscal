@@ -461,17 +461,26 @@
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
             return [{ id: 'default', name: 'Principal' }, ...custom];
         }
+        /** Concurso salvo no modelo de um perfil específico (mesma lógica de core.js). */
+        function getProfileModelConcurso(profileId) {
+            const key = profileId === 'default' ? 'estudoFiscalModel' : 'estudoFiscalModel__' + profileId;
+            try {
+                const model = JSON.parse(localStorage.getItem(key) || 'null');
+                return (model && model.concurso) ? String(model.concurso).trim() : '';
+            } catch (e) { return ''; }
+        }
+        function getProfileDisplayName(profile) {
+            return getProfileModelConcurso(profile.id) || profile.name;
+        }
         function getActiveProfileName() {
             const p = getProfiles().find(p => p.id === activeProfileId());
-            return p ? p.name : 'Principal';
+            return p ? getProfileDisplayName(p) : 'Principal';
         }
         function switchProfile(id) { localStorage.setItem(ACTIVE_PROFILE_KEY, id); location.reload(); }
         function createProfile() {
-            const name = prompt('Nome do novo perfil (ex: seu nome):');
-            if (!name || !name.trim()) return;
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
             const id = 'p_' + Date.now();
-            custom.push({ id, name: name.trim() });
+            custom.push({ id, name: 'Novo perfil' });
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
             switchProfile(id);
         }
@@ -491,7 +500,7 @@
             const pid = activeProfileId();
             if (pid === 'default') { showToast('O perfil "Principal" não pode ser excluído.', 'warning'); return; }
             if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil serão apagados.`)) return;
-            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun']
+            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession']
                 .forEach(base => localStorage.removeItem(base + '__' + pid));
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
@@ -504,7 +513,7 @@
             const active = activeProfileId();
             el.innerHTML = `
                 <select id="profile-select" onchange="this.value === '__new__' ? createProfile() : switchProfile(this.value)">
-                    ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${p.name}</option>`).join('')}
+                    ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${getProfileDisplayName(p)}</option>`).join('')}
                     <option value="__new__">+ Novo perfil…</option>
                 </select>
                 ${active !== 'default' ? `
@@ -512,6 +521,26 @@
                     <button class="profile-icon-btn" title="Excluir perfil" onclick="deleteActiveProfile()"><i class="fas fa-trash"></i></button>
                 ` : ''}`;
         }
+
+        /* --- PWA: manifest + service worker (mesmo trecho de core.js, aqui inline pois esta
+           página não carrega core.js) --- */
+        (function registerPWA() {
+            if (!document.querySelector('link[rel="manifest"]')) {
+                const link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = 'manifest.json';
+                document.head.appendChild(link);
+            }
+            if (!document.querySelector('meta[name="theme-color"]')) {
+                const meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                meta.content = '#F97316';
+                document.head.appendChild(meta);
+            }
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+            }
+        })();
 
         /* --- THEME (mesmo padrão: light por padrão, dark via toggle) --- */
         function toggleTheme() {
@@ -906,10 +935,14 @@
             const today = new Date(); today.setHours(0,0,0,0);
             const totalMs = endDate - startDate;
             const elapsedMs = today - startDate;
+            const examPassed = today > endDate;
             const daysLeft = Math.max(0, Math.ceil((endDate - today) / 86400000));
             const weeksLeft = Math.max(0, Math.floor(daysLeft / 7));
             const pctElapsed = totalMs > 0 ? Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100))) : 0;
-            document.getElementById('plan-days-left').textContent = daysLeft;
+            const daysLeftEl = document.getElementById('plan-days-left');
+            daysLeftEl.textContent = daysLeft;
+            const daysLeftLabel = daysLeftEl.nextElementSibling;
+            if (daysLeftLabel) daysLeftLabel.textContent = examPassed ? 'prova já realizada' : 'dias até a prova';
             document.getElementById('plan-weeks-left').textContent = weeksLeft;
             document.getElementById('plan-pct-elapsed').textContent = pctElapsed + '%';
 
@@ -919,6 +952,11 @@
                 totalTopics += syl.total; doneTopics += syl.done;
             });
             const insightEl = document.getElementById('countdown-insight');
+            if (examPassed) {
+                insightEl.className = 'pace-status ok';
+                insightEl.innerHTML = '<i class="fas fa-flag-checkered"></i> A data da prova cadastrada já passou. Atualize o período do ciclo (ou o modelo importado) se estiver se preparando pra uma nova data.';
+                return;
+            }
             if (totalTopics === 0) {
                 insightEl.className = 'pace-status neutral';
                 insightEl.innerHTML = 'Marque tópicos como concluídos no Conteúdo Programático pra acompanhar seu ritmo aqui.';

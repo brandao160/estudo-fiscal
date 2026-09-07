@@ -1174,7 +1174,8 @@
         }
         .edital-ai-warning i { color: var(--amber); margin-top: 2px; flex-shrink: 0; }
         .edital-ai-warning a { color: var(--accent); font-weight: 700; }
-        #edital-ai-key-input, #edital-ai-model-select, #edital-ai-pdf-input {
+        #edital-ai-key-input, #edital-ai-model-select, #edital-ai-pdf-input,
+        #edital-gemini-key-input, #edital-gemini-model-select {
             width: 100%; box-sizing: border-box;
         }
         .edital-ai-status {

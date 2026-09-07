@@ -377,15 +377,18 @@
             </div>
             <div class="modal-body">
                 <p style="font-size:0.86rem; color: var(--ink-2); margin: 0 0 14px;">
-                    Envie o PDF do edital para extrair as matérias e o conteúdo programático automaticamente, sem montar planilha. Duas formas de processar:
+                    Envie o PDF do edital para extrair as matérias e o conteúdo programático automaticamente, sem montar planilha. Três formas de processar:
                 </p>
 
                 <div class="edital-mode-tabs">
                     <button class="edital-mode-tab active" id="edital-mode-tab-free" onclick="setEditalMode('free')">
                         <i class="fas fa-gift"></i> Sem IA (grátis)
                     </button>
+                    <button class="edital-mode-tab" id="edital-mode-tab-gemini" onclick="setEditalMode('gemini')">
+                        <i class="fas fa-wand-magic-sparkles"></i> Gemini (grátis)
+                    </button>
                     <button class="edital-mode-tab" id="edital-mode-tab-ai" onclick="setEditalMode('ai')">
-                        <i class="fas fa-wand-magic-sparkles"></i> Com IA (pago)
+                        <i class="fas fa-wand-magic-sparkles"></i> Claude (pago)
                     </button>
                 </div>
 
@@ -396,16 +399,36 @@
                     <div class="edital-ai-warning" style="background: var(--surface-alt); border-color: var(--border);">
                         <i class="fas fa-circle-info" style="color: var(--ink-3);"></i>
                         <div>
-                            Lê o PDF com regras de padrão (títulos, numeração) — de graça e na hora, sem enviar nada pra fora do seu navegador. Funciona melhor em editais com formatação "arrumada" (uma matéria/tópico por linha). Não sabe julgar importância: todas as matérias específicas saem com peso 2 e as básicas com peso 1 — ajuste depois se quiser, editando a planilha exportada.
+                            Lê o PDF com regras de padrão (títulos, numeração) — de graça e na hora, sem enviar nada pra fora do seu navegador. Funciona melhor em editais com formatação "arrumada" (uma matéria/tópico por linha). Não sabe julgar importância: todas as matérias específicas saem com peso 2 e as básicas com peso 1 — ajuste depois se quiser, editando a planilha exportada. Se o edital tiver o conteúdo programático em parágrafo corrido, prefira a aba "Gemini (grátis)".
                         </div>
                     </div>
+                </div>
+
+                <div id="edital-mode-gemini-panel" style="display:none;">
+                    <div class="edital-ai-warning">
+                        <i class="fas fa-circle-info"></i>
+                        <div>
+                            Usa o Google Gemini de graça: crie sua própria chave de API no Google AI Studio (não pede cartão de crédito, tem cota diária gratuita generosa). A chave fica salva só neste navegador e a chamada vai direto do seu navegador para o Google — este site não vê nem guarda sua chave.
+                            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Criar chave grátis →</a>
+                        </div>
+                    </div>
+
+                    <label class="note-label" for="edital-gemini-key-input">Sua chave de API do Google Gemini</label>
+                    <input type="password" id="edital-gemini-key-input" class="note-input" placeholder="AIza..." style="margin-bottom:12px;" oninput="saveEditalGeminiKey(this.value)">
+
+                    <label class="note-label" for="edital-gemini-model-select">Modelo</label>
+                    <select id="edital-gemini-model-select" class="note-input" style="margin-bottom:4px;">
+                        <option value="gemini-flash-latest" selected>Gemini Flash (recomendado)</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash — versão estável</option>
+                        <option value="gemini-flash-lite-latest">Gemini Flash-Lite — mais rápido, cota maior</option>
+                    </select>
                 </div>
 
                 <div id="edital-mode-ai-panel" style="display:none;">
                     <div class="edital-ai-warning">
                         <i class="fas fa-triangle-exclamation"></i>
                         <div>
-                            Experimental: precisa da sua própria chave de API da Anthropic (Claude). A chave fica salva só neste navegador e a chamada vai direto do seu navegador para a Anthropic — este site não vê nem guarda sua chave. Cada PDF processado consome créditos da sua conta Anthropic.
+                            Precisa da sua própria chave de API da Anthropic (Claude), que é paga. A chave fica salva só neste navegador e a chamada vai direto do seu navegador para a Anthropic — este site não vê nem guarda sua chave. Cada PDF processado consome créditos da sua conta Anthropic.
                             <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Criar/gerenciar chave →</a>
                         </div>
                     </div>
@@ -426,7 +449,8 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeEditalAIModal()">Cancelar</button>
                 <button class="btn btn-primary" id="edital-free-process-btn" onclick="processEditalPDFHeuristic()"><i class="fas fa-gift"></i> Processar sem IA (Grátis)</button>
-                <button class="btn btn-primary" id="edital-ai-process-btn" onclick="processEditalPDF()" style="display:none;"><i class="fas fa-wand-magic-sparkles"></i> Processar com IA</button>
+                <button class="btn btn-primary" id="edital-gemini-process-btn" onclick="processEditalPDFGemini()" style="display:none;"><i class="fas fa-wand-magic-sparkles"></i> Processar com Gemini (Grátis)</button>
+                <button class="btn btn-primary" id="edital-ai-process-btn" onclick="processEditalPDF()" style="display:none;"><i class="fas fa-wand-magic-sparkles"></i> Processar com Claude</button>
             </div>
         </div>
     </div>
@@ -1105,9 +1129,10 @@
 
 
         // --- IMPORTAR EDITAL EM PDF COM IA (experimental) ---
-        // Chama a API da Anthropic diretamente do navegador, com a chave do próprio usuário
-        // (nunca passa pelo nosso servidor/site). Reaproveita validateModel()/applyImportedModel()
-        // do fluxo de importação Excel para manter o mesmo padrão de validação e aplicação.
+        // Chama a API do Gemini (grátis) ou da Anthropic (paga) diretamente do navegador, com a
+        // chave do próprio usuário (nunca passa pelo nosso servidor/site). Reaproveita
+        // validateModel()/applyImportedModel() do fluxo de importação Excel para manter o mesmo
+        // padrão de validação e aplicação.
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
@@ -1115,11 +1140,12 @@
         function openEditalAIModal() {
             const modal = document.getElementById('edital-ai-modal');
             if (!modal) return;
-            const savedKey = localStorage.getItem(K('estudoFiscalAnthropicKey')) || '';
-            const keyInput = document.getElementById('edital-ai-key-input');
-            if (keyInput) keyInput.value = savedKey;
+            const claudeKeyInput = document.getElementById('edital-ai-key-input');
+            if (claudeKeyInput) claudeKeyInput.value = localStorage.getItem(K('estudoFiscalAnthropicKey')) || '';
+            const geminiKeyInput = document.getElementById('edital-gemini-key-input');
+            if (geminiKeyInput) geminiKeyInput.value = localStorage.getItem(K('estudoFiscalGeminiKey')) || '';
             setEditalAIStatus('', '');
-            setEditalMode('free');
+            setEditalMode('gemini');
             modal.classList.add('open');
         }
 
@@ -1128,21 +1154,26 @@
             if (modal) modal.classList.remove('open');
         }
 
-        /** Alterna entre o modo grátis (heurística local) e o modo com IA (Anthropic API). */
+        /** Alterna entre o modo grátis (heurística local), Gemini (IA grátis) e Claude (IA paga). */
         function setEditalMode(mode) {
-            const isFree = mode === 'free';
-            document.getElementById('edital-mode-tab-free').classList.toggle('active', isFree);
-            document.getElementById('edital-mode-tab-ai').classList.toggle('active', !isFree);
-            document.getElementById('edital-mode-free-panel').style.display = isFree ? 'block' : 'none';
-            document.getElementById('edital-mode-ai-panel').style.display = isFree ? 'none' : 'block';
-            document.getElementById('edital-free-process-btn').style.display = isFree ? 'inline-flex' : 'none';
-            document.getElementById('edital-ai-process-btn').style.display = isFree ? 'none' : 'inline-flex';
+            ['free', 'gemini', 'ai'].forEach(m => {
+                document.getElementById('edital-mode-tab-' + m).classList.toggle('active', m === mode);
+                document.getElementById('edital-mode-' + m + '-panel').style.display = m === mode ? 'block' : 'none';
+            });
+            document.getElementById('edital-free-process-btn').style.display = mode === 'free' ? 'inline-flex' : 'none';
+            document.getElementById('edital-gemini-process-btn').style.display = mode === 'gemini' ? 'inline-flex' : 'none';
+            document.getElementById('edital-ai-process-btn').style.display = mode === 'ai' ? 'inline-flex' : 'none';
             setEditalAIStatus('', '');
         }
 
         function saveEditalAIKey(value) {
             if (value) localStorage.setItem(K('estudoFiscalAnthropicKey'), value);
             else localStorage.removeItem(K('estudoFiscalAnthropicKey'));
+        }
+
+        function saveEditalGeminiKey(value) {
+            if (value) localStorage.setItem(K('estudoFiscalGeminiKey'), value);
+            else localStorage.removeItem(K('estudoFiscalGeminiKey'));
         }
 
         function setEditalAIStatus(html, kind) {
@@ -1398,6 +1429,30 @@ ${editalText}
             return textBlock.text;
         }
 
+        /** Chama a API Gemini do Google diretamente do navegador com a chave do usuário (grátis). */
+        async function callGeminiForEdital(apiKey, model, promptText) {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }],
+                    generationConfig: { responseMimeType: 'application/json' }
+                })
+            });
+            if (!res.ok) {
+                let detail = '';
+                try { detail = (await res.json()).error?.message || ''; } catch (e) {}
+                if (res.status === 400 || res.status === 403) throw new Error('Chave de API inválida ou sem permissão. ' + detail);
+                if (res.status === 429) throw new Error('Cota grátis do Gemini esgotada por agora (limite diário/por minuto). Tente novamente mais tarde. ' + detail);
+                throw new Error(`Erro da API Gemini (${res.status}). ${detail}`);
+            }
+            const data = await res.json();
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const text = parts.map(p => p.text || '').join('');
+            if (!text) throw new Error('A IA não retornou texto na resposta.');
+            return text;
+        }
+
         /** Extrai um objeto JSON de um texto que pode vir com ```json cercas ou texto solto ao redor. */
         function extractJSONFromText(text) {
             let cleaned = text.trim();
@@ -1411,6 +1466,63 @@ ${editalText}
         }
 
         const EDITAL_AI_MAX_CHARS = 350000; // ~ margem generosa para caber no contexto do modelo
+
+        async function processEditalPDFGemini() {
+            const apiKey = document.getElementById('edital-gemini-key-input').value.trim();
+            const model = document.getElementById('edital-gemini-model-select').value;
+            const fileInput = document.getElementById('edital-ai-pdf-input');
+            const file = fileInput.files[0];
+
+            if (!apiKey) { setEditalAIStatus('Cole sua chave de API do Google Gemini antes de processar.', 'error'); return; }
+            if (!file) { setEditalAIStatus('Escolha o arquivo PDF do edital.', 'error'); return; }
+
+            const btn = document.getElementById('edital-gemini-process-btn');
+            btn.disabled = true;
+
+            try {
+                setEditalAIStatus('<i class="fas fa-spinner"></i> Lendo o PDF...', '');
+                let editalText = await extractPdfText(file);
+                let truncated = false;
+                if (editalText.length > EDITAL_AI_MAX_CHARS) {
+                    editalText = editalText.slice(0, EDITAL_AI_MAX_CHARS);
+                    truncated = true;
+                }
+
+                setEditalAIStatus('<i class="fas fa-spinner"></i> O Gemini está lendo o conteúdo programático (pode levar um tempinho)...', '');
+                const aiText = await callGeminiForEdital(apiKey, model, buildEditalPrompt(editalText));
+
+                let extractedModel;
+                try {
+                    extractedModel = extractJSONFromText(aiText);
+                } catch (parseErr) {
+                    setEditalAIStatus('O Gemini respondeu, mas não consegui interpretar o resultado como dados válidos. Tente novamente ou tente outro modelo.', 'error');
+                    console.error('Resposta do Gemini (não-JSON):', aiText);
+                    return;
+                }
+
+                const { errors, warnings } = validateModel(extractedModel);
+                if (errors.length > 0) {
+                    setEditalAIStatus('O Gemini não conseguiu extrair matérias válidas: ' + errors.join(' '), 'error');
+                    return;
+                }
+                const allWarnings = warnings.slice();
+                if (truncated) allWarnings.push('O PDF era muito extenso e foi lido parcialmente (pode faltar conteúdo do final do edital).');
+                if (allWarnings.length > 0) {
+                    const proceed = confirm('Avisos sobre a extração do Gemini:\n\n' + allWarnings.join('\n') + '\n\nAplicar mesmo assim?');
+                    if (!proceed) { setEditalAIStatus('Importação cancelada.', ''); return; }
+                }
+
+                applyImportedModel(extractedModel);
+                setEditalAIStatus(`<i class="fas fa-check"></i> Pronto! ${extractedModel.materias.length} matéria(s) importada(s) pelo Gemini.`, 'success');
+                showToast('Edital importado pelo Gemini com sucesso!', 'success');
+                setTimeout(closeEditalAIModal, 1500);
+            } catch (err) {
+                setEditalAIStatus('Erro: ' + err.message, 'error');
+                console.error('Erro ao processar edital com Gemini:', err);
+            } finally {
+                btn.disabled = false;
+            }
+        }
 
         async function processEditalPDF() {
             const apiKey = document.getElementById('edital-ai-key-input').value.trim();

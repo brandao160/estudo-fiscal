@@ -1204,7 +1204,7 @@ ${editalText}
                 res = await fetch(EDITAL_PROXY_URL, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ prompt: promptText, max_tokens: 8000 })
+                    body: JSON.stringify({ prompt: promptText, max_tokens: 10000 })
                 });
             } catch (e) {
                 throw new Error('Não consegui falar com a IA do site agora. Tente novamente em instantes. ' + e.message);

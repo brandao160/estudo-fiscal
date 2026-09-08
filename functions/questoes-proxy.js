@@ -117,7 +117,7 @@ export async function onRequestPost(context) {
     }
     // O cliente pode pedir mais tokens de saída (ex.: extração de edital grande gera JSON extenso),
     // mas com um teto pra não deixar ninguém pedir uma resposta absurdamente cara.
-    const maxTokens = Math.min(Math.max(parseInt(body.max_tokens, 10) || 4000, 256), 8000);
+    const maxTokens = Math.min(Math.max(parseInt(body.max_tokens, 10) || 4000, 256), 10000);
 
     // Nenhum modelo pode deixar o usuário esperando pra sempre — se demorar mais que isso, aborta e
     // cai pro próximo da lista (é assim que o pago barato de posição 3 entra em ação quando os
@@ -143,7 +143,15 @@ export async function onRequestPost(context) {
                     'HTTP-Referer': env.ALLOWED_ORIGIN || 'https://cicloestudo.com.br',
                     'X-Title': 'Ciclo de Estudo'
                 },
-                body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens }),
+                // reasoning:effort "none" evita que um modelo com raciocínio embutido (alguns dos
+                // grátis têm isso, inclusive escolhidos pelo roteador automático "openrouter/free")
+                // gaste todo o max_tokens "pensando" em silêncio e devolva o conteúdo vazio — foi
+                // exatamente isso que causou demora enorme + "IA não retornou texto". Em modelos que
+                // não suportam desligar o raciocínio, esse campo é simplesmente ignorado (sem risco).
+                body: JSON.stringify({
+                    model, messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens,
+                    reasoning: { effort: 'none' }
+                }),
                 signal: controller.signal
             });
         } catch (e) {
@@ -158,9 +166,18 @@ export async function onRequestPost(context) {
             clearTimeout(timeoutId);
         }
         text = await orRes.text();
+
+        // Um 200 OK com conteúdo vazio (modelo gastou o max_tokens todo "pensando" e não sobrou nada
+        // pra resposta) NÃO é sucesso de verdade — sem essa checagem, isso passava como se fosse uma
+        // resposta válida e o usuário só via "IA não retornou texto" no final, sem tentar outro modelo.
+        let emptyContent = false;
+        if (orRes.ok) {
+            try { emptyContent = !JSON.parse(text)?.choices?.[0]?.message?.content; } catch (e) { /* resposta não era JSON — deixa como está */ }
+        }
+
         // 402 = sem crédito (ex.: estourou o Key Limit) — cai pros próximos modelos da lista em vez de falhar.
-        const isUnavailable = [400, 402, 404, 429, 503].includes(orRes.status);
-        if (orRes.ok || !isUnavailable || isLast) break;
+        const isUnavailable = [400, 402, 404, 429, 503].includes(orRes.status) || emptyContent;
+        if ((orRes.ok && !emptyContent) || !isUnavailable || isLast) break;
     }
 
     // Só conta a requisição na cota do visitante se ela realmente foi processada.

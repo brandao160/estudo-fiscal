@@ -39,9 +39,15 @@
       ajuste as duas se o domínio/projeto do Cloudflare mudar.
    ========================================================== */
 
-// Ajuste aqui se quiser trocar de modelo grátis mais pra frente — a lista
-// muda com o tempo em openrouter.ai/models (filtro "Free").
-const MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+// A lista de modelos grátis da OpenRouter muda toda semana (modelos saem e entram sem aviso —
+// foi exatamente isso que quebrou o modelo anterior). Por isso tentamos em ordem: o primeiro que
+// responder sem erro de "modelo indisponível" é o usado. Ajuste/atualize conferindo
+// openrouter.ai/models (filtro "Price: Free") se todos pararem de funcionar.
+const FREE_MODELS = [
+    'openrouter/free', // roteador automático da própria OpenRouter entre modelos grátis disponíveis
+    'google/gemma-4-31b-it:free',
+    'nvidia/nemotron-3-super-120b-a12b:free'
+];
 
 // Quantas gerações por dia cada visitante (por IP) pode fazer. Ajuste conforme
 // o tamanho do seu público — o teto da conta é 1.000/dia no total.
@@ -99,25 +105,32 @@ export async function onRequestPost(context) {
     // mas com um teto pra não deixar ninguém pedir uma resposta absurdamente cara.
     const maxTokens = Math.min(Math.max(parseInt(body.max_tokens, 10) || 4000, 256), 8000);
 
-    let orRes;
-    try {
-        orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'content-type': 'application/json',
-                'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
-                'HTTP-Referer': env.ALLOWED_ORIGIN || 'https://cicloestudo.com.br',
-                'X-Title': 'Ciclo de Estudo'
-            },
-            body: JSON.stringify({ model: MODEL, messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens })
-        });
-    } catch (e) {
-        return new Response(JSON.stringify({ error: 'Falha ao chamar a OpenRouter: ' + e.message }), {
-            status: 502, headers: { ...cors, 'content-type': 'application/json' }
-        });
+    // Tenta os modelos grátis em ordem; se um estiver indisponível/fora do ar (400/404/429/503),
+    // passa pro próximo em vez de já devolver erro pro usuário.
+    let orRes, text;
+    for (let i = 0; i < FREE_MODELS.length; i++) {
+        const model = FREE_MODELS[i];
+        try {
+            orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
+                    'HTTP-Referer': env.ALLOWED_ORIGIN || 'https://cicloestudo.com.br',
+                    'X-Title': 'Ciclo de Estudo'
+                },
+                body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens })
+            });
+        } catch (e) {
+            return new Response(JSON.stringify({ error: 'Falha ao chamar a OpenRouter: ' + e.message }), {
+                status: 502, headers: { ...cors, 'content-type': 'application/json' }
+            });
+        }
+        text = await orRes.text();
+        const isUnavailable = [400, 404, 429, 503].includes(orRes.status);
+        const isLast = i === FREE_MODELS.length - 1;
+        if (orRes.ok || !isUnavailable || isLast) break;
     }
-
-    const text = await orRes.text();
 
     // Só conta a requisição na cota do visitante se ela realmente foi processada.
     if (env.RATE_LIMIT_KV && orRes.ok) {

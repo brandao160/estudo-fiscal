@@ -124,7 +124,7 @@ export async function onRequestPost(context) {
     // grátis estão lentos, não só quando dão erro). Mantido moderado de propósito: Cloudflare Pages
     // Functions tem um limite de duração total por requisição — encadear timeouts longos demais em
     // vários modelos seguidos poderia estourar esse limite antes mesmo de chegar no fallback pago.
-    const MODEL_TIMEOUT_MS = 12000;
+    const MODEL_TIMEOUT_MS = 8000;
 
     // Tenta os modelos da lista em ordem; se um estiver indisponível/sem crédito/fora do ar/lento
     // demais, passa pro próximo em vez de já devolver erro pro usuário.

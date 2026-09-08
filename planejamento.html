@@ -178,6 +178,19 @@
             padding: 5px 6px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--ink);
             border-radius: var(--r-sm); font-family: 'Source Sans 3', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer;
         }
+        .subj-dist-name-input {
+            padding: 5px 6px; background: transparent; border: 1px solid transparent; color: var(--ink);
+            border-radius: var(--r-sm); font-family: 'Nunito', sans-serif; font-size: 0.85rem; font-weight: 700;
+            width: 100%; min-width: 160px;
+        }
+        .subj-dist-name-input:hover, .subj-dist-name-input:focus { border-color: var(--input-border); background: var(--input-bg); outline: none; }
+        .subj-add-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-2); align-items: center; }
+        .subj-add-row input[type="text"], .subj-add-row select {
+            padding: 8px 10px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--ink);
+            border-radius: var(--r); font-family: 'Source Sans 3', sans-serif; font-size: 0.85rem;
+        }
+        .subj-add-row input[type="text"] { flex: 1; min-width: 220px; }
+        .subj-add-row select { min-width: 120px; cursor: pointer; }
 
         /* Prioridades da semana */
         .priority-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-2); }
@@ -423,12 +436,13 @@
 
             <div class="plan-card">
                 <h2><i class="fas fa-scale-balanced"></i> Distribuição por matéria</h2>
-                <p class="plan-card-sub">Quanto do seu tempo total cada matéria deveria consumir (peso do edital × dificuldade pessoal), comparado com o quanto do conteúdo programático já foi concluído. Peso, dificuldade e carga cognitiva são editáveis aqui e usados de verdade pelo gerador do Ciclo de Estudo — inclusive reajustando automaticamente o calendário já gerado, a partir de hoje.</p>
+                <p class="plan-card-sub">Quanto do seu tempo total cada matéria deveria consumir (peso do edital × dificuldade pessoal), comparado com o quanto do conteúdo programático já foi concluído. Nome, tipo, peso, dificuldade e carga cognitiva são editáveis aqui e usados de verdade pelo gerador do Ciclo de Estudo — inclusive reajustando automaticamente o calendário já gerado, a partir de hoje. Se a IA não encontrou alguma matéria do edital, adicione manualmente abaixo.</p>
                 <div style="overflow-x:auto;">
                     <table class="subj-dist-table">
                         <thead>
                             <tr>
                                 <th>Matéria</th>
+                                <th>Tipo</th>
                                 <th>Peso</th>
                                 <th>Dificuldade</th>
                                 <th>Carga</th>
@@ -439,6 +453,19 @@
                         </thead>
                         <tbody id="subj-dist-tbody"><!-- JS generated --></tbody>
                     </table>
+                </div>
+                <div class="subj-add-row">
+                    <input type="text" id="new-subject-name" placeholder="Nome da matéria que a IA não encontrou...">
+                    <select id="new-subject-tipo">
+                        <option value="Basico">Básica</option>
+                        <option value="Especifico" selected>Específica</option>
+                    </select>
+                    <select id="new-subject-peso">
+                        <option value="1">Peso 1</option>
+                        <option value="2">Peso 2</option>
+                        <option value="3" selected>Peso 3</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="addSubjectManually()"><i class="fas fa-plus"></i> Adicionar Matéria</button>
                 </div>
             </div>
 
@@ -943,6 +970,110 @@
             showToast(adjustedCycle ? 'Matéria atualizada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Matéria atualizada.', 'success');
         }
 
+        /** Corrige o nome de uma matéria (ex.: a IA escreveu errado ou abreviado) — atualiza o modelo
+         *  e o conteúdo programático, e migra o nome em todos os outros dados já salvos por perfil
+         *  (cronograma, histórico, resumos/flashcards, banco de questões) pra não deixar nada órfão. */
+        function renameSubject(oldName, newValueRaw) {
+            const newName = (newValueRaw || '').trim();
+            if (!sharedModel || !Array.isArray(sharedModel.materias)) return;
+            if (!newName || newName === oldName) { renderSubjectDistribution(); return; }
+            if (sharedModel.materias.some(m => m.nome === newName)) {
+                showToast(`Já existe uma matéria chamada "${newName}".`, 'error');
+                renderSubjectDistribution();
+                return;
+            }
+            const m = sharedModel.materias.find(x => x.nome === oldName);
+            if (!m) return;
+            m.nome = newName;
+            (sharedModel.syllabus || []).forEach(sec => {
+                (sec.subjects || []).forEach(sub => { if (sub.name === oldName) sub.name = newName; });
+            });
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            migrateSubjectNameEverywhere(oldName, newName);
+            loadAllData();
+            renderSubjectDistribution();
+            renderWeeklyPriorities();
+            renderCountdown();
+            showToast('Matéria renomeada.', 'success');
+        }
+
+        /** Troca `oldName` por `newName` em tudo que guarda o nome da matéria como referência, pra uma
+         *  correção de nome não deixar dado antigo "órfão" com o nome que não existe mais. */
+        function migrateSubjectNameEverywhere(oldName, newName) {
+            function migrateArrayField(storageKey, field) {
+                const raw = localStorage.getItem(K(storageKey));
+                if (!raw) return;
+                try {
+                    const data = JSON.parse(raw);
+                    if (!Array.isArray(data)) return;
+                    let changed = false;
+                    data.forEach(item => { if (item && item[field] === oldName) { item[field] = newName; changed = true; } });
+                    if (changed) localStorage.setItem(K(storageKey), JSON.stringify(data));
+                } catch (e) { /* dado corrompido/inesperado — não trava a renomeação por causa disso */ }
+            }
+
+            const schedRaw = localStorage.getItem(K('estudoFiscalScheduleStructure'));
+            if (schedRaw) {
+                try {
+                    const sched = JSON.parse(schedRaw);
+                    let changed = false;
+                    (sched || []).forEach(day => (day.tasks || []).forEach(t => {
+                        if (t && t.subject === oldName) { t.subject = newName; changed = true; }
+                    }));
+                    if (changed) localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(sched));
+                } catch (e) {}
+            }
+
+            migrateArrayField('estudoFiscalStudyHistory', 'subject');
+            migrateArrayField('ciclo_cards_v3', 'materia');
+            migrateArrayField('estudoFiscalQuestoes', 'materia');
+
+            // Progresso do conteúdo programático é um objeto { "Nome da Matéria": [bool, ...] }, não array.
+            const sylRaw = localStorage.getItem(K('estudoFiscalSyllabus'));
+            if (sylRaw) {
+                try {
+                    const syl = JSON.parse(sylRaw);
+                    if (syl && Object.prototype.hasOwnProperty.call(syl, oldName)) {
+                        syl[newName] = syl[oldName];
+                        delete syl[oldName];
+                        localStorage.setItem(K('estudoFiscalSyllabus'), JSON.stringify(syl));
+                    }
+                } catch (e) {}
+            }
+        }
+
+        /** Adiciona uma matéria que a IA (ou o parser da planilha) não encontrou no edital — entra no
+         *  modelo e no conteúdo programático (sem tópicos ainda; adicione em Conteúdo Programático). */
+        function addSubjectManually() {
+            const nameInput = document.getElementById('new-subject-name');
+            const nome = (nameInput.value || '').trim();
+            if (!nome) { showToast('Digite o nome da matéria.', 'warning'); return; }
+            if (!sharedModel) { showToast('Nenhum modelo carregado ainda.', 'warning'); return; }
+            if (!Array.isArray(sharedModel.materias)) sharedModel.materias = [];
+            if (sharedModel.materias.some(m => m.nome.toLowerCase() === nome.toLowerCase())) {
+                showToast('Essa matéria já existe.', 'error');
+                return;
+            }
+
+            const tipo = document.getElementById('new-subject-tipo').value;
+            const peso = Number(document.getElementById('new-subject-peso').value) || 1;
+            sharedModel.materias.push({ nome, tipo, peso, dificuldade: 3, carga: '' });
+
+            if (!Array.isArray(sharedModel.syllabus)) sharedModel.syllabus = [];
+            const catLabel = tipo === 'Especifico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos';
+            let section = sharedModel.syllabus.find(sec => sec.category === catLabel);
+            if (!section) { section = { category: catLabel, subjects: [] }; sharedModel.syllabus.push(section); }
+            if (!section.subjects.some(sub => sub.name === nome)) section.subjects.push({ name: nome, topics: [] });
+
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            loadAllData();
+            renderSubjectDistribution();
+            renderWeeklyPriorities();
+            renderCountdown();
+            nameInput.value = '';
+            showToast('Matéria adicionada! Gere (ou regenere) o Ciclo de Estudo pra incluí-la no calendário — e adicione os tópicos dela em Conteúdo Programático.', 'success');
+        }
+
         function formatHM(seconds) {
             seconds = Math.max(0, Math.round(seconds || 0));
             const h = Math.floor(seconds / 3600);
@@ -1154,6 +1285,19 @@
             box.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
         }
 
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        /** Trata variações de como "tipo" pode vir salvo (a importação por IA usa "Especifico"/"Basico"
+         *  sem acento; a importação por planilha às vezes salva "Específicos"/"Básicos", no plural e
+         *  acentuado) — usado só pra decidir qual opção do seletor mostrar como selecionada. */
+        function isEspecifica(tipo) {
+            return /espec/i.test(String(tipo || ''));
+        }
+
         function renderSubjectDistribution() {
             const totalWeight = subjectsConfig.reduce((a, s) => a + effectiveWeight(s), 0) || 1;
             const tbody = document.getElementById('subj-dist-tbody');
@@ -1163,22 +1307,31 @@
                 const syl = subjectSyllabusInfo(s.name);
                 const sylPct = syl.total > 0 ? Math.round((syl.done / syl.total) * 100) : 0;
                 const dificuldade = Number(s.dificuldade) || 3;
-                const escaped = s.name.replace(/'/g, "\\'");
+                const nameAttr = escHtml(s.name);
+                const especifica = isEspecifica(s.type);
                 return `
                 <tr>
-                    <td class="subj-dist-name">${s.name}</td>
                     <td>
-                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'peso', this.value)">
+                        <input type="text" class="subj-dist-name-input" value="${nameAttr}" data-subj-name="${nameAttr}" data-subj-field="nome">
+                    </td>
+                    <td>
+                        <select class="subj-dist-select" data-subj-name="${nameAttr}" data-subj-field="tipo">
+                            <option value="Basico" ${!especifica ? 'selected' : ''}>Básica</option>
+                            <option value="Especifico" ${especifica ? 'selected' : ''}>Específica</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="subj-dist-select" data-subj-name="${nameAttr}" data-subj-field="peso">
                             ${[1,2,3].map(n => `<option value="${n}" ${n === Math.round(s.weight) ? 'selected' : ''}>${n}</option>`).join('')}
                         </select>
                     </td>
                     <td>
-                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'dificuldade', this.value)">
+                        <select class="subj-dist-select" data-subj-name="${nameAttr}" data-subj-field="dificuldade">
                             ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === dificuldade ? 'selected' : ''}>${n}</option>`).join('')}
                         </select>
                     </td>
                     <td>
-                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'carga', this.value)">
+                        <select class="subj-dist-select" data-subj-name="${nameAttr}" data-subj-field="carga">
                             <option value="" ${!s.carga ? 'selected' : ''}>—</option>
                             <option value="pesada" ${s.carga === 'pesada' ? 'selected' : ''}>Pesada</option>
                             <option value="leve" ${s.carga === 'leve' ? 'selected' : ''}>Leve</option>
@@ -1200,6 +1353,17 @@
                 </tr>`;
             }).join('');
         }
+
+        // Delegação de eventos: evita ter que escapar o nome da matéria dentro de atributos onclick=""
+        // (nomes vêm de dados importados/gerados por IA e podem ter aspas etc.).
+        document.getElementById('subj-dist-tbody').addEventListener('change', function(e) {
+            const el = e.target.closest('[data-subj-field]');
+            if (!el) return;
+            const name = el.dataset.subjName;
+            const field = el.dataset.subjField;
+            if (field === 'nome') renameSubject(name, el.value);
+            else updateSubjectField(name, field, el.value);
+        });
 
         function render() {
             loadAllData();

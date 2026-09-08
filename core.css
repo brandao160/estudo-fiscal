@@ -679,6 +679,17 @@
             background: transparent; border: 1px solid var(--border); color: var(--ink-3); cursor: pointer;
         }
         .review-add button:hover { border-color: var(--accent); color: var(--accent); }
+        .topic-add-item { border-bottom: none !important; padding-top: 10px !important; margin-top: 4px; border-top: 1px dashed var(--border-2); }
+        .topic-add-input {
+            flex: 1; min-width: 160px; padding: 6px 10px; background: var(--input-bg); border: 1px solid var(--input-border);
+            color: var(--ink); border-radius: var(--r-sm); font-size: 0.85rem; font-family: 'Source Sans 3', sans-serif;
+        }
+        .topic-add-btn {
+            font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: var(--r-sm);
+            background: transparent; border: 1px solid var(--accent); color: var(--accent); cursor: pointer;
+            display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-family: inherit;
+        }
+        .topic-add-btn:hover { background: var(--accent-soft); }
         .progress-mini {
             width: 80px; height: 4px; background: var(--border);
             border-radius: 99px; overflow: hidden;

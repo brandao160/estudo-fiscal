@@ -125,6 +125,12 @@
 
     <script src="core.js"></script>
     <script>
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function toggleSyllabusItem(subjectName, topicIndex, checked) {
             if (!syllabusProgress[subjectName]) {
                 syllabusProgress[subjectName] = [];
@@ -164,7 +170,7 @@
             syllabusSubject.topics.forEach((_, idx) => {
                 if (savedTopics[idx]) completedCount++;
             });
-            const percent = Math.round((completedCount / syllabusSubject.topics.length) * 100);
+            const percent = syllabusSubject.topics.length ? Math.round((completedCount / syllabusSubject.topics.length) * 100) : 0;
             
             const sanitizedName = subjectName.replace(/\s+/g, '_').replace(/[^\w]/g, '');
             
@@ -213,7 +219,7 @@
                     sub.topics.forEach((_, idx) => {
                         if (savedTopics[idx]) completedCount++;
                     });
-                    const percent = Math.round((completedCount / sub.topics.length) * 100);
+                    const percent = sub.topics.length ? Math.round((completedCount / sub.topics.length) * 100) : 0;
                     
                     const sanitizedName = sub.name.replace(/\s+/g, '_').replace(/[^\w]/g, '');
 
@@ -253,7 +259,7 @@
                                     <input type="checkbox" class="topic-checkbox"
                                         ${savedTopics[idx] ? 'checked' : ''}
                                         onchange="toggleSyllabusItem('${sub.name}', ${idx}, this.checked)">
-                                    <span class="topic-text">${topic}</span>
+                                    <span class="topic-text">${escHtml(topic)}</span>
                                     ${reviewBadge}
                                     <span class="review-add">
                                         <button title="Revisar em 7 dias" onclick="scheduleTopicReview('${sub.name.replace(/'/g,"\\'")}', ${idx}, 7)">7d</button>
@@ -261,6 +267,10 @@
                                     </span>
                                 </div>`;
                             }).join('')}
+                            <div class="topic-item topic-add-item" id="add-topic-${sanitizedName}" data-subject-name="${escHtml(sub.name)}">
+                                <input type="text" class="topic-add-input" placeholder="Adicionar tópico que a IA não encontrou...">
+                                <button type="button" class="topic-add-btn"><i class="fas fa-plus"></i> Adicionar</button>
+                            </div>
                         </div>
                     `;
                     container.appendChild(card);
@@ -268,7 +278,64 @@
             });
         }
 
+        /** Salva a estrutura atual de `syllabusData` de volta no modelo compartilhado. */
+        function persistSyllabusData() {
+            const raw = localStorage.getItem(K('estudoFiscalModel'));
+            if (!raw) return;
+            try {
+                const model = JSON.parse(raw);
+                model.syllabus = syllabusData;
+                localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(model));
+            } catch (e) { console.error('Falha ao salvar tópico novo:', e); }
+        }
 
+        /** Adiciona um tópico que a IA (ou o parser da planilha) não encontrou no edital. Insere só a
+         *  linha nova no DOM (em vez de re-renderizar tudo) pra não fechar os acordeões abertos. */
+        function addTopicToSubject(subjectName, rawText) {
+            const text = (rawText || '').trim();
+            if (!text) return;
+            let subject = null;
+            for (const section of syllabusData) {
+                const found = (section.subjects || []).find(s => s.name === subjectName);
+                if (found) { subject = found; break; }
+            }
+            if (!subject) return;
+
+            const idx = subject.topics.length;
+            subject.topics.push(text);
+            persistSyllabusData();
+
+            const sanitizedName = subjectName.replace(/\s+/g, '_').replace(/[^\w]/g, '');
+            const addRow = document.getElementById(`add-topic-${sanitizedName}`);
+            if (addRow) {
+                const topicRow = document.createElement('div');
+                topicRow.className = 'topic-item';
+                topicRow.innerHTML = `
+                    <input type="checkbox" class="topic-checkbox" onchange="toggleSyllabusItem('${subjectName.replace(/'/g,"\\'")}', ${idx}, this.checked)">
+                    <span class="topic-text">${escHtml(text)}</span>`;
+                addRow.parentNode.insertBefore(topicRow, addRow);
+            }
+            updateSyllabusUI(subjectName);
+            showToast('Tópico adicionado.', 'success');
+        }
+
+        // Delegação de eventos pro botão/campo de "adicionar tópico" — evita re-render completo e
+        // problemas de escaping com nomes de matéria vindos da IA.
+        document.getElementById('syllabus-container').addEventListener('click', function(e) {
+            const btn = e.target.closest('.topic-add-btn');
+            if (!btn) return;
+            const row = btn.closest('.topic-add-item');
+            const input = row.querySelector('.topic-add-input');
+            addTopicToSubject(row.dataset.subjectName, input.value);
+            input.value = '';
+        });
+        document.getElementById('syllabus-container').addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' || !e.target.classList.contains('topic-add-input')) return;
+            e.preventDefault();
+            const row = e.target.closest('.topic-add-item');
+            addTopicToSubject(row.dataset.subjectName, e.target.value);
+            e.target.value = '';
+        });
 
         function init() {
             initCoreData();

@@ -32,6 +32,8 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 - Abra `index.html` direto no navegador (duplo clique) ou hospede os arquivos em qualquer servidor estático.
 - Cadastre as matérias e pesos em **Matérias**, ajuste **Planejamento** (fases e horas semanais) e gere o cronograma em **Ciclo de Estudo**.
 - Em **Planejamento → Contagem regressiva**, defina diretamente o **início e o fim do ciclo** (`inicioCiclo`/`fimCiclo` no modelo) pelos campos de data — não depende mais de importar planilha/PDF para isso; dá pra ajustar a qualquer momento.
+- Em **Planejamento → Distribuição por matéria**, cada matéria tem um campo **Tipo** (Básica/Específica) editável — útil quando a extração por IA classifica errado ou não reconhece — e o nome da matéria também é editável direto na tabela (renomear migra o nome em cronograma, histórico, resumos e banco de questões já salvos, pra não deixar nada órfão). Abaixo da tabela, o formulário **"Adicionar Matéria"** cobre o caso da IA não ter encontrado alguma matéria do edital: cadastra manualmente nome, tipo e peso, e já cria a seção correspondente vazia em Conteúdo Programático.
+- Em **Conteúdo Programático**, cada matéria tem um campo **"Adicionar tópico"** no fim da lista, pra completar tópicos que a IA não tiver identificado na extração do edital.
 - Use **Ciclo Livre** para estudar fora do cronograma quando quiser.
 - Gere e resolva questões de múltipla escolha por tópico em **Questões** — automático, sem precisar de chave própria (limitado a algumas gerações por dia por visitante).
 - Registre resumos/flashcards em **Meus Resumos**, acompanhe tudo em **Lista Completa**, **Conteúdo Programático**, **Tempo de Estudo** e **Histórico**.

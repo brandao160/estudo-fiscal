@@ -255,6 +255,44 @@
         }
         function qzUid() { return 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); }
 
+        // ─── Banco compartilhado de questões (entre TODOS os visitantes do site, via KV no proxy) ───
+        // Antes de gastar cota de IA gerando um lote novo, consulta se alguém já gerou questões pra
+        // este tópico e reaproveita; ao final, grava de volta o que o tópico tem (novas + já existentes)
+        // pra quem pedir esse mesmo tópico depois não precisar chamar a IA de novo.
+        function slugifyForBank(s) {
+            return String(s || '')
+                .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 70) || 'x';
+        }
+        function bankKeyFor(materia, topico) {
+            return `${slugifyForBank(materia)}--${slugifyForBank(topico)}`;
+        }
+        function normEnunciado(s) {
+            return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+        async function bankGet(bankKey) {
+            try {
+                const res = await fetch(QZ_PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ action: 'bankGet', bankKey })
+                });
+                const data = await res.json();
+                return Array.isArray(data.questoes) ? data.questoes : [];
+            } catch (e) { return []; } // banco compartilhado é só um bônus — se falhar, segue só com a IA
+        }
+        function bankSave(bankKey, questoes) {
+            // "Fire-and-forget": não trava a resposta pro usuário nem quebra o fluxo se der erro.
+            fetch(QZ_PROXY_URL, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ action: 'bankSave', bankKey, questoes })
+            }).catch(() => {});
+        }
+
         // ─── Chamadas de IA (mesmo padrão do modal "Importar Edital" do Menu Inicial) ───
         function qzExtractJSON(text) {
             let cleaned = text.trim();
@@ -399,7 +437,9 @@ ${existentes}`;
             return true;
         }
 
-        /** Gera um novo lote de questões (até QZ_BATCH_SIZE, respeitando o teto de QZ_MAX_PER_TOPIC) para um tópico. */
+        /** Gera um novo lote de questões (até QZ_BATCH_SIZE, respeitando o teto de QZ_MAX_PER_TOPIC) para um
+         *  tópico. Antes de chamar a IA, reaproveita o quanto puder do banco compartilhado (outros
+         *  visitantes que já geraram pra este mesmo tópico) — só o que faltar é gerado de novo. */
         async function gerarQuestoes(materia, topico, btnEl) {
             const store = getQuestoesStore();
             const bucket = getOrCreateBucket(store, materia, topico);
@@ -407,52 +447,101 @@ ${existentes}`;
             if (remaining <= 0) { setQzGenerationStatus('Este tópico já tem 100 questões geradas.', ''); return; }
             const quantidade = Math.min(QZ_BATCH_SIZE, remaining);
 
-            const existingEnunciados = bucket.questions.slice(-15).map(q => q.enunciado.slice(0, 140));
-            const { concurso, orgao } = getModelInfo();
-            const prompt = buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao);
-
             if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...'; }
-            setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> Gerando questões para "${escHtml(topico)}"...`, '');
+            setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> Buscando questões para "${escHtml(topico)}"...`, '');
 
-            try {
-                const rawText = await callOpenRouterForQuestions(QZ_PROXY_URL, prompt);
-                const parsed = qzExtractJSON(rawText);
-                const list = Array.isArray(parsed.questoes) ? parsed.questoes : [];
-                let added = 0, skipped = 0;
-                list.forEach(q => {
-                    if (!validateGeneratedQuestion(q)) { skipped++; return; }
-                    bucket.questions.push({
-                        id: qzUid(),
-                        enunciado: q.enunciado.trim(),
-                        alternativas: {
-                            A: q.alternativas.A.trim(), B: q.alternativas.B.trim(), C: q.alternativas.C.trim(),
-                            D: q.alternativas.D.trim(), E: q.alternativas.E.trim()
-                        },
-                        correta: q.correta,
-                        comentario: (q.comentario || '').trim(),
-                        origem: q.origem, // sempre 'gerada' (sem busca nesse modo)
-                        fonte: q.fonte,
-                        criadoEm: new Date().toISOString(),
-                        vezesRespondida: 0,
-                        acertos: 0,
-                        ultimaResposta: null
-                    });
-                    added++;
+            const bankKey = bankKeyFor(materia, topico);
+            const jaTemos = new Set(bucket.questions.map(q => normEnunciado(q.enunciado)));
+            const sharedBank = await bankGet(bankKey);
+            const reused = sharedBank
+                .filter(q => q && q.enunciado && !jaTemos.has(normEnunciado(q.enunciado)))
+                .slice(0, quantidade);
+            reused.forEach(q => {
+                bucket.questions.push({
+                    id: qzUid(),
+                    enunciado: q.enunciado,
+                    alternativas: q.alternativas,
+                    correta: q.correta,
+                    comentario: q.comentario || '',
+                    origem: q.origem || 'gerada',
+                    fonte: q.fonte || null,
+                    criadoEm: new Date().toISOString(),
+                    vezesRespondida: 0,
+                    acertos: 0,
+                    ultimaResposta: null
                 });
-                saveQuestoesStore(store);
-                if (added === 0) {
-                    setQzGenerationStatus('A IA não retornou questões válidas dessa vez. Tente novamente.', 'error');
-                } else {
-                    const skippedNote = skipped ? ` — ${skipped} descartada(s) por formato inválido` : '';
-                    setQzGenerationStatus(`<i class="fas fa-check"></i> ${added} questão(ões) geradas para "${escHtml(topico)}"${skippedNote}.`, 'success');
-                    showToast(`${added} questão(ões) geradas para "${topico}"!`, 'success');
+                jaTemos.add(normEnunciado(q.enunciado));
+            });
+
+            const deficit = quantidade - reused.length;
+            let added = reused.length, skipped = 0, aiErrorMsg = '';
+
+            if (deficit > 0) {
+                setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> Gerando ${deficit} questão(ões) nova(s) com IA para "${escHtml(topico)}"...`, '');
+                try {
+                    const existingEnunciados = bucket.questions.slice(-15).map(q => q.enunciado.slice(0, 140));
+                    const { concurso, orgao } = getModelInfo();
+                    const prompt = buildQuestionsPrompt(materia, topico, deficit, existingEnunciados, concurso, orgao);
+                    const rawText = await callOpenRouterForQuestions(QZ_PROXY_URL, prompt);
+                    const parsed = qzExtractJSON(rawText);
+                    const list = Array.isArray(parsed.questoes) ? parsed.questoes : [];
+                    list.forEach(q => {
+                        if (!validateGeneratedQuestion(q)) { skipped++; return; }
+                        if (jaTemos.has(normEnunciado(q.enunciado))) { skipped++; return; } // repetiu uma já reaproveitada
+                        const questao = {
+                            id: qzUid(),
+                            enunciado: q.enunciado.trim(),
+                            alternativas: {
+                                A: q.alternativas.A.trim(), B: q.alternativas.B.trim(), C: q.alternativas.C.trim(),
+                                D: q.alternativas.D.trim(), E: q.alternativas.E.trim()
+                            },
+                            correta: q.correta,
+                            comentario: (q.comentario || '').trim(),
+                            origem: q.origem, // sempre 'gerada' (sem busca nesse modo)
+                            fonte: q.fonte,
+                            criadoEm: new Date().toISOString(),
+                            vezesRespondida: 0,
+                            acertos: 0,
+                            ultimaResposta: null
+                        };
+                        bucket.questions.push(questao);
+                        jaTemos.add(normEnunciado(questao.enunciado));
+                        added++;
+                    });
+                } catch (err) {
+                    console.error('Erro ao gerar questões:', err);
+                    aiErrorMsg = err.message;
                 }
-            } catch (err) {
-                console.error('Erro ao gerar questões:', err);
-                setQzGenerationStatus('Erro ao gerar questões: ' + escHtml(err.message), 'error');
-            } finally {
-                renderBanco(); // reconstrói os botões do zero (contagens e labels atualizados)
             }
+
+            saveQuestoesStore(store);
+
+            // Alimenta o banco compartilhado com tudo que este tópico tem agora (inclusive questões que já
+            // existiam localmente antes desta feature) — assim outros visitantes que pedirem o mesmo tópico
+            // depois já acham prontas, sem gastar cota de IA de novo.
+            if (added > 0) {
+                const bankShaped = bucket.questions.map(q => ({
+                    enunciado: q.enunciado, alternativas: q.alternativas, correta: q.correta,
+                    comentario: q.comentario, origem: q.origem, fonte: q.fonte
+                }));
+                const merged = sharedBank.concat(bankShaped).filter((q, i, arr) =>
+                    arr.findIndex(x => normEnunciado(x.enunciado) === normEnunciado(q.enunciado)) === i
+                ).slice(0, QZ_MAX_PER_TOPIC);
+                bankSave(bankKey, merged);
+            }
+
+            if (added === 0) {
+                setQzGenerationStatus('Erro ao gerar questões: ' + escHtml(aiErrorMsg || 'a IA não retornou questões válidas dessa vez.'), 'error');
+            } else {
+                const partes = [];
+                if (reused.length) partes.push(`${reused.length} reaproveitada(s) do banco compartilhado`);
+                if (added - reused.length > 0) partes.push(`${added - reused.length} nova(s) gerada(s) pela IA`);
+                let nota = skipped ? ` — ${skipped} descartada(s)` : '';
+                if (aiErrorMsg) nota += ` (parte da geração falhou: ${escHtml(aiErrorMsg)})`;
+                setQzGenerationStatus(`<i class="fas fa-check"></i> ${partes.join(' + ')} para "${escHtml(topico)}"${nota}.`, 'success');
+                showToast(`${added} questão(ões) prontas para "${topico}"!`, 'success');
+            }
+            renderBanco(); // reconstrói os botões do zero (contagens e labels atualizados)
         }
 
         // ─── Banco de questões (accordion por categoria > matéria > tópico) ───

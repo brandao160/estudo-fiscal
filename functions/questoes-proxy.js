@@ -27,7 +27,9 @@
    2. (Recomendado) Aba Settings → Functions → KV namespace bindings → Add:
         - Storage & Databases → KV → Create a namespace (ex.: "QZ_RATE_LIMIT")
           se ainda não tiver uma, e vincule com Variable name: RATE_LIMIT_KV.
-        Sem esse passo o proxy ainda funciona, só que sem limite por visitante.
+        Sem esse passo o proxy ainda funciona, só que sem limite por visitante E sem o
+        banco compartilhado de questões (ver "Banco compartilhado de questões" abaixo —
+        sem KV, toda geração cai direto na IA, sem cache).
    3. Faça um novo commit/push (ou "Retry deployment" no dashboard) pra esse
       arquivo entrar no ar — variáveis de ambiente e bindings só valem a
       partir do próximo deployment depois de configurados. Depois do deploy,
@@ -83,6 +85,23 @@ export async function onRequestPost(context) {
     const { request, env } = context;
     const cors = corsHeaders(env);
 
+    let body;
+    try { body = await request.json(); } catch (e) {
+        return new Response(JSON.stringify({ error: 'Corpo da requisição inválido (esperado JSON).' }), {
+            status: 400, headers: { ...cors, 'content-type': 'application/json' }
+        });
+    }
+
+    // --- Banco compartilhado de questões (questoes.html) ---
+    // Antes de gerar um lote novo, o cliente consulta se ALGUÉM já gerou questões pra este
+    // tópico; se sim, reaproveita em vez de gastar cota de IA de novo — e ao final grava de
+    // volta as questões (velhas + novas) desse tópico, pra quem pedir depois já achar prontas.
+    // Não usa IA nem a chave da OpenRouter, então fica fora do fluxo de modelos/rate-limit abaixo.
+    // Usa o MESMO KV do rate limit (RATE_LIMIT_KV), só com prefixo "qbank:" pra não colidir com "rl:".
+    if (body && (body.action === 'bankGet' || body.action === 'bankSave')) {
+        return handleQuestionBank(body, env, cors);
+    }
+
     if (!env.OPENROUTER_API_KEY) {
         return new Response(JSON.stringify({ error: 'Proxy sem OPENROUTER_API_KEY configurada (Settings → Environment variables).' }), {
             status: 500, headers: { ...cors, 'content-type': 'application/json' }
@@ -103,12 +122,6 @@ export async function onRequestPost(context) {
         }
     }
 
-    let body;
-    try { body = await request.json(); } catch (e) {
-        return new Response(JSON.stringify({ error: 'Corpo da requisição inválido (esperado JSON com "prompt").' }), {
-            status: 400, headers: { ...cors, 'content-type': 'application/json' }
-        });
-    }
     const prompt = body && body.prompt;
     if (!prompt || typeof prompt !== 'string') {
         return new Response(JSON.stringify({ error: 'Campo "prompt" obrigatório.' }), {
@@ -186,4 +199,30 @@ export async function onRequestPost(context) {
     }
 
     return new Response(text, { status: orRes.status, headers: { ...cors, 'content-type': 'application/json' } });
+}
+
+/** Lê/grava o banco compartilhado de questões de um tópico no KV (ver comentário acima). */
+async function handleQuestionBank(body, env, cors) {
+    const bankKey = String(body.bankKey || '');
+    if (!/^[a-z0-9_-]{1,150}$/.test(bankKey)) {
+        return new Response(JSON.stringify({ error: 'bankKey inválida.' }), {
+            status: 400, headers: { ...cors, 'content-type': 'application/json' }
+        });
+    }
+
+    if (body.action === 'bankGet') {
+        let questoes = [];
+        if (env.RATE_LIMIT_KV) {
+            const raw = await env.RATE_LIMIT_KV.get('qbank:' + bankKey);
+            if (raw) { try { questoes = JSON.parse(raw); } catch (e) { /* ignora lixo salvo */ } }
+        }
+        return new Response(JSON.stringify({ questoes }), { status: 200, headers: { ...cors, 'content-type': 'application/json' } });
+    }
+
+    // bankSave — limitado ao mesmo teto de 100 questões por tópico usado no resto do app.
+    const questoes = Array.isArray(body.questoes) ? body.questoes.slice(0, 100) : [];
+    if (env.RATE_LIMIT_KV) {
+        await env.RATE_LIMIT_KV.put('qbank:' + bankKey, JSON.stringify(questoes));
+    }
+    return new Response(JSON.stringify({ ok: true, saved: questoes.length }), { status: 200, headers: { ...cors, 'content-type': 'application/json' } });
 }

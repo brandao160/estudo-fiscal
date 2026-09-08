@@ -130,7 +130,6 @@
         .countdown-value { font-size: 2.6rem; font-weight: 900; color: var(--accent); font-family: 'Nunito', sans-serif; line-height: 1; }
         .countdown-label { font-size: 0.78rem; color: var(--ink-3); margin-top: 4px; }
         .countdown-row { display: flex; gap: 28px; }
-<<<<<<< HEAD
         .cycle-dates-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
         .cycle-date-field { display: flex; flex-direction: column; gap: 4px; }
         .cycle-date-field label { font-size: 0.72rem; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.3px; }
@@ -138,8 +137,6 @@
             padding: 8px 10px; background: var(--input-bg); border: 1px solid var(--input-border);
             color: var(--ink); border-radius: var(--r); font-size: 0.9rem; font-family: 'Nunito', sans-serif; font-weight: 700;
         }
-=======
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
 
         /* Weekly pace */
         .pace-input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -305,12 +302,9 @@
                 <a href="conteudoprogramatico.html" class="nav-item">
                     <i class="fas fa-clipboard-list"></i><span>Conteúdo Programático</span>
                 </a>
-<<<<<<< HEAD
                 <a href="questoes.html" class="nav-item">
                     <i class="fas fa-list-check"></i><span>Questões</span>
                 </a>
-=======
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
                 <a href="tempoestudo.html" class="nav-item">
                     <i class="fas fa-chart-pie"></i><span>Tempo de Estudo</span>
                 </a>
@@ -335,7 +329,6 @@
             <div class="plan-grid">
                 <div class="plan-card">
                     <h2><i class="fas fa-hourglass-half"></i> Contagem regressiva</h2>
-<<<<<<< HEAD
                     <p class="plan-card-sub">Defina o período do seu ciclo de estudo — pode ajustar aqui a qualquer momento, sem precisar de planilha ou edital em PDF.</p>
                     <div class="cycle-dates-row">
                         <div class="cycle-date-field">
@@ -348,9 +341,6 @@
                         </div>
                     </div>
                     <div class="pace-status warn" id="cycle-dates-tip" style="display:none; margin-bottom:14px;"><i class="fas fa-triangle-exclamation"></i> A data de fim precisa ser depois da data de início.</div>
-=======
-                    <p class="plan-card-sub">Baseado na data de fim do ciclo cadastrada no seu modelo.</p>
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
                     <div class="countdown-row">
                         <div>
                             <div class="countdown-value" id="plan-days-left">0</div>
@@ -531,11 +521,7 @@
             const pid = activeProfileId();
             if (pid === 'default') { showToast('O perfil "Principal" não pode ser excluído.', 'warning'); return; }
             if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil serão apagados.`)) return;
-<<<<<<< HEAD
             ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession','ciclo_cards_v3','estudoFiscalQuestoes','estudoFiscalQuestoesMode']
-=======
-            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession']
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
                 .forEach(base => localStorage.removeItem(base + '__' + pid));
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
@@ -965,7 +951,6 @@
             return (h > 0 ? `${h}h ` : '') + `${m}m`;
         }
 
-<<<<<<< HEAD
         /* --- Período do ciclo (InicioCiclo/FimCiclo editáveis direto na página, sem planilha/PDF) --- */
         function toISODateString(date) {
             const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0');
@@ -998,8 +983,6 @@
             }
         }
 
-=======
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
         /* --- RENDER --- */
         function renderCountdown() {
             const today = new Date(); today.setHours(0,0,0,0);
@@ -1242,10 +1225,7 @@
                 document.getElementById('page-subtitle-text').textContent = `Foco na meta: ${sharedModel.concurso}`;
             }
 
-<<<<<<< HEAD
             renderCycleDates();
-=======
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
             renderCountdown();
             renderRoutine();
             renderCyclePrefs();

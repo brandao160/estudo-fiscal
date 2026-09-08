@@ -95,12 +95,8 @@
                 'estudoFiscalScheduleStructure', 'estudoFiscalModel', 'estudoFiscalReviews',
                 'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
                 'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
-<<<<<<< HEAD
                 'estudoFiscalActiveSession', 'ciclo_cards_v3',
                 'estudoFiscalQuestoes', 'estudoFiscalQuestoesMode'
-=======
-                'estudoFiscalActiveSession', 'ciclo_cards_v3'
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
             ];
         }
 

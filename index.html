@@ -115,13 +115,10 @@
                     <i class="fas fa-clipboard-list"></i>
                     <span>Conteúdo Programático</span>
                 </a>
-<<<<<<< HEAD
                 <a href="questoes.html" class="nav-item">
                     <i class="fas fa-list-check"></i>
                     <span>Questões</span>
                 </a>
-=======
->>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
                 <a href="tempoestudo.html" class="nav-item">
                     <i class="fas fa-chart-pie"></i>
                     <span>Tempo de Estudo</span>
@@ -1438,9 +1435,11 @@ ${editalText}
 
         /** Chama a API Gemini do Google diretamente do navegador com a chave do usuário (grátis). */
         async function callGeminiForEdital(apiKey, model, promptText) {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+            // A chave vai no header x-goog-api-key (não mais em ?key= na URL — o Google passou a
+            // rejeitar chaves novas nesse formato com 401 "Expected OAuth 2 access token...").
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
                 method: 'POST',
-                headers: { 'content-type': 'application/json' },
+                headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: promptText }] }],
                     generationConfig: { responseMimeType: 'application/json' }
@@ -1449,6 +1448,7 @@ ${editalText}
             if (!res.ok) {
                 let detail = '';
                 try { detail = (await res.json()).error?.message || ''; } catch (e) {}
+                if (res.status === 401) throw new Error('Chave de API inválida, expirada ou revogada. Gere uma nova em aistudio.google.com/apikey. ' + detail);
                 if (res.status === 400 || res.status === 403) throw new Error('Chave de API inválida ou sem permissão. ' + detail);
                 if (res.status === 429) throw new Error('Cota grátis do Gemini esgotada por agora (limite diário/por minuto). Tente novamente mais tarde. ' + detail);
                 throw new Error(`Erro da API Gemini (${res.status}). ${detail}`);

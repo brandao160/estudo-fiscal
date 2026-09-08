@@ -414,6 +414,8 @@
                     </div>
                 </div>
 
+                <div id="edital-cargo-select" style="display:none; margin-bottom:14px;"></div>
+
                 <div id="edital-ai-status" class="edital-ai-status" style="display:none;"></div>
             </div>
             <div class="modal-footer">
@@ -1110,6 +1112,7 @@
             const modal = document.getElementById('edital-ai-modal');
             if (!modal) return;
             setEditalAIStatus('', '');
+            hideCargoSelect();
             setEditalMode('ia');
             modal.classList.add('open');
         }
@@ -1128,6 +1131,7 @@
             document.getElementById('edital-free-process-btn').style.display = mode === 'free' ? 'inline-flex' : 'none';
             document.getElementById('edital-ia-process-btn').style.display = mode === 'ia' ? 'inline-flex' : 'none';
             setEditalAIStatus('', '');
+            hideCargoSelect();
         }
 
         function setEditalAIStatus(html, kind) {
@@ -1327,10 +1331,33 @@
             }
         }
 
-        /** Monta o prompt de extração estruturada do edital. */
-        function buildEditalPrompt(editalText) {
-            return `Você vai ler o conteúdo programático de um edital de concurso público brasileiro e extrair uma estrutura de dados em JSON para um app de ciclo de estudos.
+        /** Monta o prompt que só pergunta quais cargos/empregos distintos o edital cobre (sem extrair
+         *  conteúdo ainda) — usado pra decidir se precisa perguntar ao usuário qual cargo ele vai prestar. */
+        function buildCargoDetectionPrompt(editalText) {
+            return `Leia o texto de um edital de concurso público brasileiro abaixo e identifique se ele cobre MAIS DE UM cargo/emprego/função com conteúdo programático DIFERENTE entre si (comum em editais que reúnem vários cargos no mesmo processo seletivo, cada um com sua própria lista de matérias específicas).
 
+Regras:
+- Se o edital cobrir só um cargo, ou não deixar clara essa distinção, responda com uma lista vazia.
+- Se cobrir mais de um cargo com conteúdo específico diferente, liste o nome de cada cargo exatamente como aparece no edital (ex.: "Analista Judiciário - Área Judiciária", "Técnico Judiciário - Área Administrativa").
+- Não liste como cargos diferentes simples variações de lotação/especialidade que compartilham o mesmo conteúdo programático.
+- Responda APENAS com um JSON válido, sem nenhum texto antes ou depois, no formato exato abaixo:
+
+{"cargos": ["string", "..."]}
+
+Texto do edital:
+"""
+${editalText}
+"""`;
+        }
+
+        /** Monta o prompt de extração estruturada do edital. Se `cargo` for informado, restringe a
+         *  extração ao conteúdo básico comum + o específico só daquele cargo (edital com vários cargos). */
+        function buildEditalPrompt(editalText, cargo) {
+            const cargoInstrucao = cargo
+                ? `\nATENÇÃO: este edital cobre mais de um cargo. Extraia SOMENTE os conhecimentos básicos comuns a todos os cargos (se houver) e os conhecimentos específicos do cargo "${cargo}". Ignore completamente o conteúdo específico de qualquer outro cargo mencionado no edital.\n`
+                : '';
+            return `Você vai ler o conteúdo programático de um edital de concurso público brasileiro e extrair uma estrutura de dados em JSON para um app de ciclo de estudos.
+${cargoInstrucao}
 Regras:
 - Separe as matérias em "Basico" (conhecimentos básicos/gerais) e "Especifico" (conhecimentos específicos do cargo).
 - Para cada matéria, sugira um "peso" de 1 a 3 baseado na quantidade e complexidade dos tópicos e na importância típica para o cargo (3 = matéria extensa/central, 1 = matéria curta/secundária).
@@ -1401,10 +1428,106 @@ ${editalText}
             return JSON.parse(cleaned);
         }
 
-        // O modelo grátis usado pelo proxy (Llama 3.3 70B) tem um contexto bem menor do que Gemini/Claude
-        // tinham — um edital inteiro (às vezes 100+ páginas de regras de inscrição, não só o conteúdo
-        // programático) pode facilmente estourar isso. Corta mais cedo pra não gerar erro "contexto excedido".
-        const EDITAL_AI_MAX_CHARS = 60000;
+        // O modelo grátis usado pelo proxy tem um contexto bem menor do que Gemini/Claude tinham — um
+        // edital inteiro (às vezes 100+ páginas de regras de inscrição, não só o conteúdo programático)
+        // pode facilmente estourar isso. Corta mais cedo pra não gerar erro "contexto excedido". Um
+        // pouco mais generoso que o mínimo porque editais com vários cargos têm o conteúdo do cargo
+        // desejado mais pra frente no texto.
+        const EDITAL_AI_MAX_CHARS = 120000;
+
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // Guarda o texto já extraído do PDF entre a etapa de detecção de cargo e a extração de
+        // verdade, pra não precisar reler o PDF de novo depois que o usuário escolhe o cargo.
+        let editalCargoContext = { editalText: '', truncated: false };
+
+        /** Pergunta à IA quais cargos distintos o edital cobre. Em caso de erro, segue sem filtro
+         *  (mais seguro tratar como "cargo único" do que travar a importação por causa disso). */
+        async function detectEditalCargos(editalText) {
+            try {
+                const cargosText = await callProxyForEdital(buildCargoDetectionPrompt(editalText));
+                const parsed = extractJSONFromText(cargosText);
+                return Array.isArray(parsed.cargos) ? parsed.cargos.filter(c => typeof c === 'string' && c.trim()) : [];
+            } catch (e) {
+                console.error('Falha ao detectar cargos do edital (seguindo sem filtro de cargo):', e);
+                return [];
+            }
+        }
+
+        function showCargoSelect(cargos) {
+            const container = document.getElementById('edital-cargo-select');
+            container.innerHTML = `
+                <label class="note-label">Esse edital tem mais de um cargo — qual você vai prestar?</label>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+                    ${cargos.map(c => `<button type="button" class="btn btn-secondary edital-cargo-btn" data-cargo="${escHtml(c)}" style="justify-content:flex-start;"><i class="fas fa-user-tie"></i> ${escHtml(c)}</button>`).join('')}
+                </div>`;
+            container.style.display = 'block';
+        }
+
+        function hideCargoSelect() {
+            const container = document.getElementById('edital-cargo-select');
+            if (container) { container.style.display = 'none'; container.innerHTML = ''; }
+        }
+
+        // Delegação de eventos: evita ter que escapar o nome do cargo dentro de um onclick="" (vem
+        // direto da IA e pode ter aspas/caracteres especiais).
+        document.getElementById('edital-cargo-select').addEventListener('click', function(e) {
+            const btn = e.target.closest('.edital-cargo-btn');
+            if (btn) selectEditalCargo(btn.dataset.cargo);
+        });
+
+        async function selectEditalCargo(cargo) {
+            hideCargoSelect();
+            const btn = document.getElementById('edital-ia-process-btn');
+            btn.disabled = true;
+            try {
+                await runEditalExtraction(cargo);
+            } catch (err) {
+                setEditalAIStatus('Erro: ' + err.message, 'error');
+                console.error('Erro ao processar edital com IA:', err);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        /** Chama a IA pra extrair de verdade (matérias + conteúdo programático), já filtrando por
+         *  `cargo` quando informado, e aplica o modelo resultante. */
+        async function runEditalExtraction(cargo) {
+            const { editalText, truncated } = editalCargoContext;
+            setEditalAIStatus('<i class="fas fa-spinner"></i> A IA está lendo o conteúdo programático (pode levar um tempinho)...', '');
+            const aiText = await callProxyForEdital(buildEditalPrompt(editalText, cargo));
+
+            let extractedModel;
+            try {
+                extractedModel = extractJSONFromText(aiText);
+            } catch (parseErr) {
+                setEditalAIStatus('A IA respondeu, mas não consegui interpretar o resultado como dados válidos. Tente novamente ou use a aba "Sem IA".', 'error');
+                console.error('Resposta da IA (não-JSON):', aiText);
+                return;
+            }
+
+            const { errors, warnings } = validateModel(extractedModel);
+            if (errors.length > 0) {
+                setEditalAIStatus('A IA não conseguiu extrair matérias válidas: ' + errors.join(' '), 'error');
+                return;
+            }
+            const allWarnings = warnings.slice();
+            if (truncated) allWarnings.push('O PDF era muito extenso e foi lido parcialmente (pode faltar conteúdo do final do edital).');
+            if (allWarnings.length > 0) {
+                const proceed = confirm('Avisos sobre a extração da IA:\n\n' + allWarnings.join('\n') + '\n\nAplicar mesmo assim?');
+                if (!proceed) { setEditalAIStatus('Importação cancelada.', ''); return; }
+            }
+
+            applyImportedModel(extractedModel);
+            const cargoNote = cargo ? ` (cargo: ${cargo})` : '';
+            setEditalAIStatus(`<i class="fas fa-check"></i> Pronto! ${extractedModel.materias.length} matéria(s) importada(s) pela IA${escHtml(cargoNote)}.`, 'success');
+            showToast('Edital importado pela IA com sucesso!', 'success');
+            setTimeout(closeEditalAIModal, 1500);
+        }
 
         async function processEditalPDFAI() {
             const fileInput = document.getElementById('edital-ai-pdf-input');
@@ -1413,6 +1536,7 @@ ${editalText}
 
             const btn = document.getElementById('edital-ia-process-btn');
             btn.disabled = true;
+            hideCargoSelect();
 
             try {
                 setEditalAIStatus('<i class="fas fa-spinner"></i> Lendo o PDF...', '');
@@ -1422,35 +1546,18 @@ ${editalText}
                     editalText = editalText.slice(0, EDITAL_AI_MAX_CHARS);
                     truncated = true;
                 }
+                editalCargoContext = { editalText, truncated };
 
-                setEditalAIStatus('<i class="fas fa-spinner"></i> A IA está lendo o conteúdo programático (pode levar um tempinho)...', '');
-                const aiText = await callProxyForEdital(buildEditalPrompt(editalText));
+                setEditalAIStatus('<i class="fas fa-spinner"></i> Verificando se o edital tem mais de um cargo...', '');
+                const cargos = await detectEditalCargos(editalText);
 
-                let extractedModel;
-                try {
-                    extractedModel = extractJSONFromText(aiText);
-                } catch (parseErr) {
-                    setEditalAIStatus('A IA respondeu, mas não consegui interpretar o resultado como dados válidos. Tente novamente ou use a aba "Sem IA".', 'error');
-                    console.error('Resposta da IA (não-JSON):', aiText);
+                if (cargos.length > 1) {
+                    showCargoSelect(cargos);
+                    setEditalAIStatus('Esse edital tem mais de um cargo — escolha qual você vai prestar acima.', '');
                     return;
                 }
 
-                const { errors, warnings } = validateModel(extractedModel);
-                if (errors.length > 0) {
-                    setEditalAIStatus('A IA não conseguiu extrair matérias válidas: ' + errors.join(' '), 'error');
-                    return;
-                }
-                const allWarnings = warnings.slice();
-                if (truncated) allWarnings.push('O PDF era muito extenso e foi lido parcialmente (pode faltar conteúdo do final do edital).');
-                if (allWarnings.length > 0) {
-                    const proceed = confirm('Avisos sobre a extração da IA:\n\n' + allWarnings.join('\n') + '\n\nAplicar mesmo assim?');
-                    if (!proceed) { setEditalAIStatus('Importação cancelada.', ''); return; }
-                }
-
-                applyImportedModel(extractedModel);
-                setEditalAIStatus(`<i class="fas fa-check"></i> Pronto! ${extractedModel.materias.length} matéria(s) importada(s) pela IA.`, 'success');
-                showToast('Edital importado pela IA com sucesso!', 'success');
-                setTimeout(closeEditalAIModal, 1500);
+                await runEditalExtraction(null);
             } catch (err) {
                 setEditalAIStatus('Erro: ' + err.message, 'error');
                 console.error('Erro ao processar edital com IA:', err);

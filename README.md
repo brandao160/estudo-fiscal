@@ -50,9 +50,8 @@ A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método 
 ## Importação/Exportação de Modelo
 
 - `index.html` permite baixar/exportar/importar o modelo (matérias, pesos, tópicos). Quando a biblioteca `xlsx.js` (carregada via CDN) está disponível, o formato é Excel; sem ela (ex.: offline sem cache do CDN), cai automaticamente para CSV.
-- Também é possível extrair o conteúdo programático diretamente de um PDF de edital ("Importar Edital PDF"), em três modos: **Sem IA** (heurística local, grátis, roda 100% no navegador), **Gemini** (grátis, com chave de API do usuário) e **Claude** (pago, com chave de API do usuário). A extração usa `pdf.js` para ler o texto do PDF.
+- Também é possível extrair o conteúdo programático diretamente de um PDF de edital ("Importar Edital PDF"), em dois modos: **Sem IA** (heurística local, grátis, roda 100% no navegador) e **Com IA (automático)** (usa o mesmo proxy do site que gera as questões — sem chave própria, ver seção "Proxy de geração" abaixo). A extração usa `pdf.js` para ler o texto do PDF.
 - O modelo resultante (`estudoFiscalModel`) é a mesma chave lida por todas as páginas do app — qualquer forma de importação (planilha, CSV ou PDF) fica visível automaticamente em Planejamento, Matérias, Ciclo de Estudo, Ciclo Livre, Resumos, Lista Completa, Conteúdo Programático e Questões, sem precisar repetir a importação em cada aba.
-- **Autenticação com a API do Gemini**: a chave é enviada no header `x-goog-api-key` (não mais como `?key=` na URL). O Google passou a rejeitar chaves nesse segundo formato com erro 401 "Expected OAuth 2 access token..." a partir de set/2026 — se voltar a usar `?key=`, o Gemini para de funcionar com esse mesmo erro. A chamada à API do Claude (Anthropic) não foi afetada.
 
 ## Banco de Questões (`questoes.html`)
 
@@ -65,10 +64,12 @@ A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método 
 
 ### Proxy de geração (`functions/questoes-proxy.js`)
 
-- É uma **Cloudflare Pages Function**: um arquivo em `/functions` na raiz do repositório vira uma rota automaticamente assim que o projeto está conectado ao Cloudflare Pages (deploy automático a cada push) — não precisa criar um Worker separado.
+- É uma **Cloudflare Pages Function** genérica ("prompt" entra, texto da IA sai): um arquivo em `/functions` na raiz do repositório vira uma rota automaticamente assim que o projeto está conectado ao Cloudflare Pages (deploy automático a cada push) — não precisa criar um Worker separado. Usada por **duas** telas: gerar questões (`questoes.html`) e extrair o edital em PDF (`index.html`, aba "Com IA").
 - Guarda a chave paga da OpenRouter como variável de ambiente **secreta** (Settings → Variables and secrets → `OPENROUTER_API_KEY`, tipo Secret) — nunca é enviada ao navegador de quem visita o site.
-- Limita quantas gerações por dia cada visitante (por IP) pode fazer (`DAILY_LIMIT_PER_IP` no topo do arquivo), usando um KV namespace opcional (`RATE_LIMIT_KV`) — divide a cota total da conta (ex.: 1.000 req/dia com $10 de crédito na OpenRouter) entre todo mundo, em vez de deixar uma pessoa só esgotar tudo.
-- A URL do proxy fica fixa numa constante (`QZ_PROXY_URL`) no `<script>` de `questoes.html` — ajuste ali se o domínio/projeto do Cloudflare mudar.
+- Limita quantas chamadas por dia cada visitante (por IP) pode fazer (`DAILY_LIMIT_PER_IP` no topo do arquivo), usando um KV namespace opcional (`RATE_LIMIT_KV`) — divide a cota total da conta (ex.: 1.000 req/dia com $10 de crédito na OpenRouter) entre todo mundo, em vez de deixar uma pessoa só esgotar tudo.
+- O cliente pode pedir mais tokens de saída (`max_tokens` no corpo da requisição — extração de edital pede mais do que um lote de questões), com um teto de 8000 no proxy pra ninguém pedir uma resposta absurdamente cara.
+- A URL do proxy fica fixa em código — `QZ_PROXY_URL` em `questoes.html` e `EDITAL_PROXY_URL` em `index.html` — ajuste as duas se o domínio/projeto do Cloudflare mudar.
+- O modelo grátis usado (`meta-llama/llama-3.3-70b-instruct:free`) tem um contexto bem menor que Gemini/Claude tinham — por isso `EDITAL_AI_MAX_CHARS` em `index.html` foi reduzido (60.000 caracteres) pra não estourar o contexto com editais grandes cheios de regras de inscrição irrelevantes ao conteúdo programático.
 - **Importante, e é de propósito estar assim**: essa chave nunca poderia ficar só no HTML/JS do site — qualquer texto enviado ao navegador é visível a qualquer visitante (DevTools, "ver código-fonte", bots que varrem repositórios públicos atrás de chave vazada) — "ofuscar" não resolve isso. Um servidor guardando a chave como variável de ambiente secreta é a única forma de mantê-la privada com vários usuários compartilhando o mesmo app. Instruções completas de configuração nos comentários do topo do arquivo.
 - **Integração com a sessão de estudo ativa**: durante uma sessão em `cicloestudo.html`/`cicloestudolivre.html`, o botão **"Questões IA"** na barra de cronômetro pausa o timer e abre `questoes.html?materia=<matéria>` já resolvendo questões dessa matéria (ou com o acordeão dela aberto no Banco, se ainda não houver questões geradas). Cada questão respondida ali é somada em `estudoFiscalActiveSession` (campos `quizQuestions`/`quizCorrect`); ao voltar e clicar em "Salvar" o estudo, os campos **Questões Feitas** e **Acertos** já vêm preenchidos com o que foi resolvido de verdade (ainda editáveis à mão). Isso evita duplicar o mesmo desempenho no histórico: enquanto a sessão de estudo daquela matéria estiver ativa, `questoes.html` não cria um lançamento próprio para ela — só matérias sem sessão ativa no momento geram um histórico imediato.
 
@@ -87,7 +88,6 @@ Chaves principais (por perfil, com sufixo `__<id>` quando não é o perfil "Prin
 - `estudoFiscalActiveSession`: sessão de estudo (Pomodoro) em andamento — inclui `quizQuestions`/`quizCorrect`, acumulados a partir de `questoes.html` enquanto a sessão está ativa.
 - `ciclo_cards_v3`: resumos/flashcards.
 - `estudoFiscalQuestoes`: banco de questões geradas por IA, por matéria/tópico (ver `questoes.html`).
-- `estudoFiscalGeminiKey` / `estudoFiscalAnthropicKey`: chaves de API do usuário (Gemini/Claude), usadas na importação de edital em PDF (`index.html`).
 - `estudoFiscalProfiles` / `estudoFiscalActiveProfile`: registro e perfil ativo (não é namespaceada por perfil).
 - `theme`, `estudoFiscalTutorialSeen`, `estudoFiscalOnboardingSeen`, `estudoFiscalConcursoName`: preferências de UI, globais (sem sufixo de perfil).
 

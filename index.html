@@ -1097,11 +1097,11 @@
         }
 
 
-        // --- IMPORTAR EDITAL EM PDF COM IA (experimental) ---
-        // Chama a API do Gemini (grátis) ou da Anthropic (paga) diretamente do navegador, com a
-        // chave do próprio usuário (nunca passa pelo nosso servidor/site). Reaproveita
-        // validateModel()/applyImportedModel() do fluxo de importação Excel para manter o mesmo
-        // padrão de validação e aplicação.
+        // --- IMPORTAR EDITAL EM PDF COM IA ---
+        // O modo "Com IA" chama o proxy do próprio site (functions/questoes-proxy.js), que fala com
+        // a OpenRouter usando uma chave paga guardada só no servidor — o usuário não precisa de
+        // chave própria. Reaproveita validateModel()/applyImportedModel() do fluxo de importação
+        // Excel para manter o mesmo padrão de validação e aplicação.
         if (typeof pdfjsLib !== 'undefined') {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
@@ -1359,6 +1359,16 @@ ${editalText}
         // A chave da OpenRouter fica só no servidor; o navegador nunca vê nem envia nenhuma chave.
         const EDITAL_PROXY_URL = 'https://estudo-fiscal.pages.dev/questoes-proxy';
 
+        /** Extrai uma mensagem legível de um erro do proxy — pode vir como string (erro nosso, ex.:
+         *  limite diário) ou como objeto repassado direto da OpenRouter (ex.: {message, code}). */
+        function proxyErrorMessage(data) {
+            const err = data && data.error;
+            if (!err) return '';
+            if (typeof err === 'string') return err;
+            if (typeof err === 'object') return err.message || JSON.stringify(err);
+            return String(err);
+        }
+
         /** Chama o proxy do site (sem chave própria) pra extrair o edital com IA. */
         async function callProxyForEdital(promptText) {
             let res;
@@ -1373,7 +1383,7 @@ ${editalText}
             }
             let data;
             try { data = await res.json(); } catch (e) { throw new Error('A IA do site não retornou uma resposta válida.'); }
-            if (!res.ok) throw new Error((data && data.error) || `Erro da IA do site (${res.status}).`);
+            if (!res.ok) throw new Error(proxyErrorMessage(data) || `Erro da IA do site (${res.status}).`);
             const text = data.choices?.[0]?.message?.content;
             if (!text) throw new Error('A IA não retornou texto na resposta.');
             return text;
@@ -1391,7 +1401,10 @@ ${editalText}
             return JSON.parse(cleaned);
         }
 
-        const EDITAL_AI_MAX_CHARS = 350000; // ~ margem generosa para caber no contexto do modelo
+        // O modelo grátis usado pelo proxy (Llama 3.3 70B) tem um contexto bem menor do que Gemini/Claude
+        // tinham — um edital inteiro (às vezes 100+ páginas de regras de inscrição, não só o conteúdo
+        // programático) pode facilmente estourar isso. Corta mais cedo pra não gerar erro "contexto excedido".
+        const EDITAL_AI_MAX_CHARS = 60000;
 
         async function processEditalPDFAI() {
             const fileInput = document.getElementById('edital-ai-pdf-input');

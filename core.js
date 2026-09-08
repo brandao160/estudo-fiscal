@@ -96,7 +96,7 @@
                 'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
                 'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
                 'estudoFiscalActiveSession', 'ciclo_cards_v3',
-                'estudoFiscalQuestoes', 'estudoFiscalQuestoesMode'
+                'estudoFiscalQuestoes'
             ];
         }
 

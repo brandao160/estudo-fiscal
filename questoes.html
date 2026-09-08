@@ -267,6 +267,16 @@
             return JSON.parse(cleaned);
         }
 
+        /** Extrai uma mensagem legível de um erro do proxy — pode vir como string (erro nosso, ex.:
+         *  limite diário) ou como objeto repassado direto da OpenRouter (ex.: {message, code}). */
+        function proxyErrorMessage(data) {
+            const err = data && data.error;
+            if (!err) return '';
+            if (typeof err === 'string') return err;
+            if (typeof err === 'object') return err.message || JSON.stringify(err);
+            return String(err);
+        }
+
         async function callOpenRouterForQuestions(proxyUrl, promptText) {
             let res;
             try {
@@ -281,7 +291,7 @@
             let data;
             try { data = await res.json(); } catch (e) { throw new Error('O proxy não retornou um JSON válido.'); }
             if (!res.ok) {
-                throw new Error((data && data.error) || `Erro do proxy (${res.status}).`);
+                throw new Error(proxyErrorMessage(data) || `Erro do proxy (${res.status}).`);
             }
             const text = data.choices?.[0]?.message?.content;
             if (!text) throw new Error('A IA não retornou texto na resposta.');

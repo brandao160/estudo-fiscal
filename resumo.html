@@ -1114,9 +1114,12 @@
             <a href="conteudoprogramatico.html" class="nav-item" id="menu-syllabus">
                 <i class="fas fa-list-check"></i><span>Conteúdo Programático</span>
             </a>
+<<<<<<< HEAD
             <a href="questoes.html" class="nav-item">
                 <i class="fas fa-list-check"></i><span>Questões</span>
             </a>
+=======
+>>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
             <a href="tempoestudo.html" class="nav-item">
                 <i class="fas fa-chart-pie"></i><span>Tempo de Estudo</span>
             </a>
@@ -1351,7 +1354,11 @@
         const pid = activeProfileId();
         if (pid === 'default') { alert('O perfil "Principal" não pode ser excluído.'); return; }
         if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil (matérias, ciclo, resumos) serão apagados.`)) return;
+<<<<<<< HEAD
         ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','ciclo_cards_v3','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession','estudoFiscalQuestoes','estudoFiscalQuestoesMode']
+=======
+        ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','ciclo_cards_v3','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession']
+>>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
             .forEach(base => localStorage.removeItem(base + '__' + pid));
         const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
         localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));

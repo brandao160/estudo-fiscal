@@ -10,8 +10,12 @@ const CACHE_NAME = 'ciclo-estudo-v1';
 const PRECACHE_URLS = [
     'index.html', 'cicloestudo.html', 'cicloestudolivre.html', 'materias.html',
     'planejamento.html', 'resumo.html', 'listacompleta.html', 'conteudoprogramatico.html',
+<<<<<<< HEAD
     'questoes.html', 'tempoestudo.html', 'historico.html', 'core.css', 'core.js',
     'manifest.json', 'icon.svg'
+=======
+    'tempoestudo.html', 'historico.html', 'core.css', 'core.js', 'manifest.json', 'icon.svg'
+>>>>>>> 8a8591edb317b906b6977c505202350c8e74bb43
 ];
 
 self.addEventListener('install', (event) => {

@@ -39,20 +39,15 @@
       ajuste as duas se o domínio/projeto do Cloudflare mudar.
    ========================================================== */
 
-// Tenta os modelos nesta ordem; o primeiro que responder sem erro de "indisponível" é o usado.
-// ATENÇÃO — os 3 primeiros são PAGOS (colocados a pedido, só pra comparar qualidade/performance):
-//   openai/gpt-6-astra        ~$0,01/1K tokens de entrada + ~$0,05/1K de saída
-//   qwen/qwen3.8-max-0902     ~$0,002/1K de entrada + ~$0,006/1K de saída (bem mais barato)
-//   anthropic/claude-fable-5.1 ~$0,01/1K de entrada + ~$0,05/1K de saída
-// Um lote de 20 questões (uns 5-8 mil tokens de saída) custa a partir de ~$0,03 (Qwen) até ~$0,30
-// (Astra/Fable) POR CHAMADA — e isso sai da cota compartilhada usada por QUALQUER visitante do site,
-// não só de quem está testando. Com o "Key Limit" de $1 configurado na chave, isso esgota rapidinho
-// (uns 3-4 lotes nos modelos caros). Pra voltar a ser 100% grátis depois do teste, é só apagar essas
-// 3 linhas — os modelos grátis abaixo continuam como fallback caso os pagos falhem (sem crédito, etc).
+// Testamos modelos pagos (GPT-6 Astra, Qwen3.8 Max, Claude Fable 5.1) e voltamos atrás: o GPT-6
+// Astra sozinho consumiu ~$0,83 numa única chamada (é um modelo com "reasoning" — gasta um monte de
+// tokens invisíveis "pensando" antes de responder, cobrados como saída). Ruim demais pra uma cota
+// compartilhada por qualquer visitante do site. 100% grátis de novo.
+//
+// Tenta os modelos nesta ordem; o primeiro que responder sem erro de "indisponível" é o usado. A
+// OpenRouter muda os modelos grátis disponíveis toda semana — se todos pararem de funcionar,
+// atualize conferindo openrouter.ai/models (filtro "Price: Free").
 const FREE_MODELS = [
-    'openai/gpt-6-astra',
-    'qwen/qwen3.8-max-0902',
-    'anthropic/claude-fable-5.1',
     'openrouter/free', // roteador automático da própria OpenRouter entre modelos grátis disponíveis
     'google/gemma-4-31b-it:free',
     'nvidia/nemotron-3-super-120b-a12b:free'

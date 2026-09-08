@@ -39,11 +39,20 @@
       ajuste as duas se o domínio/projeto do Cloudflare mudar.
    ========================================================== */
 
-// A lista de modelos grátis da OpenRouter muda toda semana (modelos saem e entram sem aviso —
-// foi exatamente isso que quebrou o modelo anterior). Por isso tentamos em ordem: o primeiro que
-// responder sem erro de "modelo indisponível" é o usado. Ajuste/atualize conferindo
-// openrouter.ai/models (filtro "Price: Free") se todos pararem de funcionar.
+// Tenta os modelos nesta ordem; o primeiro que responder sem erro de "indisponível" é o usado.
+// ATENÇÃO — os 3 primeiros são PAGOS (colocados a pedido, só pra comparar qualidade/performance):
+//   openai/gpt-6-astra        ~$0,01/1K tokens de entrada + ~$0,05/1K de saída
+//   qwen/qwen3.8-max-0902     ~$0,002/1K de entrada + ~$0,006/1K de saída (bem mais barato)
+//   anthropic/claude-fable-5.1 ~$0,01/1K de entrada + ~$0,05/1K de saída
+// Um lote de 20 questões (uns 5-8 mil tokens de saída) custa a partir de ~$0,03 (Qwen) até ~$0,30
+// (Astra/Fable) POR CHAMADA — e isso sai da cota compartilhada usada por QUALQUER visitante do site,
+// não só de quem está testando. Com o "Key Limit" de $1 configurado na chave, isso esgota rapidinho
+// (uns 3-4 lotes nos modelos caros). Pra voltar a ser 100% grátis depois do teste, é só apagar essas
+// 3 linhas — os modelos grátis abaixo continuam como fallback caso os pagos falhem (sem crédito, etc).
 const FREE_MODELS = [
+    'openai/gpt-6-astra',
+    'qwen/qwen3.8-max-0902',
+    'anthropic/claude-fable-5.1',
     'openrouter/free', // roteador automático da própria OpenRouter entre modelos grátis disponíveis
     'google/gemma-4-31b-it:free',
     'nvidia/nemotron-3-super-120b-a12b:free'
@@ -105,7 +114,7 @@ export async function onRequestPost(context) {
     // mas com um teto pra não deixar ninguém pedir uma resposta absurdamente cara.
     const maxTokens = Math.min(Math.max(parseInt(body.max_tokens, 10) || 4000, 256), 8000);
 
-    // Tenta os modelos grátis em ordem; se um estiver indisponível/fora do ar (400/404/429/503),
+    // Tenta os modelos da lista em ordem; se um estiver indisponível/sem crédito/fora do ar,
     // passa pro próximo em vez de já devolver erro pro usuário.
     let orRes, text;
     for (let i = 0; i < FREE_MODELS.length; i++) {
@@ -127,7 +136,8 @@ export async function onRequestPost(context) {
             });
         }
         text = await orRes.text();
-        const isUnavailable = [400, 404, 429, 503].includes(orRes.status);
+        // 402 = sem crédito (ex.: estourou o Key Limit) — cai pros modelos grátis da lista em vez de falhar.
+        const isUnavailable = [400, 402, 404, 429, 503].includes(orRes.status);
         const isLast = i === FREE_MODELS.length - 1;
         if (orRes.ok || !isUnavailable || isLast) break;
     }

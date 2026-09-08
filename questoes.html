@@ -264,7 +264,52 @@
             const lastBrace = cleaned.lastIndexOf('}');
             if (firstBrace === -1 || lastBrace === -1) throw new Error('Resposta da IA não contém um JSON reconhecível.');
             cleaned = cleaned.slice(firstBrace, lastBrace + 1);
-            return JSON.parse(cleaned);
+            try {
+                return JSON.parse(cleaned);
+            } catch (e) {
+                // Modelos (principalmente os grátis/menores) às vezes erram a sintaxe de UMA questão no
+                // meio de um lote de 20 (aspas não escapadas dentro do enunciado, por exemplo) — em vez
+                // de descartar o lote inteiro por causa de um item, salva as questões que estão OK.
+                const salvaged = salvageQuestoesArray(cleaned);
+                if (salvaged.length) return { questoes: salvaged };
+                throw e;
+            }
+        }
+
+        /** Varre o texto manualmente contando chaves (ignorando { e } dentro de strings) pra extrair
+         *  cada objeto do array "questoes" um por um — um item malformado é só pulado, não derruba
+         *  os outros que estão sintaticamente corretos. */
+        function salvageQuestoesArray(text) {
+            const arrStart = text.indexOf('[', text.indexOf('"questoes"'));
+            if (arrStart === -1) return [];
+
+            const items = [];
+            let i = arrStart + 1;
+            while (i < text.length) {
+                while (i < text.length && /[\s,]/.test(text[i])) i++;
+                if (i >= text.length || text[i] === ']') break;
+                if (text[i] !== '{') { i++; continue; }
+
+                const objStart = i;
+                let depth = 0, inString = false, escape = false;
+                for (; i < text.length; i++) {
+                    const ch = text[i];
+                    if (inString) {
+                        if (escape) escape = false;
+                        else if (ch === '\\') escape = true;
+                        else if (ch === '"') inString = false;
+                        continue;
+                    }
+                    if (ch === '"') { inString = true; continue; }
+                    if (ch === '{') depth++;
+                    else if (ch === '}') {
+                        depth--;
+                        if (depth === 0) { i++; break; }
+                    }
+                }
+                try { items.push(JSON.parse(text.slice(objStart, i))); } catch (e) { /* pula item malformado */ }
+            }
+            return items;
         }
 
         /** Extrai uma mensagem legível de um erro do proxy — pode vir como string (erro nosso, ex.:

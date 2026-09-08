@@ -381,38 +381,11 @@
             </div>
             <div class="modal-body">
                 <p style="font-size:0.86rem; color: var(--ink-2); margin: 0 0 14px;">
-                    Envie o PDF do edital para extrair as matérias e o conteúdo programático automaticamente, sem montar planilha. Duas formas de processar:
+                    Envie o PDF do edital para extrair as matérias e o conteúdo programático automaticamente com IA, sem montar planilha.
                 </p>
-
-                <div class="edital-mode-tabs">
-                    <button class="edital-mode-tab" id="edital-mode-tab-free" onclick="setEditalMode('free')">
-                        <i class="fas fa-gift"></i> Sem IA (grátis)
-                    </button>
-                    <button class="edital-mode-tab active" id="edital-mode-tab-ia" onclick="setEditalMode('ia')">
-                        <i class="fas fa-wand-magic-sparkles"></i> Com IA (automático)
-                    </button>
-                </div>
 
                 <label class="note-label" for="edital-ai-pdf-input">PDF do edital</label>
                 <input type="file" id="edital-ai-pdf-input" accept="application/pdf" class="note-input" style="margin-bottom:14px;">
-
-                <div id="edital-mode-free-panel" style="display:none;">
-                    <div class="edital-ai-warning" style="background: var(--surface-alt); border-color: var(--border);">
-                        <i class="fas fa-circle-info" style="color: var(--ink-3);"></i>
-                        <div>
-                            Lê o PDF com regras de padrão (títulos, numeração) — de graça e na hora, sem enviar nada pra fora do seu navegador. Funciona melhor em editais com formatação "arrumada" (uma matéria/tópico por linha). Não sabe julgar importância: todas as matérias específicas saem com peso 2 e as básicas com peso 1 — ajuste depois se quiser, editando a planilha exportada. Se o edital tiver o conteúdo programático em parágrafo corrido, prefira a aba "Com IA".
-                        </div>
-                    </div>
-                </div>
-
-                <div id="edital-mode-ia-panel">
-                    <div class="edital-ai-warning">
-                        <i class="fas fa-circle-info"></i>
-                        <div>
-                            Processamento automático pela IA do site — sem precisar de chave própria. Costuma extrair melhor editais com o conteúdo programático em parágrafo corrido (sem uma matéria/tópico por linha). Tem um limite diário de uso compartilhado entre os visitantes; se esgotar, tente de novo mais tarde ou use a aba "Sem IA".
-                        </div>
-                    </div>
-                </div>
 
                 <div id="edital-cargo-select" style="display:none; margin-bottom:14px;"></div>
 
@@ -420,7 +393,6 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeEditalAIModal()">Cancelar</button>
-                <button class="btn btn-primary" id="edital-free-process-btn" onclick="processEditalPDFHeuristic()" style="display:none;"><i class="fas fa-gift"></i> Processar sem IA (Grátis)</button>
                 <button class="btn btn-primary" id="edital-ia-process-btn" onclick="processEditalPDFAI()"><i class="fas fa-wand-magic-sparkles"></i> Processar com IA</button>
             </div>
         </div>
@@ -1113,25 +1085,12 @@
             if (!modal) return;
             setEditalAIStatus('', '');
             hideCargoSelect();
-            setEditalMode('ia');
             modal.classList.add('open');
         }
 
         function closeEditalAIModal() {
             const modal = document.getElementById('edital-ai-modal');
             if (modal) modal.classList.remove('open');
-        }
-
-        /** Alterna entre o modo grátis (heurística local) e IA (automático, via proxy do site). */
-        function setEditalMode(mode) {
-            ['free', 'ia'].forEach(m => {
-                document.getElementById('edital-mode-tab-' + m).classList.toggle('active', m === mode);
-                document.getElementById('edital-mode-' + m + '-panel').style.display = m === mode ? 'block' : 'none';
-            });
-            document.getElementById('edital-free-process-btn').style.display = mode === 'free' ? 'inline-flex' : 'none';
-            document.getElementById('edital-ia-process-btn').style.display = mode === 'ia' ? 'inline-flex' : 'none';
-            setEditalAIStatus('', '');
-            hideCargoSelect();
         }
 
         function setEditalAIStatus(html, kind) {
@@ -1171,164 +1130,6 @@
                 fullText += '\n\n';
             }
             return fullText;
-        }
-
-        // --- PARSER HEURÍSTICO (modo grátis, sem IA) ---
-        /** Deixa cada palavra com inicial maiúscula, mantendo conectivos comuns em minúsculo. */
-        function toTitleCasePt(str) {
-            const stop = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'a', 'o', 'as', 'os', 'para', 'com', 'no', 'na']);
-            return str.toLowerCase().split(' ').map((w, i) => {
-                if (i > 0 && stop.has(w)) return w;
-                return w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
-            }).join(' ');
-        }
-
-        /** Colapsa espaços/tabs repetidos (comuns na extração do pdf.js) em um único espaço. */
-        function normalizeEditalSpaces(text) {
-            return text.replace(/[ \t]+/g, ' ');
-        }
-
-        // Palavras que aparecem como "Nome :" mas não são matéria (notas/observações dentro do texto).
-        const EDITAL_HEADER_BLOCKLIST = new Set(['observação', 'observacao', 'obs', 'nota', 'importante', 'atenção', 'atencao']);
-
-        // Padrão real de "conteúdo programático" de edital: "Nome da Matéria : descrição corrida dos
-        // tópicos (às vezes numerados '1.', às vezes não), tudo em um único parágrafo por matéria" —
-        // não é uma linha por tópico. O nome da matéria vem em Title Case, curto, seguido de dois-pontos.
-        const EDITAL_HEADER_RE = /^([A-ZÀ-Ý][A-Za-zÀ-ÿ0-9,()\/\-]*(?:\s+[A-Za-zÀ-ÿ0-9,()\/\-]+){0,7})\s*:\s*(.*)$/;
-
-        /**
-         * Uma linha só pode iniciar uma NOVA matéria se a linha anterior realmente terminou uma frase
-         * (pontuação de fechamento) — se ela termina só em número de lista ("... 11.") ou no meio de uma
-         * frase (sem pontuação), o "Nome :" encontrado é apenas um tópico numerado dentro do parágrafo
-         * da matéria anterior, não uma matéria nova.
-         */
-        function editalPrevLineEndsSentence(line) {
-            const trimmed = (line || '').trim();
-            if (!trimmed) return true;
-            if (/\d{1,3}\.?\s*$/.test(trimmed)) return false;
-            return /[.;:]$/.test(trimmed);
-        }
-
-        /**
-         * Parser "burro" (sem IA): usa padrões de texto comuns em editais brasileiros para montar a
-         * mesma estrutura de `model` usada pela importação de Excel/IA. Restringe a leitura à seção de
-         * "Conteúdo Programático" (geralmente um anexo) para não confundir matéria com título
-         * administrativo do edital (ex: "Das Inscrições", "Dos Recursos"). Não tem noção real de
-         * importância — pesos são uma regra fixa (Básico=1, Específico=2).
-         */
-        function parseEditalHeuristically(rawText) {
-            let text = normalizeEditalSpaces(rawText);
-            let sectionWarning = null;
-
-            // Restringe ao último bloco "Conteúdo Programático" do documento (o anexo em si — mecionar
-            // esse termo antes, num sumário ou regra de prova, é comum e não deve ser usado como início).
-            const startRe = /conte[uú]do\s+program[aá]tico/gi;
-            let startIdx = -1, sm;
-            while ((sm = startRe.exec(text))) startIdx = sm.index;
-            if (startIdx === -1) {
-                sectionWarning = 'Não encontrei uma seção "Conteúdo Programático" clara nesse PDF — tentei ler o documento inteiro. Revise o resultado com atenção, pode ter vindo lixo de outras partes do edital.';
-            } else {
-                const rest = text.slice(startIdx);
-                const endMatch = rest.slice(80).match(/anexo\s+i{2,3}\b/i);
-                text = endMatch ? rest.slice(0, 80 + endMatch.index) : rest;
-            }
-
-            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-            const catBasicoRe = /conhecimentos?\s+(b[aá]sicos?|gerais?)/i;
-            const catEspecificoRe = /conhecimentos?\s+espec[ií]ficos?/i;
-
-            let currentCategory = 'Basico';
-            let currentSubject = null;
-            let prevLineEndedSentence = true; // início de seção conta como fronteira
-            const materiasMap = new Map(); // nome -> { nome, tipo, peso, contentParts: [] }
-
-            lines.forEach(line => {
-                if (catBasicoRe.test(line)) { currentCategory = 'Basico'; currentSubject = null; prevLineEndedSentence = true; return; }
-                if (catEspecificoRe.test(line)) { currentCategory = 'Especifico'; currentSubject = null; prevLineEndedSentence = true; return; }
-
-                const hm = line.match(EDITAL_HEADER_RE);
-                const candidateName = hm ? hm[1].trim() : '';
-                const isValidHeader = hm && candidateName.length <= 60
-                    && !EDITAL_HEADER_BLOCKLIST.has(candidateName.toLowerCase())
-                    && prevLineEndedSentence;
-
-                if (isValidHeader) {
-                    const nome = toTitleCasePt(candidateName);
-                    if (!materiasMap.has(nome)) {
-                        materiasMap.set(nome, { nome, tipo: currentCategory, peso: currentCategory === 'Especifico' ? 2 : 1, contentParts: [] });
-                    }
-                    currentSubject = nome;
-                    if (hm[2]) materiasMap.get(nome).contentParts.push(hm[2]);
-                } else if (currentSubject) {
-                    materiasMap.get(currentSubject).contentParts.push(line);
-                }
-
-                prevLineEndedSentence = editalPrevLineEndsSentence(line);
-            });
-
-            const materias = [];
-            const byCategory = {};
-            materiasMap.forEach(m => {
-                const contentText = m.contentParts.join(' ');
-                const topics = contentText
-                    .split(/\.\s+/)
-                    .map(t => t.replace(/^\d{1,3}\.?\s*/, '').replace(/\.$/, '').trim())
-                    .filter(t => t.length > 3)
-                    // Cargos diferentes às vezes repetem a mesma matéria com o mesmo texto —
-                    // sem isso o tópico apareceria duplicado na lista.
-                    .filter((t, i, arr) => arr.indexOf(t) === i);
-                materias.push({ nome: m.nome, tipo: m.tipo, peso: m.peso });
-                const catLabel = m.tipo === 'Especifico' ? 'Conhecimentos Específicos' : 'Conhecimentos Básicos';
-                if (!byCategory[catLabel]) byCategory[catLabel] = [];
-                byCategory[catLabel].push({ name: m.nome, topics });
-            });
-            const syllabus = Object.keys(byCategory).map(cat => ({ category: cat, subjects: byCategory[cat] }));
-
-            return { concurso: '', orgao: '', materias, syllabus, _sectionWarning: sectionWarning };
-        }
-
-        async function processEditalPDFHeuristic() {
-            const fileInput = document.getElementById('edital-ai-pdf-input');
-            const file = fileInput.files[0];
-            if (!file) { setEditalAIStatus('Escolha o arquivo PDF do edital.', 'error'); return; }
-
-            const btnFree = document.getElementById('edital-free-process-btn');
-            const btnAI = document.getElementById('edital-ia-process-btn');
-            btnFree.disabled = true; btnAI.disabled = true;
-
-            try {
-                setEditalAIStatus('<i class="fas fa-spinner"></i> Lendo o PDF...', '');
-                const text = await extractPdfText(file);
-                const extractedModel = parseEditalHeuristically(text);
-
-                if (!extractedModel.materias.length) {
-                    setEditalAIStatus('Não consegui identificar matérias nesse PDF no modo grátis (formatação pouco padrão pro parser). Tente o modo "Com IA" ou monte a planilha manualmente.', 'error');
-                    return;
-                }
-
-                const { errors, warnings } = validateModel(extractedModel);
-                if (errors.length > 0) {
-                    setEditalAIStatus('Não consegui montar um modelo válido: ' + errors.join(' '), 'error');
-                    return;
-                }
-                const allWarnings = warnings.slice();
-                if (extractedModel._sectionWarning) allWarnings.push(extractedModel._sectionWarning);
-                allWarnings.push('Modo grátis (sem IA): pesos foram definidos por uma regra fixa (Básico=1, Específico=2) — não é uma avaliação real de importância. Ajuste depois exportando, editando e reimportando a planilha.');
-                allWarnings.push('Revise a lista de matérias abaixo antes de continuar estudando — o parser pode ocasionalmente pegar um trecho que não é matéria de verdade.');
-                delete extractedModel._sectionWarning;
-                const proceed = confirm(`Encontrei ${extractedModel.materias.length} matéria(s):\n${extractedModel.materias.map(m => '- ' + m.nome).join('\n')}\n\nAvisos:\n\n${allWarnings.join('\n')}\n\nAplicar mesmo assim?`);
-                if (!proceed) { setEditalAIStatus('Importação cancelada.', ''); return; }
-
-                applyImportedModel(extractedModel);
-                setEditalAIStatus(`<i class="fas fa-check"></i> Pronto! ${extractedModel.materias.length} matéria(s) importada(s) (modo grátis).`, 'success');
-                showToast('Edital importado (modo grátis) com sucesso!', 'success');
-                setTimeout(closeEditalAIModal, 1500);
-            } catch (err) {
-                setEditalAIStatus('Erro: ' + err.message, 'error');
-                console.error('Erro no parser heurístico do edital:', err);
-            } finally {
-                btnFree.disabled = false; btnAI.disabled = false;
-            }
         }
 
         /** Monta o prompt que só pergunta quais cargos/empregos distintos o edital cobre (sem extrair
@@ -1406,7 +1207,7 @@ ${editalText}
                     body: JSON.stringify({ prompt: promptText, max_tokens: 8000 })
                 });
             } catch (e) {
-                throw new Error('Não consegui falar com a IA do site agora. Tente novamente em instantes, ou use a aba "Sem IA". ' + e.message);
+                throw new Error('Não consegui falar com a IA do site agora. Tente novamente em instantes. ' + e.message);
             }
             let data;
             try { data = await res.json(); } catch (e) { throw new Error('A IA do site não retornou uma resposta válida.'); }
@@ -1505,7 +1306,7 @@ ${editalText}
             try {
                 extractedModel = extractJSONFromText(aiText);
             } catch (parseErr) {
-                setEditalAIStatus('A IA respondeu, mas não consegui interpretar o resultado como dados válidos. Tente novamente ou use a aba "Sem IA".', 'error');
+                setEditalAIStatus('A IA respondeu, mas não consegui interpretar o resultado como dados válidos. Tente novamente.', 'error');
                 console.error('Resposta da IA (não-JSON):', aiText);
                 return;
             }

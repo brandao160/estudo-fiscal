@@ -39,18 +39,28 @@
       ajuste as duas se o domínio/projeto do Cloudflare mudar.
    ========================================================== */
 
-// Testamos modelos pagos (GPT-6 Astra, Qwen3.8 Max, Claude Fable 5.1) e voltamos atrás: o GPT-6
-// Astra sozinho consumiu ~$0,83 numa única chamada (é um modelo com "reasoning" — gasta um monte de
-// tokens invisíveis "pensando" antes de responder, cobrados como saída). Ruim demais pra uma cota
-// compartilhada por qualquer visitante do site. 100% grátis de novo.
+// Testamos modelos pagos "de ponta" (GPT-6 Astra, Qwen3.8 Max, Claude Fable 5.1) e voltamos atrás:
+// o GPT-6 Astra sozinho consumiu ~$0,83 numa única chamada (é um modelo com "reasoning" — gasta um
+// monte de tokens invisíveis "pensando" antes de responder, cobrados como saída). Ruim demais pra
+// uma cota compartilhada por qualquer visitante do site.
 //
-// Tenta os modelos nesta ordem; o primeiro que responder sem erro de "indisponível" é o usado. A
-// OpenRouter muda os modelos grátis disponíveis toda semana — se todos pararem de funcionar,
-// atualize conferindo openrouter.ai/models (filtro "Price: Free").
+// Tenta os modelos nesta ordem; o primeiro que responder sem erro de "indisponível" é o usado.
+// Os dois primeiros são grátis; o terceiro é pago mas CUSTA CENTAVOS DE CENTAVO (sem "reasoning",
+// pra não repetir o susto do Astra) — só entra em ação se os dois grátis estiverem fora do ar/muito
+// lentos/indisponíveis, servindo de rede de segurança pra sempre ter uma resposta rápida. Os últimos
+// da lista são mais grátis, como último recurso caso até o pago falhe.
+//
+// A OpenRouter muda os modelos grátis disponíveis toda semana — se algum parar de funcionar,
+// atualize conferindo openrouter.ai/models (filtro "Price: Free"; pro pago, ordene por preço e
+// confira que NÃO tem "reasoning" no nome/descrição antes de trocar).
 const FREE_MODELS = [
-    'openrouter/free', // roteador automático da própria OpenRouter entre modelos grátis disponíveis
-    'google/gemma-4-31b-it:free',
-    'nvidia/nemotron-3-super-120b-a12b:free'
+    'openrouter/free',              // grátis — roteador automático da própria OpenRouter
+    'google/gemma-4-31b-it:free',   // grátis — 31B, uso geral
+    'upstage/solar-pro4',           // PAGO, ~$0,03 de entrada + $0,12 de saída por MILHÃO de tokens
+                                     // (sem reasoning) — um lote de questões custa frações de centavo
+    'nvidia/nemotron-3-super-120b-a12b:free', // grátis — modelo grande (MoE), último recurso
+    'thinkingmachines/inkling-small:free',    // grátis — 12B, último recurso
+    'google/gemma-4-26b-a4b-it:free'          // grátis — último recurso
 ];
 
 // Quantas gerações por dia cada visitante (por IP) pode fazer. Ajuste conforme
@@ -109,11 +119,21 @@ export async function onRequestPost(context) {
     // mas com um teto pra não deixar ninguém pedir uma resposta absurdamente cara.
     const maxTokens = Math.min(Math.max(parseInt(body.max_tokens, 10) || 4000, 256), 8000);
 
-    // Tenta os modelos da lista em ordem; se um estiver indisponível/sem crédito/fora do ar,
-    // passa pro próximo em vez de já devolver erro pro usuário.
+    // Nenhum modelo pode deixar o usuário esperando pra sempre — se demorar mais que isso, aborta e
+    // cai pro próximo da lista (é assim que o pago barato de posição 3 entra em ação quando os
+    // grátis estão lentos, não só quando dão erro). Mantido moderado de propósito: Cloudflare Pages
+    // Functions tem um limite de duração total por requisição — encadear timeouts longos demais em
+    // vários modelos seguidos poderia estourar esse limite antes mesmo de chegar no fallback pago.
+    const MODEL_TIMEOUT_MS = 12000;
+
+    // Tenta os modelos da lista em ordem; se um estiver indisponível/sem crédito/fora do ar/lento
+    // demais, passa pro próximo em vez de já devolver erro pro usuário.
     let orRes, text;
     for (let i = 0; i < FREE_MODELS.length; i++) {
         const model = FREE_MODELS[i];
+        const isLast = i === FREE_MODELS.length - 1;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
         try {
             orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
@@ -123,17 +143,23 @@ export async function onRequestPost(context) {
                     'HTTP-Referer': env.ALLOWED_ORIGIN || 'https://cicloestudo.com.br',
                     'X-Title': 'Ciclo de Estudo'
                 },
-                body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens })
+                body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens }),
+                signal: controller.signal
             });
         } catch (e) {
-            return new Response(JSON.stringify({ error: 'Falha ao chamar a OpenRouter: ' + e.message }), {
-                status: 502, headers: { ...cors, 'content-type': 'application/json' }
-            });
+            // Timeout (AbortError) ou falha de rede: tenta o próximo modelo, a não ser que seja o último.
+            if (isLast) {
+                return new Response(JSON.stringify({ error: 'Falha ao chamar a OpenRouter: ' + e.message }), {
+                    status: 502, headers: { ...cors, 'content-type': 'application/json' }
+                });
+            }
+            continue;
+        } finally {
+            clearTimeout(timeoutId);
         }
         text = await orRes.text();
-        // 402 = sem crédito (ex.: estourou o Key Limit) — cai pros modelos grátis da lista em vez de falhar.
+        // 402 = sem crédito (ex.: estourou o Key Limit) — cai pros próximos modelos da lista em vez de falhar.
         const isUnavailable = [400, 402, 404, 429, 503].includes(orRes.status);
-        const isLast = i === FREE_MODELS.length - 1;
         if (orRes.ok || !isUnavailable || isLast) break;
     }
 

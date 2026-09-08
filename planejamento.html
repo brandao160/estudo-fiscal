@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planejamento — Ciclo de Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ─── TOKENS (mesmo sistema do Ciclo de Estudo, pra tudo combinar) ─── */
+        :root {
+            --bg: #0F0F0F; --surface: #1A1A1A; --surface-alt: #222222;
+            --sidebar-bg: #111111; --sidebar-hover: rgba(249,115,22,0.10); --sidebar-border: rgba(255,255,255,0.07);
+            --sidebar-text: #F5F5F5; --sidebar-muted: #777777; --sidebar-card-bg: rgba(255,255,255,0.04);
+            --ink: #F5F5F5; --ink-2: #D4D4D4; --ink-3: #888888; --ink-4: #555555;
+            --accent: #F97316; --accent-soft: rgba(249,115,22,0.14); --accent-hover: #EA6F0F;
+            --accent-secondary: #DC2626; --accent-secondary-soft: rgba(220,38,38,0.12);
+            --green: #22C55E; --green-soft: rgba(34,197,94,0.12);
+            --amber: #EAB308; --amber-soft: rgba(234,179,8,0.12);
+            --red: #EF4444; --red-soft: rgba(239,68,68,0.12);
+            --border: rgba(255,255,255,0.08); --border-2: rgba(255,255,255,0.04);
+            --r-xs: 3px; --r-sm: 6px; --r: 8px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 9999px;
+            --sh-xs: none; --sh-sm: 0 1px 3px rgba(0,0,0,0.4); --sh: 0 3px 8px rgba(0,0,0,0.5);
+            --sh-md: 0 8px 24px rgba(0,0,0,0.6); --sh-lg: 0 20px 60px rgba(0,0,0,0.8);
+            --input-bg: var(--surface-alt); --input-border: var(--border);
+            --glass-bg: rgba(15,15,15,0.95); --glass-border: rgba(255,255,255,0.08);
+        }
+        [data-theme="light"] {
+            --bg: #F7F7F7; --surface: #FFFFFF; --surface-alt: #F0F0F0;
+            --sidebar-bg: #FFFFFF; --sidebar-hover: rgba(249,115,22,0.08); --sidebar-border: #E5E5E5;
+            --sidebar-text: #1A1A1A; --sidebar-muted: #888888; --sidebar-card-bg: rgba(0,0,0,0.03);
+            --ink: #1A1A1A; --ink-2: #404040; --ink-3: #888888; --ink-4: #AAAAAA;
+            --accent: #EA6F0F; --accent-soft: rgba(234,111,15,0.10); --accent-hover: #D96200;
+            --accent-secondary: #B91C1C; --accent-secondary-soft: rgba(185,28,28,0.09);
+            --green: #16A34A; --green-soft: rgba(22,163,74,0.09);
+            --amber: #D97706; --amber-soft: rgba(217,119,6,0.09);
+            --red: #DC2626; --red-soft: rgba(220,38,38,0.09);
+            --border: #E5E5E5; --border-2: #F0F0F0;
+            --sh-xs: 0 1px 2px rgba(0,0,0,0.05); --sh-sm: 0 1px 4px rgba(0,0,0,0.08);
+            --sh: 0 3px 8px rgba(0,0,0,0.08); --sh-md: 0 8px 24px rgba(0,0,0,0.10); --sh-lg: 0 20px 60px rgba(0,0,0,0.14);
+            --input-bg: var(--surface); --input-border: var(--border);
+            --glass-bg: rgba(255,255,255,0.96); --glass-border: rgba(0,0,0,0.08);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.3); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        body {
+            margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+            font-family: 'Source Sans 3', 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.55;
+            display: flex; flex-direction: column; min-height: 100vh;
+            transition: background 0.2s, color 0.2s; -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── TOP HEADER (idêntico ao Ciclo de Estudo) ──────────────── */
+        .app-header {
+            display: flex; flex-direction: column; align-items: stretch;
+            background: var(--sidebar-bg); border-bottom: 1px solid var(--sidebar-border);
+            flex-shrink: 0; color: var(--sidebar-text); position: sticky; top: 0; z-index: 100;
+        }
+        [data-theme="light"] .app-header { box-shadow: 0 1px 0 var(--sidebar-border); }
+        .app-header-row { display: flex; align-items: center; gap: 14px; padding: 8px 20px; }
+        .app-header-row + .app-header-row { border-top: 1px solid var(--sidebar-border); }
+
+        .brand { display: flex; align-items: center; gap: 8px; font-family: 'Nunito', sans-serif; font-size: 1.05rem; font-weight: 900; letter-spacing: -0.3px; flex-shrink: 0; text-decoration: none; }
+        .brand span { background: linear-gradient(135deg, #F97316 0%, #DC2626 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .brand i { color: #F97316; font-size: 1.1rem; }
+        [data-theme="light"] .brand span { background: linear-gradient(135deg, #EA6F0F, #B91C1C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        [data-theme="light"] .brand i { color: #EA6F0F; }
+
+        .profile-switcher { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+        .profile-switcher select {
+            background: var(--sidebar-card-bg); color: var(--sidebar-text);
+            border: 1px solid var(--sidebar-border); border-radius: var(--r);
+            padding: 6px 8px; font-size: 0.76rem; font-family: 'Source Sans 3', sans-serif; font-weight: 700; cursor: pointer; max-width: 130px;
+        }
+        .profile-icon-btn {
+            background: transparent; border: 1px solid var(--sidebar-border); color: var(--sidebar-muted);
+            width: 26px; height: 26px; border-radius: var(--r); cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 0.7rem; transition: all 0.14s;
+        }
+        .profile-icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        .topnav-menu { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+        .topnav-menu::-webkit-scrollbar { display: none; }
+        .nav-item {
+            padding: 8px 12px; border-radius: var(--r); cursor: pointer; display: flex; align-items: center; gap: 8px;
+            color: var(--sidebar-muted); transition: background 0.15s, color 0.15s;
+            font-family: 'Source Sans 3', sans-serif; font-weight: 600; font-size: 0.85rem;
+            text-decoration: none; position: relative; white-space: nowrap; flex-shrink: 0;
+        }
+        .nav-item:hover { background: var(--sidebar-hover); color: var(--accent); }
+        .nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+        .nav-item.active::before { content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px; background: var(--accent); border-radius: 2px 2px 0 0; }
+        [data-theme="light"] .nav-item { color: var(--ink-3); }
+        [data-theme="light"] .nav-item.active { color: var(--accent); }
+        .nav-item i { width: 15px; text-align: center; font-size: 0.82rem; color: inherit; }
+
+        .header-icon-btn {
+            border: 1px solid var(--sidebar-border); background: var(--sidebar-card-bg); color: var(--sidebar-muted);
+            width: 36px; height: 36px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: all 0.14s;
+        }
+        .header-icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* ─── PAGE HEADER ────────────────────────────────────────────── */
+        .page-top-bar {
+            padding: 14px 24px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); flex-shrink: 0; gap: 16px;
+        }
+        .page-top-bar h1 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--ink); font-family: 'Nunito', sans-serif; }
+        .page-top-bar p { margin: 2px 0 0; font-size: 0.8rem; color: var(--ink-3); }
+
+        .content-area { flex: 1; overflow-y: auto; padding: 24px; background: var(--bg); }
+        .plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 18px; }
+
+        .plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; }
+        .plan-card h2 { margin: 0 0 4px; font-size: 0.98rem; font-weight: 800; font-family: 'Nunito', sans-serif; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+        .plan-card h2 i { color: var(--accent); }
+        .plan-card .plan-card-sub { margin: 0 0 16px; font-size: 0.8rem; color: var(--ink-3); }
+
+        /* Countdown */
+        .countdown-value { font-size: 2.6rem; font-weight: 900; color: var(--accent); font-family: 'Nunito', sans-serif; line-height: 1; }
+        .countdown-label { font-size: 0.78rem; color: var(--ink-3); margin-top: 4px; }
+        .countdown-row { display: flex; gap: 28px; }
+        .cycle-dates-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+        .cycle-date-field { display: flex; flex-direction: column; gap: 4px; }
+        .cycle-date-field label { font-size: 0.72rem; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.3px; }
+        .cycle-date-field input[type="date"] {
+            padding: 8px 10px; background: var(--input-bg); border: 1px solid var(--input-border);
+            color: var(--ink); border-radius: var(--r); font-size: 0.9rem; font-family: 'Nunito', sans-serif; font-weight: 700;
+        }
+
+        /* Weekly pace */
+        .pace-input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .pace-input-row input {
+            width: 80px; padding: 8px 10px; background: var(--input-bg); border: 1px solid var(--input-border);
+            color: var(--ink); border-radius: var(--r); font-size: 0.95rem; font-family: 'Nunito', sans-serif; font-weight: 700;
+        }
+        .pace-status { padding: 10px 12px; border-radius: var(--r); font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .pace-status.ok { background: var(--green-soft); color: var(--green); }
+        .pace-status.warn { background: var(--amber-soft); color: var(--amber); }
+        .pace-status.bad { background: var(--red-soft); color: var(--red); }
+        .pace-status.neutral { background: var(--surface-alt); color: var(--ink-3); }
+
+        /* Rotina semanal (grid de dias) */
+        .routine-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-bottom: 12px; }
+        .routine-day { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 4px; }
+        .routine-day-label { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-3); font-family: 'Nunito', sans-serif; }
+        .routine-day-input {
+            width: 100%; text-align: center; padding: 5px 2px; background: var(--input-bg); border: 1px solid var(--input-border);
+            color: var(--ink); border-radius: var(--r-sm); font-size: 0.9rem; font-family: 'Nunito', sans-serif; font-weight: 800;
+        }
+        .routine-day-unit { font-size: 0.62rem; color: var(--ink-4); }
+        .routine-total-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 8px 12px; background: var(--accent-soft); border-radius: var(--r); }
+        .routine-total-row strong { color: var(--accent); font-family: 'Nunito', sans-serif; font-size: 1.05rem; }
+
+        /* Preferências do ciclo */
+        .pref-row { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border-2); }
+        .pref-row-body { flex: 1; min-width: 0; }
+        .pref-row-title { font-weight: 700; font-size: 0.9rem; color: var(--ink); font-family: 'Nunito', sans-serif; }
+        .pref-row-desc { font-size: 0.78rem; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 99px; transition: 0.15s; }
+        .switch-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.15s; box-shadow: var(--sh-xs); }
+        .switch input:checked + .switch-slider { background: var(--accent); }
+        .switch input:checked + .switch-slider::before { transform: translateX(18px); }
+
+        .subj-dist-select {
+            padding: 5px 6px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--ink);
+            border-radius: var(--r-sm); font-family: 'Source Sans 3', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+        }
+
+        /* Prioridades da semana */
+        .priority-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-2); }
+        .priority-row:last-child { border-bottom: none; }
+        .priority-rank {
+            width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+            font-weight: 800; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'Nunito', sans-serif;
+        }
+        .priority-body { flex: 1; min-width: 0; }
+        .priority-name { font-weight: 700; font-size: 0.9rem; color: var(--ink); font-family: 'Nunito', sans-serif; }
+        .priority-meta { font-size: 0.75rem; color: var(--ink-3); margin-top: 2px; }
+        .priority-gap { font-weight: 800; color: var(--amber); font-family: 'Nunito', sans-serif; font-size: 0.9rem; flex-shrink: 0; white-space: nowrap; }
+
+        /* Fases */
+        .phase-tip {
+            display: flex; gap: 8px; align-items: flex-start; background: var(--accent-soft);
+            border: 1px solid rgba(249,115,22,0.25); border-radius: var(--r); padding: 9px 12px;
+            font-size: 0.8rem; color: var(--ink-2); margin-bottom: 16px; line-height: 1.5;
+        }
+        .phase-tip i { color: var(--accent); margin-top: 2px; }
+        .phase-timeline { display: flex; height: 34px; border-radius: var(--r-full); overflow: hidden; margin-bottom: 14px; box-shadow: var(--sh-xs); }
+        .phase-seg { display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; color: #fff; font-family: 'Nunito', sans-serif; white-space: nowrap; overflow: hidden; position: relative; }
+        .phase-seg.is-current { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.6); }
+        .phase-marker {
+            position: absolute; top: -6px; width: 2px; height: 46px; background: var(--ink);
+            opacity: 0.5;
+        }
+        .phase-list { display: flex; flex-direction: column; gap: 10px; }
+        .phase-row { display: flex; align-items: center; gap: 12px; }
+        .phase-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .phase-row-body { flex: 1; min-width: 0; }
+        .phase-row-title { font-weight: 700; font-size: 0.88rem; color: var(--ink); font-family: 'Nunito', sans-serif; }
+        .phase-row-title.is-current { color: var(--accent); }
+        .phase-row-meta { font-size: 0.76rem; color: var(--ink-3); }
+        .phase-pct-input { width: 52px; padding: 5px 6px; text-align: center; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--ink); border-radius: var(--r); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.85rem; }
+
+        /* Distribuição por matéria */
+        .subj-dist-table { width: 100%; border-collapse: collapse; }
+        .subj-dist-table th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-3); padding: 6px 8px; border-bottom: 2px solid var(--border); font-family: 'Nunito', sans-serif; }
+        .subj-dist-table td { padding: 8px; border-bottom: 1px solid var(--border-2); font-size: 0.85rem; vertical-align: middle; }
+        .subj-dist-name { font-weight: 700; color: var(--ink); }
+        .subj-dist-bar-track { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; width: 100%; min-width: 70px; }
+        .subj-dist-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-secondary)); border-radius: 99px; }
+        .subj-dist-prog-track { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; width: 100%; min-width: 70px; }
+        .subj-dist-prog-fill { height: 100%; background: var(--green); border-radius: 99px; }
+
+        .empty-state {
+            background: var(--surface); border: 1px dashed var(--border); border-radius: var(--r-xl);
+            padding: 48px 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px;
+        }
+        .empty-state i { font-size: 2.2rem; color: var(--accent); opacity: 0.8; }
+        .empty-state h3 { margin: 0; font-family: 'Nunito', sans-serif; font-size: 1.1rem; color: var(--ink); }
+        .empty-state p { margin: 0; color: var(--ink-3); font-size: 0.9rem; max-width: 460px; }
+
+        .btn {
+            padding: 8px 18px; border-radius: var(--r-md); font-weight: 700; cursor: pointer; border: none;
+            font-size: 0.88rem; font-family: 'Source Sans 3', sans-serif; transition: all 0.14s ease;
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(249,115,22,0.3); }
+        .btn-primary:hover { background: var(--accent-hover); }
+
+        #toast-container { position: fixed; top: 16px; right: 16px; z-index: 10001; display: flex; flex-direction: column; gap: 7px; }
+        .toast {
+            background: var(--glass-bg); color: var(--ink); padding: 11px 14px; border-radius: var(--r-md);
+            border-left: 3px solid var(--accent); border: 1px solid var(--glass-border); border-left: 3px solid var(--accent);
+            box-shadow: var(--sh-md); min-width: 250px; max-width: 360px; animation: slideInRight 0.25s ease-out forwards;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.88rem; font-weight: 600;
+            backdrop-filter: blur(20px);
+        }
+        .toast.success { border-left-color: var(--green); }
+        .toast.warning { border-left-color: var(--amber); }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { transform: translateX(100%); opacity: 0; } }
+
+        @media (max-width: 768px) {
+            .app-header-row { padding: 8px 12px; }
+            .content-area { padding: 14px; }
+            .countdown-row { flex-wrap: wrap; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <header class="app-header">
+        <div class="app-header-row">
+            <a href="index.html" class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </a>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+            <div style="flex:1;"></div>
+            <button id="theme-toggle" class="header-icon-btn" onclick="toggleTheme()" title="Alternar tema">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i><span>Início</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-map"></i><span>Planejamento</span>
+                </div>
+                <a href="materias.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i><span>Matérias</span>
+                </a>
+                <a href="cicloestudo.html" class="nav-item">
+                    <i class="fas fa-bullseye"></i><span>Ciclo de Estudo</span>
+                </a>
+                <a href="cicloestudolivre.html" class="nav-item">
+                    <i class="fas fa-hand-pointer"></i><span>Ciclo Livre</span>
+                </a>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i><span>Meus Resumos</span>
+                </a>
+                <a href="listacompleta.html" class="nav-item">
+                    <i class="fas fa-list"></i><span>Lista Completa</span>
+                </a>
+                <a href="conteudoprogramatico.html" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i><span>Conteúdo Programático</span>
+                </a>
+                <a href="questoes.html" class="nav-item">
+                    <i class="fas fa-list-check"></i><span>Questões</span>
+                </a>
+                <a href="tempoestudo.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i><span>Tempo de Estudo</span>
+                </a>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i><span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-top-bar">
+        <div>
+            <h1>Planejamento de Estudo</h1>
+            <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div id="empty-state-container"></div>
+        <div id="plan-content" style="display:none;">
+
+            <div class="plan-grid">
+                <div class="plan-card">
+                    <h2><i class="fas fa-hourglass-half"></i> Contagem regressiva</h2>
+                    <p class="plan-card-sub">Defina o período do seu ciclo de estudo — pode ajustar aqui a qualquer momento, sem precisar de planilha ou edital em PDF.</p>
+                    <div class="cycle-dates-row">
+                        <div class="cycle-date-field">
+                            <label for="cycle-date-inicio">Início do ciclo</label>
+                            <input type="date" id="cycle-date-inicio" onchange="updateCycleDate('inicioCiclo', this.value)">
+                        </div>
+                        <div class="cycle-date-field">
+                            <label for="cycle-date-fim">Fim do ciclo (data da prova)</label>
+                            <input type="date" id="cycle-date-fim" onchange="updateCycleDate('fimCiclo', this.value)">
+                        </div>
+                    </div>
+                    <div class="pace-status warn" id="cycle-dates-tip" style="display:none; margin-bottom:14px;"><i class="fas fa-triangle-exclamation"></i> A data de fim precisa ser depois da data de início.</div>
+                    <div class="countdown-row">
+                        <div>
+                            <div class="countdown-value" id="plan-days-left">0</div>
+                            <div class="countdown-label">dias até a prova</div>
+                        </div>
+                        <div>
+                            <div class="countdown-value" id="plan-weeks-left">0</div>
+                            <div class="countdown-label">semanas restantes</div>
+                        </div>
+                        <div>
+                            <div class="countdown-value" id="plan-pct-elapsed">0%</div>
+                            <div class="countdown-label">do ciclo já passou</div>
+                        </div>
+                    </div>
+                    <div class="pace-status neutral" id="countdown-insight" style="margin-top:14px;"></div>
+                </div>
+
+                <div class="plan-card">
+                    <h2><i class="fas fa-calendar-week"></i> Minha rotina semanal</h2>
+                    <p class="plan-card-sub">Quantas horas você tem disponíveis em cada dia? O Ciclo de Estudo usa exatamente esses horários para gerar sua agenda.</p>
+                    <div class="routine-grid" id="routine-grid"><!-- JS generated --></div>
+                    <div class="routine-total-row">
+                        <span style="font-size:0.82rem; color:var(--ink-2);">Total disponível por semana</span>
+                        <strong><span id="routine-total-hours">0</span>h</strong>
+                    </div>
+                    <div class="pace-status neutral" id="pace-status-box">Calculando…</div>
+                    <div class="pace-status warn" id="routine-rest-tip" style="display:none; margin-top:8px;"><i class="fas fa-mug-hot"></i> Reserve pelo menos 1 dia de descanso na semana — até quem estuda em ritmo forte precisa disso.</div>
+                </div>
+            </div>
+
+            <div class="plan-card" style="margin-bottom: 18px;">
+                <h2><i class="fas fa-sliders"></i> Preferências do ciclo</h2>
+                <p class="plan-card-sub">Ajustes que mudam de verdade como o Ciclo de Estudo monta sua agenda.</p>
+                <div class="pref-row">
+                    <div class="pref-row-body">
+                        <div class="pref-row-title">Edital já foi publicado</div>
+                        <div class="pref-row-desc">Depois que o edital sai, dá pra apertar o ritmo — quem já passou costuma aumentar a carga semanal nesse momento.</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="pref-edital-publicado" onchange="updateEditalPublicado(this.checked)"><span class="switch-slider"></span></label>
+                </div>
+                <div class="pace-status warn" id="edital-publicado-tip" style="display:none;"><i class="fas fa-arrow-up"></i> Considere aumentar sua rotina semanal em ~15-20% enquanto durar a reta final até a prova.</div>
+
+                <div class="pref-row">
+                    <div class="pref-row-body">
+                        <div class="pref-row-title">Meu concurso tem prova discursiva</div>
+                        <div class="pref-row-desc">Reserva um bloco de horas por semana só pra prática de redação/discursiva, separado da distribuição por matéria.</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="pref-tem-discursiva" onchange="updateTemDiscursiva(this.checked)"><span class="switch-slider"></span></label>
+                </div>
+                <div class="pace-input-row" id="discursiva-hours-row" style="display:none;">
+                    <input type="number" id="discursiva-hours-input" min="0" max="20" step="0.5" value="3" onchange="updateDiscursivaHoras(this.value)">
+                    <span>horas / semana reservadas pra discursiva</span>
+                </div>
+
+                <div class="pref-row" style="border-bottom:none;">
+                    <div class="pref-row-body">
+                        <div class="pref-row-title">Não pular blocos perdidos</div>
+                        <div class="pref-row-desc">Se você perder um dia, as tarefas não concluídas são movidas pra hoje em vez de ficarem pra trás — o ciclo não reseta, só continua de onde parou.</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="pref-rollover" onchange="updateRolloverPref(this.checked)"><span class="switch-slider"></span></label>
+                </div>
+            </div>
+
+            <div class="plan-card" style="margin-bottom: 18px;">
+                <h2><i class="fas fa-list-check"></i> Prioridades da semana</h2>
+                <p class="plan-card-sub">Comparando sua rotina (peso da matéria × horas disponíveis) com o que você realmente estudou nos últimos 7 dias — as matérias mais atrasadas aparecem primeiro.</p>
+                <div id="weekly-priorities-box"><!-- JS generated --></div>
+            </div>
+
+            <div class="plan-card" style="margin-bottom: 18px;">
+                <h2><i class="fas fa-route"></i> Fases do estudo</h2>
+                <p class="plan-card-sub">Divida o tempo até a prova em fases — método clássico de periodização usado em preparação para concursos. Ajuste as porcentagens se quiser (a soma deve fechar em 100%).</p>
+                <div class="phase-tip">
+                    <i class="fas fa-lightbulb"></i>
+                    <div>Sugestão padrão: metade do tempo cobrindo o conteúdo pela primeira vez, um quarto resolvendo questões, e o resto dividido entre revisão espaçada e simulados na reta final. Ajuste conforme seu edital e seu ponto de partida.</div>
+                </div>
+                <div class="phase-timeline" id="phase-timeline"><!-- JS generated --></div>
+                <div class="phase-list" id="phase-list"><!-- JS generated --></div>
+            </div>
+
+            <div class="plan-card">
+                <h2><i class="fas fa-scale-balanced"></i> Distribuição por matéria</h2>
+                <p class="plan-card-sub">Quanto do seu tempo total cada matéria deveria consumir (peso do edital × dificuldade pessoal), comparado com o quanto do conteúdo programático já foi concluído. Peso, dificuldade e carga cognitiva são editáveis aqui e usados de verdade pelo gerador do Ciclo de Estudo — inclusive reajustando automaticamente o calendário já gerado, a partir de hoje.</p>
+                <div style="overflow-x:auto;">
+                    <table class="subj-dist-table">
+                        <thead>
+                            <tr>
+                                <th>Matéria</th>
+                                <th>Peso</th>
+                                <th>Dificuldade</th>
+                                <th>Carga</th>
+                                <th>% do tempo total</th>
+                                <th>Tempo estudado</th>
+                                <th>Conteúdo concluído</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subj-dist-tbody"><!-- JS generated --></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="plan-card" style="text-align:center;">
+                <h2><i class="fas fa-sync-alt"></i> Gerar Ciclo</h2>
+                <p class="plan-card-sub">Já ajustou peso, dificuldade e carga de cada matéria acima? Gere (ou regenere) seu Ciclo de Estudo completo agora, com esses valores.</p>
+                <button class="btn btn-primary" onclick="generateCycleFromPlanejamento()"><i class="fas fa-sync-alt"></i> Gerar Ciclo</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        /* --- TOAST LOGIC (igual ao Ciclo de Estudo) --- */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = 'info-circle';
+            if (type === 'success') icon = 'check-circle';
+            if (type === 'error') icon = 'exclamation-circle';
+            if (type === 'warning') icon = 'exclamation-triangle';
+            toast.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-${icon}"></i><span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:inherit; cursor:pointer;"><i class="fas fa-times"></i></button>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        /* --- PERFIS (mesmo sistema do Ciclo de Estudo, pra tudo se conversar) --- */
+        const PROFILE_REGISTRY_KEY = 'estudoFiscalProfiles';
+        const ACTIVE_PROFILE_KEY = 'estudoFiscalActiveProfile';
+        function activeProfileId() { return localStorage.getItem(ACTIVE_PROFILE_KEY) || 'default'; }
+        function K(baseKey) { const pid = activeProfileId(); return pid === 'default' ? baseKey : (baseKey + '__' + pid); }
+        function getProfiles() {
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
+            return [{ id: 'default', name: 'Principal' }, ...custom];
+        }
+        /** Concurso salvo no modelo de um perfil específico (mesma lógica de core.js). */
+        function getProfileModelConcurso(profileId) {
+            const key = profileId === 'default' ? 'estudoFiscalModel' : 'estudoFiscalModel__' + profileId;
+            try {
+                const model = JSON.parse(localStorage.getItem(key) || 'null');
+                return (model && model.concurso) ? String(model.concurso).trim() : '';
+            } catch (e) { return ''; }
+        }
+        function getProfileDisplayName(profile) {
+            return getProfileModelConcurso(profile.id) || profile.name;
+        }
+        function getActiveProfileName() {
+            const p = getProfiles().find(p => p.id === activeProfileId());
+            return p ? getProfileDisplayName(p) : 'Principal';
+        }
+        function switchProfile(id) { localStorage.setItem(ACTIVE_PROFILE_KEY, id); location.reload(); }
+        function createProfile() {
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
+            const id = 'p_' + Date.now();
+            custom.push({ id, name: 'Novo perfil' });
+            localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
+            switchProfile(id);
+        }
+        function renameActiveProfile() {
+            const pid = activeProfileId();
+            if (pid === 'default') { showToast('O perfil "Principal" não pode ser renomeado.', 'warning'); return; }
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]');
+            const profile = custom.find(p => p.id === pid);
+            if (!profile) return;
+            const name = prompt('Novo nome do perfil:', profile.name);
+            if (!name || !name.trim()) return;
+            profile.name = name.trim();
+            localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
+            renderProfileSwitcher();
+        }
+        function deleteActiveProfile() {
+            const pid = activeProfileId();
+            if (pid === 'default') { showToast('O perfil "Principal" não pode ser excluído.', 'warning'); return; }
+            if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil serão apagados.`)) return;
+            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession','ciclo_cards_v3','estudoFiscalQuestoes','estudoFiscalQuestoesMode']
+                .forEach(base => localStorage.removeItem(base + '__' + pid));
+            const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
+            localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
+            switchProfile('default');
+        }
+        function renderProfileSwitcher() {
+            const el = document.getElementById('profile-switcher');
+            if (!el) return;
+            const profiles = getProfiles();
+            const active = activeProfileId();
+            el.innerHTML = `
+                <select id="profile-select" onchange="this.value === '__new__' ? createProfile() : switchProfile(this.value)">
+                    ${profiles.map(p => `<option value="${p.id}" ${p.id === active ? 'selected' : ''}>${getProfileDisplayName(p)}</option>`).join('')}
+                    <option value="__new__">+ Novo perfil…</option>
+                </select>
+                ${active !== 'default' ? `
+                    <button class="profile-icon-btn" title="Renomear perfil" onclick="renameActiveProfile()"><i class="fas fa-pen"></i></button>
+                    <button class="profile-icon-btn" title="Excluir perfil" onclick="deleteActiveProfile()"><i class="fas fa-trash"></i></button>
+                ` : ''}`;
+        }
+
+        /* --- PWA: manifest + service worker (mesmo trecho de core.js, aqui inline pois esta
+           página não carrega core.js) --- */
+        (function registerPWA() {
+            if (!document.querySelector('link[rel="manifest"]')) {
+                const link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = 'manifest.json';
+                document.head.appendChild(link);
+            }
+            if (!document.querySelector('meta[name="theme-color"]')) {
+                const meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                meta.content = '#F97316';
+                document.head.appendChild(meta);
+            }
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+            }
+        })();
+
+        /* --- THEME (mesmo padrão: light por padrão, dark via toggle) --- */
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            if (next === 'light') html.setAttribute('data-theme', 'light');
+            else html.removeAttribute('data-theme');
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
+        }
+        function updateThemeIcon(theme) {
+            const btn = document.getElementById('theme-toggle');
+            if (!btn) return;
+            const icon = btn.querySelector('i');
+            if (theme === 'light') { icon.className = 'fas fa-moon'; btn.title = 'Modo Escuro'; }
+            else { icon.className = 'fas fa-sun'; btn.title = 'Modo Claro'; }
+        }
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'dark') { document.documentElement.removeAttribute('data-theme'); updateThemeIcon('dark'); }
+            else { document.documentElement.setAttribute('data-theme', 'light'); updateThemeIcon('light'); }
+        }
+
+        /* --- DADOS COMPARTILHADOS (lê o mesmo modelo/histórico do Ciclo de Estudo) --- */
+        function parseLocalDateString(s) {
+            const str = String(s || '').trim();
+            let m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+            const d = new Date(str);
+            return isNaN(d) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        }
+
+        function loadSharedModel() {
+            const raw = localStorage.getItem(K('estudoFiscalModel'));
+            if (!raw) return null;
+            try { return JSON.parse(raw); } catch (e) { return null; }
+        }
+
+        const DEFAULT_PHASES = [
+            { key: 'fundamentacao', name: 'Fundamentação', desc: 'Cobrir todo o conteúdo programático pela 1ª vez', color: '#3B82F6', pct: 45 },
+            { key: 'pratica', name: 'Prática e Questões', desc: 'Resolver questões, aprofundar pontos fracos', color: '#F97316', pct: 25 },
+            { key: 'revisao', name: 'Revisão Espaçada', desc: 'Revisar o que já foi estudado (use as "Revisões pendentes" no Ciclo de Estudo)', color: '#22C55E', pct: 20 },
+            { key: 'retafinal', name: 'Reta Final', desc: 'Simulados completos e revisão dos erros', color: '#DC2626', pct: 10 },
+        ];
+
+        function loadPhases() {
+            const raw = localStorage.getItem(K('estudoFiscalPlanPhases'));
+            if (raw) {
+                try {
+                    const saved = JSON.parse(raw);
+                    return DEFAULT_PHASES.map(p => ({ ...p, pct: (saved[p.key] !== undefined ? saved[p.key] : p.pct) }));
+                } catch (e) {}
+            }
+            return DEFAULT_PHASES.map(p => ({ ...p }));
+        }
+
+        function savePhases(phases) {
+            const toSave = {};
+            phases.forEach(p => { toSave[p.key] = p.pct; });
+            localStorage.setItem(K('estudoFiscalPlanPhases'), JSON.stringify(toSave));
+        }
+
+        /* Rotina semanal: edita slotsPorDia direto no modelo compartilhado,
+           o mesmo array que o Ciclo de Estudo usa pra gerar a agenda (index.html). */
+        const WEEK_DAYS = [
+            { label: 'Dom', slotIdx: 6 }, { label: 'Seg', slotIdx: 0 }, { label: 'Ter', slotIdx: 1 },
+            { label: 'Qua', slotIdx: 2 }, { label: 'Qui', slotIdx: 3 }, { label: 'Sex', slotIdx: 4 }, { label: 'Sáb', slotIdx: 5 },
+        ];
+        const DEFAULT_SLOTS = [5, 5, 5, 5, 5, 8, 8]; // seg..dom, mesmo default do Ciclo de Estudo
+
+        function getRoutineSlots() {
+            if (sharedModel && Array.isArray(sharedModel.slotsPorDia) && sharedModel.slotsPorDia.length === 7) {
+                return sharedModel.slotsPorDia.map(n => Number(n) || 0);
+            }
+            return [...DEFAULT_SLOTS];
+        }
+
+        function saveRoutineSlots(slots) {
+            if (!sharedModel) return;
+            sharedModel.slotsPorDia = slots;
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+        }
+
+        function updateRoutineDay(slotIdx, value) {
+            const slots = getRoutineSlots();
+            slots[slotIdx] = Math.max(0, Math.min(16, Number(value) || 0));
+            saveRoutineSlots(slots);
+            renderRoutine();
+            renderPace();
+            renderWeeklyPriorities();
+            showToast('Rotina salva — o Ciclo de Estudo vai usar esses horários ao gerar a agenda.', 'success');
+        }
+
+        function renderRoutine() {
+            const slots = getRoutineSlots();
+            const grid = document.getElementById('routine-grid');
+            grid.innerHTML = WEEK_DAYS.map(d => `
+                <div class="routine-day">
+                    <div class="routine-day-label">${d.label}</div>
+                    <input type="number" class="routine-day-input" min="0" max="16" step="0.5" value="${slots[d.slotIdx]}" onchange="updateRoutineDay(${d.slotIdx}, this.value)">
+                    <div class="routine-day-unit">h/dia</div>
+                </div>`).join('');
+            document.getElementById('routine-total-hours').textContent = slots.reduce((a, b) => a + b, 0);
+            document.getElementById('routine-rest-tip').style.display = slots.every(h => h > 0) ? 'flex' : 'none';
+        }
+
+        /* --- Preferências do ciclo (edital publicado / discursiva / rollover de blocos perdidos) --- */
+        function updateEditalPublicado(checked) {
+            if (!sharedModel) return;
+            sharedModel.editalPublicado = checked;
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            document.getElementById('edital-publicado-tip').style.display = checked ? 'flex' : 'none';
+            showToast(checked ? 'Marcado — considere apertar o ritmo.' : 'Preferência atualizada.', 'success');
+        }
+
+        function updateTemDiscursiva(checked) {
+            if (!sharedModel) return;
+            sharedModel.temDiscursiva = checked;
+            if (checked && !sharedModel.horasDiscursivaSemana) sharedModel.horasDiscursivaSemana = 3;
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            document.getElementById('discursiva-hours-row').style.display = checked ? 'flex' : 'none';
+            renderPace();
+            renderWeeklyPriorities();
+            showToast('Preferência atualizada.', 'success');
+        }
+
+        function updateDiscursivaHoras(value) {
+            if (!sharedModel) return;
+            sharedModel.horasDiscursivaSemana = Math.max(0, Number(value) || 0);
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            renderPace();
+            renderWeeklyPriorities();
+            showToast('Horas de discursiva salvas.', 'success');
+        }
+
+        function updateRolloverPref(checked) {
+            localStorage.setItem(K('estudoFiscalRolloverMissed'), checked ? 'true' : 'false');
+            showToast(checked ? 'O Ciclo de Estudo vai mover blocos perdidos pra hoje.' : 'Preferência desativada.', 'success');
+        }
+
+        function renderCyclePrefs() {
+            document.getElementById('pref-edital-publicado').checked = !!(sharedModel && sharedModel.editalPublicado);
+            document.getElementById('edital-publicado-tip').style.display = (sharedModel && sharedModel.editalPublicado) ? 'flex' : 'none';
+
+            const temDiscursiva = !!(sharedModel && sharedModel.temDiscursiva);
+            document.getElementById('pref-tem-discursiva').checked = temDiscursiva;
+            document.getElementById('discursiva-hours-row').style.display = temDiscursiva ? 'flex' : 'none';
+            document.getElementById('discursiva-hours-input').value = (sharedModel && sharedModel.horasDiscursivaSemana) || 3;
+
+            document.getElementById('pref-rollover').checked = localStorage.getItem(K('estudoFiscalRolloverMissed')) === 'true';
+        }
+
+        let sharedModel = null;
+        let startDate = null;
+        let endDate = null;
+        let subjectsConfig = [];
+        let studyHistory = [];
+        let syllabusProgress = {};
+
+        function loadAllData() {
+            sharedModel = loadSharedModel();
+            studyHistory = JSON.parse(localStorage.getItem(K('estudoFiscalStudyHistory')) || '[]');
+            syllabusProgress = JSON.parse(localStorage.getItem(K('estudoFiscalSyllabus')) || '{}');
+
+            if (sharedModel) {
+                subjectsConfig = (sharedModel.materias || []).map(m => ({
+                    name: m.nome, type: m.tipo || 'Básico', weight: m.peso !== undefined ? Number(m.peso) : 1,
+                    dificuldade: Number(m.dificuldade) || 3, carga: m.carga || ''
+                }));
+                startDate = sharedModel.inicioCiclo ? parseLocalDateString(sharedModel.inicioCiclo) : null;
+                endDate = sharedModel.fimCiclo ? parseLocalDateString(sharedModel.fimCiclo) : null;
+            }
+            if (!startDate) startDate = new Date();
+            if (!endDate) { endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 180); }
+        }
+
+        function subjectSyllabusInfo(name) {
+            let topics = [];
+            if (sharedModel && Array.isArray(sharedModel.syllabus)) {
+                for (const sec of sharedModel.syllabus) {
+                    const subj = (sec.subjects || []).find(s => s.name === name);
+                    if (subj) { topics = subj.topics || []; break; }
+                }
+            }
+            const saved = syllabusProgress[name] || [];
+            const done = topics.filter((_, i) => saved[i]).length;
+            return { total: topics.length, done };
+        }
+
+        function subjectStudiedSeconds(name) {
+            return studyHistory.filter(h => h.subject === name).reduce((acc, h) => acc + (h.duration || 0), 0);
+        }
+
+        function subjectRecentSeconds(name, sinceMs) {
+            return studyHistory
+                .filter(h => h.subject === name && new Date(h.date).getTime() >= sinceMs)
+                .reduce((acc, h) => acc + (h.duration || 0), 0);
+        }
+
+        /** % de acerto em questões da matéria (null se não houver dado suficiente) — mesmo critério do Ciclo de Estudo. */
+        function subjectPerformanceRate(name) {
+            let qTotal = 0, qCorrect = 0;
+            studyHistory.forEach(h => { if (h.subject === name && h.questions) { qTotal += h.questions; qCorrect += (h.correct || 0); } });
+            if (qTotal < 5) return null;
+            return Math.round((qCorrect / qTotal) * 100);
+        }
+
+        /** Mesma fórmula do Ciclo de Estudo (peso do edital × dificuldade pessoal, reduzido em modo revisão). */
+        function effectiveWeight(s) {
+            const raw = Math.max(1, Math.round(s.weight || 0));
+            const dificuldade = Number(s.dificuldade) || 3;
+            let w = Math.max(1, Math.round(raw * (dificuldade / 3)));
+            const syl = subjectSyllabusInfo(s.name);
+            if (syl.total > 0 && (syl.done / syl.total) >= 0.9) w = Math.max(1, Math.ceil(w / 2));
+            return w;
+        }
+
+        /**
+         * Tenta escolher, dentre `valid` (já ordenado por prioridade), um candidato com "carga"
+         * cognitiva diferente da última escolhida — mesma lógica do Ciclo de Estudo (core.js),
+         * copiada aqui porque esta página não carrega core.js.
+         */
+        function pickAlternatingCarga(valid, lastCarga, rankKey) {
+            if (!lastCarga || valid.length < 2) return valid[0];
+            const top = valid[0];
+            if (top.carga !== lastCarga) return top;
+            const topRank = rankKey(top);
+            const alt = valid.find(s => s.carga && s.carga !== lastCarga && rankKey(s) === topRank);
+            return alt || top;
+        }
+
+        /**
+         * Reconstrói o calendário do "Ciclo de Estudo" a partir de HOJE (inclusive) em diante,
+         * usando peso/dificuldade/carga atuais — dias passados ficam intocados (histórico e
+         * progresso já registrados nunca são mexidos). Chamada sempre que o usuário ajusta Peso,
+         * Dificuldade ou Carga aqui, pra esses ajustes realmente valerem no ciclo automático
+         * (sem isso, um cronograma já gerado nunca via essas mudanças de novo).
+         */
+        function regenerateFutureSchedule() {
+            if (!sharedModel) return false;
+            const raw = localStorage.getItem(K('estudoFiscalScheduleStructure'));
+            if (!raw) return false; // nenhum ciclo gerado ainda — nada a reconstruir
+            let schedule;
+            try { schedule = JSON.parse(raw); } catch (e) { return false; }
+            if (!Array.isArray(schedule) || !schedule.length) return false;
+
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            // Conta quantos blocos já foram consumidos em dias passados, pra continuar a
+            // sequência do ciclo mestre a partir do mesmo ponto (não reinicia do zero).
+            let consumedBlocks = 0;
+            schedule.forEach(day => {
+                const d = new Date(day.date); d.setHours(0, 0, 0, 0);
+                if (d.getTime() < today.getTime()) consumedBlocks += (day.tasks || []).length;
+            });
+
+            // Reconstrói o ciclo mestre com peso/dificuldade/carga atuais (mesmo algoritmo do core.js).
+            const counts = {};
+            subjectsConfig.forEach(s => {
+                if (Math.round(s.weight || 0) > 0) counts[s.name] = effectiveWeight(s);
+            });
+            const totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
+            let masterCycle = [];
+            let lastSub = null, lastCarga = null;
+            for (let i = 0; i < totalBlocks; i++) {
+                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
+                if (!candidates.length) break;
+                let valid = candidates.filter(s => s.name !== lastSub);
+                if (!valid.length) valid = candidates;
+                valid.sort((a, b) => counts[b.name] - counts[a.name]);
+                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
+                masterCycle.push(pick);
+                counts[pick.name]--;
+                lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
+            }
+            if (!masterCycle.length) return false;
+
+            const slots = getRoutineSlots(); // seg..dom
+            let cycleIndex = consumedBlocks;
+            let touchedDays = 0;
+            schedule.forEach(day => {
+                const d = new Date(day.date); d.setHours(0, 0, 0, 0);
+                if (d.getTime() < today.getTime()) return; // preserva o passado
+                const dayIdxMonFirst = (d.getDay() + 6) % 7;
+                const hours = slots[dayIdxMonFirst] || 0;
+                const newTasks = [];
+                for (let h = 0; h < hours; h++) {
+                    const sub = masterCycle[cycleIndex % masterCycle.length];
+                    newTasks.push({
+                        id: `task-${d.getTime()}-${h}-r${Date.now()}`,
+                        subject: sub.name, type: sub.type, weight: sub.weight, completed: false
+                    });
+                    cycleIndex++;
+                }
+                day.tasks = newTasks;
+                touchedDays++;
+            });
+
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));
+            return touchedDays > 0;
+        }
+
+        /**
+         * Gera o Ciclo de Estudo do zero (mesmo botão/ação de "Início"), usando o peso/dificuldade/
+         * carga/rotina atuais — pra o usuário poder ajustar tudo aqui em Planejamento e já gerar,
+         * sem precisar voltar pra Início. Substitui qualquer ciclo já gerado (mesmo comportamento
+         * do botão "Gerar Ciclo" de Início: começa do zero a partir de "Início do Ciclo").
+         */
+        function generateCycleFromPlanejamento() {
+            if (!sharedModel) {
+                showToast('Nenhum modelo carregado ainda — importe uma planilha ou o PDF do edital em "Início".', 'warning');
+                return;
+            }
+            if (!subjectsConfig.length) {
+                showToast('Cadastre suas matérias antes de gerar o ciclo.', 'warning');
+                return;
+            }
+
+            const counts = {};
+            subjectsConfig.forEach(s => { if (Math.round(s.weight || 0) > 0) counts[s.name] = effectiveWeight(s); });
+            const totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
+            if (!totalBlocks) {
+                showToast('Nenhuma matéria com peso ativo pra gerar o ciclo.', 'warning');
+                return;
+            }
+
+            let masterCycle = [];
+            let lastSub = null, lastCarga = null;
+            for (let i = 0; i < totalBlocks; i++) {
+                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
+                if (!candidates.length) break;
+                let valid = candidates.filter(s => s.name !== lastSub);
+                if (!valid.length) valid = candidates;
+                valid.sort((a, b) => counts[b.name] - counts[a.name]);
+                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
+                masterCycle.push(pick);
+                counts[pick.name]--;
+                lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
+            }
+            if (!masterCycle.length) return;
+
+            const slots = getRoutineSlots();
+            const schedule = [];
+            let cycleIndex = 0;
+            let cur = new Date(startDate);
+            while (cur <= endDate) {
+                const dayIdxMonFirst = (cur.getDay() + 6) % 7;
+                const hours = slots[dayIdxMonFirst] || 0;
+                const tasks = [];
+                for (let h = 0; h < hours; h++) {
+                    const sub = masterCycle[cycleIndex % masterCycle.length];
+                    tasks.push({ id: `task-${cur.getTime()}-${h}`, subject: sub.name, type: sub.type, weight: sub.weight, completed: false });
+                    cycleIndex++;
+                }
+                schedule.push({ date: new Date(cur), tasks });
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));
+            showToast('Ciclo gerado! Confira em "Ciclo de Estudo".', 'success');
+        }
+
+        /** Atualiza um campo (peso/dificuldade/carga) de uma matéria direto no modelo compartilhado. */
+        function updateSubjectField(name, field, value) {
+            if (!sharedModel || !Array.isArray(sharedModel.materias)) return;
+            const m = sharedModel.materias.find(x => x.nome === name);
+            if (!m) return;
+            m[field] = (field === 'dificuldade' || field === 'peso') ? Number(value) : value;
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+            loadAllData();
+            const adjustedCycle = regenerateFutureSchedule();
+            renderSubjectDistribution();
+            renderWeeklyPriorities();
+            showToast(adjustedCycle ? 'Matéria atualizada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Matéria atualizada.', 'success');
+        }
+
+        function formatHM(seconds) {
+            seconds = Math.max(0, Math.round(seconds || 0));
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (h === 0 && m === 0) return '0m';
+            return (h > 0 ? `${h}h ` : '') + `${m}m`;
+        }
+
+        /* --- Período do ciclo (InicioCiclo/FimCiclo editáveis direto na página, sem planilha/PDF) --- */
+        function toISODateString(date) {
+            const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, '0'), d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function renderCycleDates() {
+            document.getElementById('cycle-date-inicio').value = toISODateString(startDate);
+            document.getElementById('cycle-date-fim').value = toISODateString(endDate);
+            document.getElementById('cycle-dates-tip').style.display = (endDate <= startDate) ? 'flex' : 'none';
+        }
+
+        function updateCycleDate(field, value) {
+            if (!sharedModel || !value) return;
+            sharedModel[field] = value; // input[type=date] já entrega YYYY-MM-DD, mesmo formato aceito pelo modelo
+            localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
+
+            startDate = sharedModel.inicioCiclo ? parseLocalDateString(sharedModel.inicioCiclo) : startDate;
+            endDate = sharedModel.fimCiclo ? parseLocalDateString(sharedModel.fimCiclo) : endDate;
+
+            renderCycleDates();
+            renderCountdown();
+            renderPace();
+            renderWeeklyPriorities();
+
+            if (endDate <= startDate) {
+                showToast('Atenção: a data de fim está antes (ou igual) à data de início.', 'warning');
+            } else {
+                showToast('Período do ciclo salvo — gere (ou regere) o Ciclo de Estudo para aplicar ao calendário.', 'success');
+            }
+        }
+
+        /* --- RENDER --- */
+        function renderCountdown() {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const totalMs = endDate - startDate;
+            const elapsedMs = today - startDate;
+            const examPassed = today > endDate;
+            const daysLeft = Math.max(0, Math.ceil((endDate - today) / 86400000));
+            const weeksLeft = Math.max(0, Math.floor(daysLeft / 7));
+            const pctElapsed = totalMs > 0 ? Math.min(100, Math.max(0, Math.round((elapsedMs / totalMs) * 100))) : 0;
+            const daysLeftEl = document.getElementById('plan-days-left');
+            daysLeftEl.textContent = daysLeft;
+            const daysLeftLabel = daysLeftEl.nextElementSibling;
+            if (daysLeftLabel) daysLeftLabel.textContent = examPassed ? 'prova já realizada' : 'dias até a prova';
+            document.getElementById('plan-weeks-left').textContent = weeksLeft;
+            document.getElementById('plan-pct-elapsed').textContent = pctElapsed + '%';
+
+            let totalTopics = 0, doneTopics = 0;
+            subjectsConfig.forEach(s => {
+                const syl = subjectSyllabusInfo(s.name);
+                totalTopics += syl.total; doneTopics += syl.done;
+            });
+            const insightEl = document.getElementById('countdown-insight');
+            if (examPassed) {
+                insightEl.className = 'pace-status ok';
+                insightEl.innerHTML = '<i class="fas fa-flag-checkered"></i> A data da prova cadastrada já passou. Atualize o período do ciclo (ou o modelo importado) se estiver se preparando pra uma nova data.';
+                return;
+            }
+            if (totalTopics === 0) {
+                insightEl.className = 'pace-status neutral';
+                insightEl.innerHTML = 'Marque tópicos como concluídos no Conteúdo Programático pra acompanhar seu ritmo aqui.';
+                return;
+            }
+            const contentPct = Math.round((doneTopics / totalTopics) * 100);
+            const diff = contentPct - pctElapsed;
+            let cls = 'ok', icon = 'circle-check';
+            let msg = `Você concluiu ${contentPct}% do conteúdo com ${pctElapsed}% do prazo consumido — à frente do ritmo!`;
+            if (diff < -15) {
+                cls = 'bad'; icon = 'triangle-exclamation';
+                msg = `Você concluiu apenas ${contentPct}% do conteúdo, mas já passou ${pctElapsed}% do prazo — abaixo do ritmo, hora de acelerar.`;
+            } else if (diff < 0) {
+                cls = 'warn'; icon = 'circle-exclamation';
+                msg = `${contentPct}% do conteúdo concluído com ${pctElapsed}% do prazo consumido — levemente abaixo do ritmo ideal.`;
+            }
+            insightEl.className = 'pace-status ' + cls;
+            insightEl.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
+        }
+
+        function renderWeeklyPriorities() {
+            const weeklyHours = Math.max(0, getRoutineSlots().reduce((a, b) => a + b, 0) - getDiscursivaHoras());
+            const box = document.getElementById('weekly-priorities-box');
+            if (!weeklyHours) {
+                box.innerHTML = `<p style="color:var(--ink-3); font-size:0.85rem; margin:0;">Preencha sua rotina semanal acima pra receber recomendações.</p>`;
+                return;
+            }
+            const totalWeight = subjectsConfig.reduce((a, s) => a + effectiveWeight(s), 0) || 1;
+            const sevenDaysAgoMs = Date.now() - 7 * 86400000;
+
+            const rows = subjectsConfig.map(s => {
+                const idealHours = (effectiveWeight(s) / totalWeight) * weeklyHours;
+                const doneHours = subjectRecentSeconds(s.name, sevenDaysAgoMs) / 3600;
+                const syl = subjectSyllabusInfo(s.name);
+                const sylPct = syl.total > 0 ? Math.round((syl.done / syl.total) * 100) : null;
+                const rate = subjectPerformanceRate(s.name);
+                // Método clássico de ciclo de estudos: prioriza não só quem estudou pouco, mas quem
+                // erra muito nas questões — soma uma "urgência extra" quando a taxa de acerto é baixa.
+                const rateBonus = rate === null ? 0 : (rate < 50 ? 1.5 : (rate < 70 ? 0.75 : 0));
+                return { name: s.name, idealHours, doneHours, gapHours: idealHours - doneHours, sylPct, rate, urgency: (idealHours - doneHours) + rateBonus };
+            }).sort((a, b) => b.urgency - a.urgency);
+
+            const priorities = rows.filter(r => r.urgency > 0.3).slice(0, 5);
+
+            if (!priorities.length) {
+                box.innerHTML = `<div class="pace-status ok"><i class="fas fa-circle-check"></i> Você está em dia com a distribuição ideal entre as matérias essa semana. Mantenha o ritmo!</div>`;
+                return;
+            }
+            box.innerHTML = priorities.map((r, i) => `
+                <div class="priority-row">
+                    <div class="priority-rank">${i + 1}</div>
+                    <div class="priority-body">
+                        <div class="priority-name">${r.name}</div>
+                        <div class="priority-meta">Estudado nos últimos 7 dias: ${formatHM(r.doneHours * 3600)} · Ideal p/ semana: ~${r.idealHours.toFixed(1)}h${r.sylPct !== null ? ` · Conteúdo: ${r.sylPct}%` : ''}${r.rate !== null ? ` · Acerto em questões: ${r.rate}%` : ''}</div>
+                    </div>
+                    <div class="priority-gap">+${Math.max(0, r.gapHours).toFixed(1)}h</div>
+                </div>`).join('');
+        }
+
+        function renderPhases() {
+            const phases = loadPhases();
+            const today = new Date(); today.setHours(0,0,0,0);
+            const totalDays = Math.max(1, Math.round((endDate - startDate) / 86400000));
+            const elapsedDays = Math.min(totalDays, Math.max(0, Math.round((today - startDate) / 86400000)));
+            const elapsedPct = (elapsedDays / totalDays) * 100;
+
+            let cum = 0;
+            const withRanges = phases.map(p => {
+                const startPct = cum;
+                cum += p.pct;
+                return { ...p, startPct, endPct: cum };
+            });
+            const currentPhase = withRanges.find(p => elapsedPct >= p.startPct && elapsedPct < p.endPct) || withRanges[withRanges.length - 1];
+
+            const timeline = document.getElementById('phase-timeline');
+            timeline.innerHTML = withRanges.map(p => `
+                <div class="phase-seg ${p.key === currentPhase.key ? 'is-current' : ''}" style="width:${p.pct}%; background:${p.color};" title="${p.name} (${p.pct}%)">
+                    ${p.pct >= 12 ? p.name : ''}
+                </div>`).join('');
+
+            const list = document.getElementById('phase-list');
+            list.innerHTML = withRanges.map(p => {
+                const phaseDays = Math.round((p.pct / 100) * totalDays);
+                return `
+                <div class="phase-row">
+                    <div class="phase-dot" style="background:${p.color};"></div>
+                    <div class="phase-row-body">
+                        <div class="phase-row-title ${p.key === currentPhase.key ? 'is-current' : ''}">${p.name}${p.key === currentPhase.key ? ' — você está aqui' : ''}</div>
+                        <div class="phase-row-meta">${p.desc} · ~${phaseDays} dias</div>
+                    </div>
+                    <input type="number" class="phase-pct-input" min="0" max="100" value="${p.pct}" onchange="updatePhasePct('${p.key}', this.value)">
+                    <span style="color:var(--ink-3); font-size:0.8rem;">%</span>
+                </div>`;
+            }).join('');
+        }
+
+        function updatePhasePct(key, value) {
+            const phases = loadPhases();
+            const target = phases.find(p => p.key === key);
+            if (target) target.pct = Math.max(0, Math.min(100, Number(value) || 0));
+            const sum = phases.reduce((a, p) => a + p.pct, 0);
+            savePhases(phases);
+            renderPhases();
+            if (sum !== 100) {
+                showToast(`As fases somam ${sum}% — ajuste para fechar 100%.`, 'warning');
+            } else {
+                showToast('Fases atualizadas.', 'success');
+            }
+        }
+
+        function getDiscursivaHoras() {
+            if (!sharedModel || !sharedModel.temDiscursiva) return 0;
+            return Number(sharedModel.horasDiscursivaSemana) || 0;
+        }
+
+        function renderPace() {
+            const rawWeeklyHours = getRoutineSlots().reduce((a, b) => a + b, 0);
+            const discursivaHoras = getDiscursivaHoras();
+            const weeklyHours = Math.max(0, rawWeeklyHours - discursivaHoras);
+
+            const today = new Date(); today.setHours(0,0,0,0);
+            const weeksLeft = Math.max(0, (endDate - today) / (86400000 * 7));
+            const availableHours = Math.round(weeksLeft * weeklyHours);
+
+            // Estimativa simples de "horas necessárias": 1h por bloco de peso efetivo, somado por matéria,
+            // multiplicado por um fator de cobertura (assume ~4 blocos por matéria pra cobrir o conteúdo 1x + revisar).
+            const totalWeight = subjectsConfig.reduce((a, s) => a + effectiveWeight(s), 0);
+            const estimatedHoursNeeded = totalWeight * 4;
+
+            const box = document.getElementById('pace-status-box');
+            if (!subjectsConfig.length) {
+                box.className = 'pace-status neutral';
+                box.innerHTML = 'Importe suas matérias para calcular o ritmo necessário.';
+                return;
+            }
+            const ratio = availableHours / Math.max(1, estimatedHoursNeeded);
+            const discursivaNote = discursivaHoras > 0 ? ` (já descontadas ${discursivaHoras}h/semana de discursiva)` : '';
+            let cls = 'ok', icon = 'circle-check', msg = `Ótimo ritmo: ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas de estudo${discursivaNote}.`;
+            if (ratio < 0.7) { cls = 'bad'; icon = 'triangle-exclamation'; msg = `Ritmo apertado: só ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas${discursivaNote}. Considere aumentar as horas semanais.`; }
+            else if (ratio < 1) { cls = 'warn'; icon = 'circle-exclamation'; msg = `Ritmo razoável: ${availableHours}h disponíveis para ~${estimatedHoursNeeded}h estimadas${discursivaNote} — dá pra cumprir com foco.`; }
+            box.className = 'pace-status ' + cls;
+            box.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
+        }
+
+        function renderSubjectDistribution() {
+            const totalWeight = subjectsConfig.reduce((a, s) => a + effectiveWeight(s), 0) || 1;
+            const tbody = document.getElementById('subj-dist-tbody');
+            tbody.innerHTML = subjectsConfig.map(s => {
+                const pct = Math.round((effectiveWeight(s) / totalWeight) * 100);
+                const studied = subjectStudiedSeconds(s.name);
+                const syl = subjectSyllabusInfo(s.name);
+                const sylPct = syl.total > 0 ? Math.round((syl.done / syl.total) * 100) : 0;
+                const dificuldade = Number(s.dificuldade) || 3;
+                const escaped = s.name.replace(/'/g, "\\'");
+                return `
+                <tr>
+                    <td class="subj-dist-name">${s.name}</td>
+                    <td>
+                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'peso', this.value)">
+                            ${[1,2,3].map(n => `<option value="${n}" ${n === Math.round(s.weight) ? 'selected' : ''}>${n}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'dificuldade', this.value)">
+                            ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === dificuldade ? 'selected' : ''}>${n}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="subj-dist-select" onchange="updateSubjectField('${escaped}', 'carga', this.value)">
+                            <option value="" ${!s.carga ? 'selected' : ''}>—</option>
+                            <option value="pesada" ${s.carga === 'pesada' ? 'selected' : ''}>Pesada</option>
+                            <option value="leve" ${s.carga === 'leve' ? 'selected' : ''}>Leve</option>
+                        </select>
+                    </td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="subj-dist-bar-track"><div class="subj-dist-bar-fill" style="width:${pct}%"></div></div>
+                            <span style="white-space:nowrap; font-size:0.78rem; color:var(--ink-3);">${pct}%</span>
+                        </div>
+                    </td>
+                    <td>${formatHM(studied)}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="subj-dist-prog-track"><div class="subj-dist-prog-fill" style="width:${sylPct}%"></div></div>
+                            <span style="white-space:nowrap; font-size:0.78rem; color:var(--ink-3);">${syl.total ? sylPct + '%' : '—'}</span>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function render() {
+            loadAllData();
+            const emptyEl = document.getElementById('empty-state-container');
+            const contentEl = document.getElementById('plan-content');
+
+            if (!subjectsConfig.length) {
+                contentEl.style.display = 'none';
+                emptyEl.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-map"></i>
+                        <h3>Nenhuma matéria carregada ainda</h3>
+                        <p>Importe sua planilha de matérias (Excel ou edital em PDF) no Menu Inicial pra gerar seu planejamento automaticamente aqui.</p>
+                        <a href="index.html" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Ir para o Menu Inicial</a>
+                    </div>`;
+                return;
+            }
+
+            emptyEl.innerHTML = '';
+            contentEl.style.display = 'block';
+
+            if (sharedModel && sharedModel.concurso) {
+                document.getElementById('page-subtitle-text').textContent = `Foco na meta: ${sharedModel.concurso}`;
+            }
+
+            renderCycleDates();
+            renderCountdown();
+            renderRoutine();
+            renderCyclePrefs();
+            renderPhases();
+            renderPace();
+            renderWeeklyPriorities();
+            renderSubjectDistribution();
+        }
+
+        // Init
+        initTheme();
+        renderProfileSwitcher();
+        render();
+    </script>
+</body>
+</html>

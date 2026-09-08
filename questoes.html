@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questões · Ciclo Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="core.css">
+    <style>
+        /* ─── QUESTÕES (banco + resolução) ──────────────────────────── */
+        .qz-count-badge {
+            font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: var(--r-full);
+            background: var(--accent-soft); color: var(--accent); white-space: nowrap;
+        }
+        .qz-topic-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .qz-btn-sm {
+            font-size: 0.72rem; font-weight: 700; padding: 5px 10px; border-radius: var(--r);
+            background: transparent; border: 1px solid var(--border); color: var(--ink-3); cursor: pointer;
+            display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-family: inherit;
+        }
+        .qz-btn-sm:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+        .qz-btn-sm:disabled { opacity: 0.6; cursor: default; }
+        .qz-btn-sm.qz-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .qz-btn-sm.qz-btn-primary:hover { opacity: 0.9; color: #fff; }
+
+        .qz-session-bar {
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+            background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+            padding: 12px 16px; margin-bottom: 18px;
+        }
+        .qz-session-stats { display: flex; align-items: center; gap: 16px; font-size: 0.85rem; color: var(--ink-2); }
+        .qz-session-stats strong { color: var(--accent); font-family: 'Nunito', sans-serif; }
+
+        .qz-question-progress { text-align: center; font-size: 0.78rem; color: var(--ink-3); margin-bottom: 10px; }
+        .qz-question-card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+            padding: 22px; max-width: 760px; margin: 0 auto;
+        }
+        .qz-question-meta { font-size: 0.76rem; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; }
+        .qz-enunciado { font-size: 1rem; color: var(--ink); line-height: 1.6; margin-bottom: 18px; white-space: pre-wrap; }
+        .qz-alternativas { display: flex; flex-direction: column; gap: 10px; }
+        .qz-alt {
+            display: flex; align-items: flex-start; gap: 12px; text-align: left; width: 100%;
+            background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--r-md);
+            padding: 12px 14px; cursor: pointer; font-family: inherit; font-size: 0.9rem; color: var(--ink-2);
+            transition: all 0.15s;
+        }
+        .qz-alt:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+        .qz-alt:disabled { cursor: default; }
+        .qz-alt.correct { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+        .qz-alt.wrong { border-color: var(--red); background: var(--red-soft); color: var(--red); }
+        .qz-alt-letra {
+            flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--surface);
+            border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.78rem;
+        }
+        .qz-alt-texto { flex: 1; line-height: 1.4; }
+        .qz-feedback { margin-top: 16px; padding: 12px 14px; border-radius: var(--r-md); font-size: 0.88rem; font-weight: 700; }
+        .qz-feedback.ok { background: var(--green-soft); color: var(--green); }
+        .qz-feedback.bad { background: var(--red-soft); color: var(--red); }
+        .qz-comentario { margin-top: 8px; font-weight: 400; color: var(--ink-2); line-height: 1.5; }
+        .qz-question-actions { margin-top: 18px; display: flex; justify-content: flex-end; }
+    </style>
+</head>
+<body>
+    <script id="persistence-data">window.HARDCODED_DATA = null;</script>
+    <div id="toast-container"></div>
+
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+        </div>
+
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i>
+                    <span>Início</span>
+                </a>
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <a href="materias.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </a>
+                <a href="cicloestudo.html" class="nav-item">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </a>
+                <a href="cicloestudolivre.html" class="nav-item">
+                    <i class="fas fa-hand-pointer"></i>
+                    <span>Ciclo Livre</span>
+                </a>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <a href="listacompleta.html" class="nav-item">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </a>
+                <a href="conteudoprogramatico.html" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-list-check"></i>
+                    <span>Questões</span>
+                </div>
+                <a href="tempoestudo.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </a>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
+                </div>
+            </div>
+
+            <div style="flex:1;"></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Questões</h1>
+                <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+
+            <div id="view-banco" class="view-section active">
+                <div class="subject-card" style="margin-bottom: 20px;">
+                    <h3><i class="fas fa-robot" style="color: var(--accent);"></i> IA para gerar questões</h3>
+                    <p style="color: var(--ink-3); font-size: 0.85rem; margin: 0 0 14px;">
+                        Escolha Gemini (grátis, precisa de uma chave de API do Google AI Studio) ou Claude (pago, precisa de uma chave de API da Anthropic). A chave fica salva só neste navegador e a chamada vai direto daqui pra IA — este site não vê nem guarda sua chave. Se você já configurou uma chave ao importar o edital em PDF no Menu Inicial, ela já aparece preenchida abaixo.
+                    </p>
+                    <div class="edital-mode-tabs">
+                        <button class="edital-mode-tab active" id="qz-mode-tab-gemini" onclick="setQzMode('gemini')">
+                            <i class="fas fa-wand-magic-sparkles"></i> Gemini (grátis)
+                        </button>
+                        <button class="edital-mode-tab" id="qz-mode-tab-claude" onclick="setQzMode('claude')">
+                            <i class="fas fa-wand-magic-sparkles"></i> Claude (pago)
+                        </button>
+                    </div>
+                    <div id="qz-mode-gemini-panel">
+                        <label class="note-label" for="qz-gemini-key-input">Sua chave de API do Google Gemini</label>
+                        <input type="password" id="qz-gemini-key-input" class="note-input" placeholder="AIza..." style="margin-bottom:12px;" oninput="saveQzGeminiKey(this.value)">
+                        <label class="note-label" for="qz-gemini-model-select">Modelo</label>
+                        <select id="qz-gemini-model-select" class="note-input">
+                            <option value="gemini-flash-latest" selected>Gemini Flash (recomendado)</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash — versão estável</option>
+                            <option value="gemini-flash-lite-latest">Gemini Flash-Lite — mais rápido, cota maior</option>
+                        </select>
+                    </div>
+                    <div id="qz-mode-claude-panel" style="display:none;">
+                        <label class="note-label" for="qz-claude-key-input">Sua chave de API da Anthropic</label>
+                        <input type="password" id="qz-claude-key-input" class="note-input" placeholder="sk-ant-..." style="margin-bottom:12px;" oninput="saveQzClaudeKey(this.value)">
+                        <label class="note-label" for="qz-claude-model-select">Modelo</label>
+                        <select id="qz-claude-model-select" class="note-input">
+                            <option value="claude-opus-5">Claude Opus 5 — mais capaz, mais caro</option>
+                            <option value="claude-sonnet-5" selected>Claude Sonnet 5 — bom equilíbrio (recomendado)</option>
+                            <option value="claude-haiku-4-5">Claude Haiku 4.5 — mais barato e rápido</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="subject-card" style="margin-bottom: 20px;">
+                    <h3><i class="fas fa-layer-group" style="color: var(--accent);"></i> Banco de Questões</h3>
+                    <p style="color: var(--ink-3); font-size: 0.85rem; margin: 0 0 14px;">
+                        Gere questões inéditas de múltipla escolha (A a E) para cada tópico do seu conteúdo programático — até 100 por tópico, em lotes de até 20 por vez — e resolva no estilo de um cursinho de questões. O desempenho entra automaticamente nas suas estatísticas de Planejamento e Matérias.
+                    </p>
+                    <button class="btn btn-primary" onclick="startPractice(null, null)"><i class="fas fa-play"></i> Resolver questões de todas as matérias</button>
+                </div>
+
+                <div id="qz-banco-container"><!-- JS generated --></div>
+            </div>
+
+            <div id="view-resolver" class="view-section">
+                <div class="qz-session-bar">
+                    <button class="btn btn-secondary" onclick="exitPractice()"><i class="fas fa-arrow-left"></i> Finalizar e voltar ao banco</button>
+                    <div class="qz-session-stats">
+                        <span id="qz-session-scope"></span>
+                        <span>Acertos: <strong id="qz-session-correct">0</strong>/<span id="qz-session-total">0</span></span>
+                    </div>
+                </div>
+                <div id="qz-question-area"><!-- JS generated --></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="core.js"></script>
+    <script>
+        // ─── Config de IA (chaves compartilhadas com o modal de Importar Edital do Menu Inicial) ───
+        function qzMode() { return localStorage.getItem(K('estudoFiscalQuestoesMode')) || 'gemini'; }
+
+        function setQzMode(mode) {
+            localStorage.setItem(K('estudoFiscalQuestoesMode'), mode);
+            ['gemini', 'claude'].forEach(m => {
+                document.getElementById('qz-mode-tab-' + m).classList.toggle('active', m === mode);
+                document.getElementById('qz-mode-' + m + '-panel').style.display = m === mode ? 'block' : 'none';
+            });
+        }
+
+        function saveQzGeminiKey(v) {
+            if (v) localStorage.setItem(K('estudoFiscalGeminiKey'), v);
+            else localStorage.removeItem(K('estudoFiscalGeminiKey'));
+        }
+        function saveQzClaudeKey(v) {
+            if (v) localStorage.setItem(K('estudoFiscalAnthropicKey'), v);
+            else localStorage.removeItem(K('estudoFiscalAnthropicKey'));
+        }
+
+        function loadQzConfig() {
+            document.getElementById('qz-gemini-key-input').value = localStorage.getItem(K('estudoFiscalGeminiKey')) || '';
+            document.getElementById('qz-claude-key-input').value = localStorage.getItem(K('estudoFiscalAnthropicKey')) || '';
+            setQzMode(qzMode());
+        }
+
+        function getModelInfo() {
+            const raw = localStorage.getItem(K('estudoFiscalModel'));
+            if (!raw) return { concurso: '', orgao: '' };
+            try {
+                const m = JSON.parse(raw);
+                return { concurso: m.concurso || '', orgao: m.orgao || '' };
+            } catch (e) { return { concurso: '', orgao: '' }; }
+        }
+
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // ─── Armazenamento das questões geradas (por perfil, via K()) ───
+        const QZ_MAX_PER_TOPIC = 100;
+        const QZ_BATCH_SIZE = 20;
+        const QZ_LETTERS = ['A', 'B', 'C', 'D', 'E'];
+
+        function getQuestoesStore() {
+            try { return JSON.parse(localStorage.getItem(K('estudoFiscalQuestoes')) || '[]'); }
+            catch (e) { return []; }
+        }
+        function saveQuestoesStore(store) {
+            localStorage.setItem(K('estudoFiscalQuestoes'), JSON.stringify(store));
+        }
+        function findBucket(store, materia, topico) {
+            return store.find(b => b.materia === materia && b.topico === topico);
+        }
+        function getOrCreateBucket(store, materia, topico) {
+            let b = findBucket(store, materia, topico);
+            if (!b) { b = { materia, topico, questions: [] }; store.push(b); }
+            return b;
+        }
+        function qzUid() { return 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); }
+
+        // ─── Chamadas de IA (mesmo padrão do modal "Importar Edital" do Menu Inicial) ───
+        function qzExtractJSON(text) {
+            let cleaned = text.trim();
+            const fenced = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+            if (fenced) cleaned = fenced[1].trim();
+            const firstBrace = cleaned.indexOf('{');
+            const lastBrace = cleaned.lastIndexOf('}');
+            if (firstBrace === -1 || lastBrace === -1) throw new Error('Resposta da IA não contém um JSON reconhecível.');
+            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+            return JSON.parse(cleaned);
+        }
+
+        async function callClaudeForQuestions(apiKey, model, promptText) {
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+                body: JSON.stringify({ model, max_tokens: 8192, messages: [{ role: 'user', content: promptText }] })
+            });
+            if (!res.ok) {
+                let detail = '';
+                try { detail = (await res.json()).error?.message || ''; } catch (e) {}
+                if (res.status === 401) throw new Error('Chave de API inválida ou sem permissão. ' + detail);
+                if (res.status === 429) throw new Error('Limite de uso da API atingido. Tente novamente em instantes. ' + detail);
+                throw new Error(`Erro da API Anthropic (${res.status}). ${detail}`);
+            }
+            const data = await res.json();
+            const textBlock = (data.content || []).find(b => b.type === 'text');
+            if (!textBlock) throw new Error('A IA não retornou texto na resposta.');
+            return textBlock.text;
+        }
+
+        async function callGeminiForQuestions(apiKey, model, promptText) {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { responseMimeType: 'application/json' } })
+            });
+            if (!res.ok) {
+                let detail = '';
+                try { detail = (await res.json()).error?.message || ''; } catch (e) {}
+                if (res.status === 400 || res.status === 403) throw new Error('Chave de API inválida ou sem permissão. ' + detail);
+                if (res.status === 429) throw new Error('Cota grátis do Gemini esgotada por agora (limite diário/por minuto). Tente novamente mais tarde. ' + detail);
+                throw new Error(`Erro da API Gemini (${res.status}). ${detail}`);
+            }
+            const data = await res.json();
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const text = parts.map(p => p.text || '').join('');
+            if (!text) throw new Error('A IA não retornou texto na resposta.');
+            return text;
+        }
+
+        /**
+         * Monta o prompt de geração de questões. Manda as últimas questões já existentes desse
+         * tópico (resumidas) pra IA tentar variar o subtema/ângulo e não repetir a mesma ideia.
+         */
+        function buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao) {
+            const contexto = [concurso, orgao].filter(Boolean).join(' — ') || 'concurso público brasileiro';
+            const existentes = existingEnunciados.length
+                ? existingEnunciados.map((e, i) => `${i + 1}. ${e}`).join('\n')
+                : 'nenhuma ainda';
+            return `Você é um professor especialista em bancas de concursos públicos brasileiros, com o mesmo padrão de qualidade de questões do tecconcursos.com.br.
+
+Gere ${quantidade} questões INÉDITAS de múltipla escolha (exatamente 5 alternativas, A a E, apenas uma correta) sobre o tópico "${topico}" da matéria "${materia}", no nível de um concurso público brasileiro (${contexto}).
+
+Regras:
+- Enunciados claros e no estilo real de bancas examinadoras (afirmações para julgar, "assinale a alternativa correta", estudos de caso curtos, texto de apoio quando fizer sentido) — varie o estilo entre as questões.
+- Alternativas erradas devem ser plausíveis (erros conceituais comuns, pegadinhas reais de prova), nunca absurdas ou óbvias.
+- Cada questão deve ter um comentário curto e didático explicando por que a alternativa correta está certa.
+- Não repita o mesmo subtema/ângulo das questões já existentes listadas abaixo.
+- Responda APENAS com um JSON válido, sem nenhum texto antes ou depois, no formato exato abaixo:
+
+{"questoes": [{"enunciado": "string", "alternativas": {"A": "string", "B": "string", "C": "string", "D": "string", "E": "string"}, "correta": "A", "comentario": "string"}]}
+
+Questões já existentes sobre este tópico (não repetir o mesmo conteúdo):
+${existentes}`;
+        }
+
+        /** Valida e normaliza uma questão retornada pela IA. Retorna false se estiver malformada. */
+        function validateGeneratedQuestion(q) {
+            if (!q || typeof q.enunciado !== 'string' || !q.enunciado.trim()) return false;
+            if (!q.alternativas || typeof q.alternativas !== 'object') return false;
+            if (!QZ_LETTERS.every(l => typeof q.alternativas[l] === 'string' && q.alternativas[l].trim())) return false;
+            const correta = String(q.correta || '').trim().toUpperCase();
+            if (!QZ_LETTERS.includes(correta)) return false;
+            q.correta = correta;
+            return true;
+        }
+
+        /** Gera um novo lote de questões (até QZ_BATCH_SIZE, respeitando o teto de QZ_MAX_PER_TOPIC) para um tópico. */
+        async function gerarQuestoes(materia, topico, btnEl) {
+            const mode = qzMode();
+            const apiKey = (mode === 'gemini'
+                ? document.getElementById('qz-gemini-key-input').value
+                : document.getElementById('qz-claude-key-input').value).trim();
+            if (!apiKey) {
+                showToast(`Cole sua chave de API do ${mode === 'gemini' ? 'Google Gemini' : 'Anthropic (Claude)'} antes de gerar questões.`, 'error');
+                return;
+            }
+            const model = mode === 'gemini'
+                ? document.getElementById('qz-gemini-model-select').value
+                : document.getElementById('qz-claude-model-select').value;
+
+            const store = getQuestoesStore();
+            const bucket = getOrCreateBucket(store, materia, topico);
+            const remaining = QZ_MAX_PER_TOPIC - bucket.questions.length;
+            if (remaining <= 0) { showToast('Este tópico já tem 100 questões geradas.', 'info'); return; }
+            const quantidade = Math.min(QZ_BATCH_SIZE, remaining);
+
+            const existingEnunciados = bucket.questions.slice(-15).map(q => q.enunciado.slice(0, 140));
+            const { concurso, orgao } = getModelInfo();
+            const prompt = buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao);
+
+            if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...'; }
+
+            let toastMsg = null, toastKind = 'success';
+            try {
+                const rawText = mode === 'gemini'
+                    ? await callGeminiForQuestions(apiKey, model, prompt)
+                    : await callClaudeForQuestions(apiKey, model, prompt);
+                const parsed = qzExtractJSON(rawText);
+                const list = Array.isArray(parsed.questoes) ? parsed.questoes : [];
+                let added = 0, skipped = 0;
+                list.forEach(q => {
+                    if (!validateGeneratedQuestion(q)) { skipped++; return; }
+                    bucket.questions.push({
+                        id: qzUid(),
+                        enunciado: q.enunciado.trim(),
+                        alternativas: {
+                            A: q.alternativas.A.trim(), B: q.alternativas.B.trim(), C: q.alternativas.C.trim(),
+                            D: q.alternativas.D.trim(), E: q.alternativas.E.trim()
+                        },
+                        correta: q.correta,
+                        comentario: (q.comentario || '').trim(),
+                        origem: mode,
+                        criadoEm: new Date().toISOString(),
+                        vezesRespondida: 0,
+                        acertos: 0,
+                        ultimaResposta: null
+                    });
+                    added++;
+                });
+                saveQuestoesStore(store);
+                if (added === 0) {
+                    toastMsg = 'A IA não retornou questões válidas dessa vez. Tente novamente.';
+                    toastKind = 'error';
+                } else {
+                    toastMsg = `${added} questão(ões) geradas para "${topico}"` + (skipped ? ` (${skipped} descartada(s) por formato inválido)` : '') + '.';
+                }
+            } catch (err) {
+                console.error('Erro ao gerar questões:', err);
+                toastMsg = 'Erro ao gerar questões: ' + err.message;
+                toastKind = 'error';
+            } finally {
+                renderBanco(); // reconstrói os botões do zero (contagens e labels atualizados)
+                if (toastMsg) showToast(toastMsg, toastKind);
+            }
+        }
+
+        // ─── Banco de questões (accordion por categoria > matéria > tópico) ───
+        window.toggleAccordion = function(header) {
+            const content = header.nextElementSibling;
+            content.classList.toggle('open');
+            const icon = header.querySelector('.accordion-icon');
+            icon.textContent = content.classList.contains('open') ? '▼' : '▶';
+        };
+
+        function renderBanco() {
+            const container = document.getElementById('qz-banco-container');
+            container.innerHTML = '';
+            const store = getQuestoesStore();
+
+            if (!syllabusData.length) {
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-clipboard-list"></i><h3>Nenhum conteúdo programático carregado</h3><p>Importe sua planilha ou o edital em PDF no Menu Inicial pra listar as matérias e tópicos aqui.</p><a href="index.html" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Ir para o Menu Inicial</a></div>`;
+                return;
+            }
+
+            syllabusData.forEach(section => {
+                const secTitle = document.createElement('h4');
+                secTitle.textContent = section.category;
+                secTitle.style.margin = '20px 0 10px 0';
+                secTitle.style.color = 'var(--accent)';
+                container.appendChild(secTitle);
+
+                section.subjects.forEach(sub => {
+                    const totalQuestoesMateria = sub.topics.reduce((acc, t) => acc + (findBucket(store, sub.name, t)?.questions.length || 0), 0);
+
+                    const card = document.createElement('div');
+                    card.className = 'syllabus-category';
+                    card.innerHTML = `
+                        <div class="syllabus-header" onclick="toggleAccordion(this)">
+                            <div class="syllabus-title-group">
+                                <span class="accordion-icon">▶</span>
+                                <div>
+                                    <div class="syllabus-title">${escHtml(sub.name)}</div>
+                                    <div class="syllabus-meta">${totalQuestoesMateria} questão(ões) geradas no total</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="syllabus-content">
+                            ${sub.topics.map(topico => {
+                                const bucket = findBucket(store, sub.name, topico);
+                                const count = bucket ? bucket.questions.length : 0;
+                                const remaining = QZ_MAX_PER_TOPIC - count;
+                                const genBtnHtml = remaining <= 0
+                                    ? `<button class="qz-btn-sm" disabled><i class="fas fa-circle-check"></i> Completo</button>`
+                                    : `<button class="qz-btn-sm qz-gerar-btn" data-materia="${escHtml(sub.name)}" data-topico="${escHtml(topico)}"><i class="fas fa-wand-magic-sparkles"></i> Gerar +${Math.min(QZ_BATCH_SIZE, remaining)}</button>`;
+                                const resolverBtnHtml = count > 0
+                                    ? `<button class="qz-btn-sm qz-btn-primary qz-resolver-btn" data-materia="${escHtml(sub.name)}" data-topico="${escHtml(topico)}"><i class="fas fa-play"></i> Resolver</button>`
+                                    : '';
+                                return `
+                                <div class="topic-item">
+                                    <span class="topic-text">${escHtml(topico)}</span>
+                                    <span class="qz-count-badge">${count}/${QZ_MAX_PER_TOPIC}</span>
+                                    <span class="qz-topic-actions">${genBtnHtml}${resolverBtnHtml}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>`;
+                    container.appendChild(card);
+                });
+            });
+        }
+
+        // Delegação de eventos: evita ter que escapar matéria/tópico dentro de atributos onclick=""
+        // (nomes de matéria/tópico vêm de dados importados/gerados por IA e podem ter aspas etc.).
+        document.getElementById('qz-banco-container').addEventListener('click', function(e) {
+            const genBtn = e.target.closest('.qz-gerar-btn');
+            if (genBtn && !genBtn.disabled) {
+                gerarQuestoes(genBtn.dataset.materia, genBtn.dataset.topico, genBtn);
+                return;
+            }
+            const resBtn = e.target.closest('.qz-resolver-btn');
+            if (resBtn) startPractice(resBtn.dataset.materia, resBtn.dataset.topico);
+        });
+
+        // ─── Modo de resolução (prática estilo cursinho de questões) ───
+        let qzSession = null; // { scope:{materia,topico}, queue:[{materia,topico,question}], idx, correct, answered, answeredBySubject, answeredNow }
+
+        function collectQuestionsForScope(materia, topico) {
+            const store = getQuestoesStore();
+            const list = [];
+            store.forEach(b => {
+                if (materia && b.materia !== materia) return;
+                if (topico && b.topico !== topico) return;
+                b.questions.forEach(q => list.push({ materia: b.materia, topico: b.topico, question: q }));
+            });
+            return list;
+        }
+
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function showQzView(name) {
+            document.getElementById('view-banco').classList.toggle('active', name === 'banco');
+            document.getElementById('view-resolver').classList.toggle('active', name === 'resolver');
+        }
+
+        function startPractice(materia, topico) {
+            let list = collectQuestionsForScope(materia, topico);
+            if (!list.length) { showToast('Nenhuma questão gerada ainda para esse filtro.', 'error'); return; }
+
+            // Prioriza questões nunca respondidas, embaralhando dentro de cada grupo de "vezes respondida".
+            const grouped = {};
+            list.forEach(item => { (grouped[item.question.vezesRespondida] = grouped[item.question.vezesRespondida] || []).push(item); });
+            list = Object.keys(grouped).sort((a, b) => a - b).flatMap(k => shuffle(grouped[k]));
+
+            qzSession = { scope: { materia, topico }, queue: list, idx: 0, correct: 0, answered: 0, answeredBySubject: {}, answeredNow: false };
+            document.getElementById('qz-session-scope').textContent = topico ? `${materia} — ${topico}` : (materia || 'Todas as matérias');
+            showQzView('resolver');
+            renderCurrentQuestion();
+        }
+
+        function exitPractice() {
+            finalizeSessionHistory();
+            qzSession = null;
+            showQzView('banco');
+            renderBanco();
+        }
+
+        function renderCurrentQuestion() {
+            const area = document.getElementById('qz-question-area');
+            document.getElementById('qz-session-correct').textContent = qzSession.correct;
+            document.getElementById('qz-session-total').textContent = qzSession.answered;
+
+            if (qzSession.idx >= qzSession.queue.length) {
+                const pct = qzSession.answered ? Math.round((qzSession.correct / qzSession.answered) * 100) : 0;
+                area.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-flag-checkered"></i>
+                        <h3>Sessão concluída!</h3>
+                        <p>Você respondeu ${qzSession.answered} questão(ões), com ${qzSession.correct} acerto(s)${qzSession.answered ? ` (${pct}%)` : ''}.</p>
+                        <button class="btn btn-primary" onclick="exitPractice()"><i class="fas fa-arrow-left"></i> Voltar ao banco de questões</button>
+                    </div>`;
+                return;
+            }
+
+            const item = qzSession.queue[qzSession.idx];
+            const q = item.question;
+            qzSession.answeredNow = false;
+
+            area.innerHTML = `
+                <div class="qz-question-progress">Questão ${qzSession.idx + 1} de ${qzSession.queue.length}</div>
+                <div class="qz-question-card">
+                    <div class="qz-question-meta">${escHtml(item.materia)} • ${escHtml(item.topico)}${q.vezesRespondida > 0 ? ` • já respondida ${q.vezesRespondida}x` : ''}</div>
+                    <div class="qz-enunciado">${escHtml(q.enunciado)}</div>
+                    <div class="qz-alternativas" id="qz-alternativas">
+                        ${QZ_LETTERS.map(l => `
+                            <button class="qz-alt" data-letra="${l}" onclick="qzResponder('${l}')">
+                                <span class="qz-alt-letra">${l}</span>
+                                <span class="qz-alt-texto">${escHtml(q.alternativas[l])}</span>
+                            </button>`).join('')}
+                    </div>
+                    <div id="qz-feedback" style="display:none;"></div>
+                    <div class="qz-question-actions" id="qz-question-actions" style="display:none;">
+                        <button class="btn btn-primary" onclick="qzProxima()"><i class="fas fa-arrow-right"></i> Próxima</button>
+                    </div>
+                </div>`;
+        }
+
+        function qzResponder(letra) {
+            if (!qzSession || qzSession.answeredNow) return;
+            qzSession.answeredNow = true;
+
+            const item = qzSession.queue[qzSession.idx];
+            const q = item.question;
+            const acertou = letra === q.correta;
+
+            q.vezesRespondida = (q.vezesRespondida || 0) + 1;
+            if (acertou) q.acertos = (q.acertos || 0) + 1;
+            q.ultimaResposta = letra;
+
+            const store = getQuestoesStore();
+            const bucket = findBucket(store, item.materia, item.topico);
+            const stored = bucket && bucket.questions.find(x => x.id === q.id);
+            if (stored) Object.assign(stored, { vezesRespondida: q.vezesRespondida, acertos: q.acertos, ultimaResposta: q.ultimaResposta });
+            saveQuestoesStore(store);
+
+            qzSession.answered++;
+            if (acertou) qzSession.correct++;
+            const subjStats = qzSession.answeredBySubject[item.materia] || (qzSession.answeredBySubject[item.materia] = { total: 0, correct: 0, topicos: new Set() });
+            subjStats.total++;
+            if (acertou) subjStats.correct++;
+            subjStats.topicos.add(item.topico);
+
+            document.getElementById('qz-session-correct').textContent = qzSession.correct;
+            document.getElementById('qz-session-total').textContent = qzSession.answered;
+
+            document.querySelectorAll('#qz-alternativas .qz-alt').forEach(btn => {
+                btn.disabled = true;
+                const l = btn.dataset.letra;
+                if (l === q.correta) btn.classList.add('correct');
+                else if (l === letra) btn.classList.add('wrong');
+            });
+
+            const feedback = document.getElementById('qz-feedback');
+            feedback.style.display = 'block';
+            feedback.className = 'qz-feedback ' + (acertou ? 'ok' : 'bad');
+            feedback.innerHTML = `<i class="fas fa-${acertou ? 'circle-check' : 'circle-xmark'}"></i> ${acertou ? 'Você acertou!' : 'Você errou. Gabarito: ' + q.correta + '.'}` +
+                (q.comentario ? `<div class="qz-comentario">${escHtml(q.comentario)}</div>` : '');
+
+            document.getElementById('qz-question-actions').style.display = 'flex';
+        }
+
+        function qzProxima() {
+            qzSession.idx++;
+            renderCurrentQuestion();
+        }
+
+        /** Registra o desempenho da sessão no histórico de estudo, um lançamento por matéria praticada
+         *  (assim "% de acerto em questões" no Planejamento/Matérias reflete o que foi resolvido aqui). */
+        function finalizeSessionHistory() {
+            if (!qzSession || qzSession.answered === 0) return;
+            Object.keys(qzSession.answeredBySubject).forEach(materia => {
+                const stats = qzSession.answeredBySubject[materia];
+                const topicos = Array.from(stats.topicos);
+                const notaTopicos = topicos.length > 2 ? `${topicos.slice(0, 2).join(', ')} e mais ${topicos.length - 2}` : topicos.join(', ');
+                studyHistory.push({
+                    date: new Date().toISOString(),
+                    subject: materia,
+                    duration: 0,
+                    note: `Sessão de questões (${notaTopicos}): ${stats.correct}/${stats.total} corretas`,
+                    questions: stats.total,
+                    correct: stats.correct
+                });
+            });
+            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
+            showToast(`Sessão registrada: ${qzSession.correct}/${qzSession.answered} corretas no total.`, 'success');
+        }
+
+        function init() {
+            initCoreData();
+            loadQzConfig();
+            renderBanco();
+        }
+        initTheme();
+        hydrateFromDisk().then(() => { init(); });
+    </script>
+</body>
+</html>

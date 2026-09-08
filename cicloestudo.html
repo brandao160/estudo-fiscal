@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ciclo de Estudo · Ciclo Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="core.css">
+</head>
+<body>
+    <script id="persistence-data">window.HARDCODED_DATA = null;</script>
+    <div id="toast-container"></div>
+
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+        </div>
+
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i>
+                    <span>Início</span>
+                </a>
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <a href="materias.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </div>
+                <a href="cicloestudolivre.html" class="nav-item">
+                    <i class="fas fa-hand-pointer"></i>
+                    <span>Ciclo Livre</span>
+                </a>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <a href="listacompleta.html" class="nav-item">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </a>
+                <a href="conteudoprogramatico.html" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </a>
+                <a href="questoes.html" class="nav-item">
+                    <i class="fas fa-list-check"></i>
+                    <span>Questões</span>
+                </a>
+                <a href="tempoestudo.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </a>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
+                </div>
+            </div>
+
+            <div style="flex:1;"></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Ciclo de Estudo</h1>
+                <p id="page-subtitle-text">Seu cronograma automático, dia a dia</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="view-calendar" class="view-section active">
+                <div id="calendar-empty-banner"><!-- JS generated --></div>
+
+                <div class="calendar-toolbar">
+                    <div class="calendar-toolbar-nav">
+                        <button class="calendar-nav-btn" onclick="changeCalendarMonth(-1)" title="Mês anterior"><i class="fas fa-chevron-left"></i></button>
+                        <h2 class="calendar-month-label" id="calendar-month-label">—</h2>
+                        <button class="calendar-nav-btn" onclick="changeCalendarMonth(1)" title="Próximo mês"><i class="fas fa-chevron-right"></i></button>
+                        <button class="calendar-today-btn" onclick="goToCalendarToday()"><i class="fas fa-calendar-day"></i> Hoje</button>
+                    </div>
+                    <div class="calendar-legend">
+                        <div class="calendar-legend-item"><span class="calendar-legend-dot" style="background:var(--accent);"></span> A fazer</div>
+                        <div class="calendar-legend-item"><span class="calendar-legend-dot" style="background:var(--green);"></span> Concluído</div>
+                    </div>
+                </div>
+
+                <div class="calendar-table">
+                    <div class="calendar-table-head" id="calendar-grid-head"><!-- JS generated --></div>
+                    <div class="calendar-table-body" id="calendar-grid"><!-- JS generated --></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: TAREFAS DO DIA -->
+    <div class="modal-overlay" id="calendar-day-modal">
+        <div class="modal" style="width: 640px;">
+            <div class="modal-header">
+                <div class="modal-title" id="calendar-day-modal-title"><i class="fas fa-calendar-day" style="color: var(--accent);"></i> Dia</div>
+                <button class="close-modal" onclick="closeCalendarDayModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="cycle-add-row">
+                    <select id="calendar-add-subject-select"><!-- JS generated --></select>
+                    <button class="btn btn-secondary" onclick="addSubjectToCalendarDay()"><i class="fas fa-plus"></i> Adicionar matéria a este dia</button>
+                </div>
+                <div id="calendar-day-modal-tasks"><!-- JS generated --></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTE MODAL -->
+    <div id="note-modal">
+        <div class="note-modal-content">
+            <div class="note-header">
+                <span>Como foi, Estudante? Lembre-se de anotar em que página parou do PDF/Vídeo Aula</span>
+                <button onclick="cancelNote()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:1.2rem;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="note-body">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1;">
+                        <label class="note-label">Questões Feitas</label>
+                        <input type="number" id="note-questions-total" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="note-label">Acertos</label>
+                        <input type="number" id="note-questions-correct" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
+                    </div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:flex-start; font-size:0.78rem; color:var(--text-secondary, #999); margin-bottom:10px; line-height:1.4;">
+                    <i class="fas fa-lightbulb" style="color:var(--accent-color); margin-top:2px;"></i>
+                    <span>Antes de fechar: resolva 5-10 questões dessa matéria e dê uma revisada rápida nos pontos principais — reforça muito mais do que só ler.</span>
+                </div>
+                <label class="note-label">Anotações</label>
+                <textarea id="note-textarea" class="note-textarea" placeholder="Faça suas anotações aqui!"></textarea>
+            </div>
+            <div class="note-footer">
+                <button class="bar-btn btn-cancel" onclick="cancelNote()"><i class="fas fa-times"></i> Cancelar</button>
+                <button class="bar-btn btn-save" onclick="saveNote()"><i class="fas fa-check"></i> Atualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKY TIMER BAR -->
+    <div id="active-study-bar">
+        <div class="bar-subject-info">
+            <div id="bar-subject-name" class="bar-subject-name">Subject Name</div>
+            <div class="bar-timer">
+                <i class="fas fa-stopwatch"></i>
+                <span id="bar-timer-display">0h 0m 0s</span>
+            </div>
+            <div class="bar-progress">
+                <div id="bar-progress-fill" class="bar-progress-fill"></div>
+            </div>
+            <span id="bar-target-label" class="bar-target"></span>
+        </div>
+        <div class="bar-controls">
+            <button class="bar-btn btn-cancel" onclick="openFocusMode()" title="Modo Foco (tela cheia)">
+                <i class="fas fa-expand"></i> Modo Foco
+            </button>
+            <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
+                <i class="fas fa-pause"></i> Pausar
+            </button>
+            <button class="bar-btn btn-save" onclick="finishSession()">
+                <i class="fas fa-check"></i> Salvar
+            </button>
+            <button class="bar-btn btn-cancel" onclick="cancelSession()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+
+    <!-- MODO FOCO (tela cheia, sem distração) -->
+    <div id="focus-mode-overlay">
+        <div class="focus-subject" id="focus-subject-name">Matéria</div>
+        <div class="focus-timer" id="focus-timer-display">00:00:00</div>
+        <div class="focus-progress"><div class="focus-progress-fill" id="focus-progress-fill"></div></div>
+        <div class="focus-target" id="focus-target-label"></div>
+        <div class="focus-controls">
+            <button class="bar-btn btn-continue" onclick="togglePauseResume()"><i class="fas fa-pause" id="focus-pause-icon"></i> Pausar</button>
+            <button class="bar-btn btn-save" onclick="finishSession()"><i class="fas fa-check"></i> Salvar</button>
+            <button class="bar-btn btn-cancel" onclick="closeFocusMode()"><i class="fas fa-compress"></i> Sair do Modo Foco</button>
+        </div>
+    </div>
+
+
+    <script src="core.js"></script>
+    <script>
+        /**
+         * Formata uma Date como chave "yyyy-mm-dd" (sem fuso), usada pra indexar fullSchedule.
+         */
+        function dateKeyOf(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function findDayObjByKey(key) {
+            return fullSchedule.find(d => dateKeyOf(d.date) === key);
+        }
+
+        /**
+         * Retorna (e cria se necessário) o dia do fullSchedule correspondente à chave —
+         * versão genérica de getOrCreateTodayDayObj() do core.js, pra qualquer data do calendário.
+         */
+        function getOrCreateDayObjByKey(key) {
+            let dayObj = findDayObjByKey(key);
+            if (!dayObj) {
+                const [y, m, d] = key.split('-').map(Number);
+                dayObj = { date: new Date(y, m - 1, d), tasks: [] };
+                fullSchedule.push(dayObj);
+                fullSchedule.sort((a, b) => a.date.getTime() - b.date.getTime());
+            }
+            return dayObj;
+        }
+
+        // --- NAVEGAÇÃO DO CALENDÁRIO ---
+        let calendarViewDate = new Date();
+        calendarViewDate.setDate(1);
+        let calendarSelectedDateKey = null;
+
+        function changeCalendarMonth(offset) {
+            calendarViewDate.setMonth(calendarViewDate.getMonth() + offset);
+            renderCalendarMonth();
+        }
+
+        function goToCalendarToday() {
+            calendarViewDate = new Date();
+            calendarViewDate.setDate(1);
+            renderCalendarMonth();
+        }
+
+        /**
+         * Desenha o mês inteiro: cabeçalho (Segunda..Domingo) + uma célula por dia (incluindo
+         * dias do mês anterior/seguinte pra completar as semanas), com pontinhos indicando as
+         * matérias planejadas (laranja = a fazer, verde = concluída) — o cronograma já vem
+         * pronto de fullSchedule (gerado em Início via "Gerar Ciclo").
+         */
+        function renderCalendarMonth() {
+            const head = document.getElementById('calendar-grid-head');
+            const grid = document.getElementById('calendar-grid');
+            const label = document.getElementById('calendar-month-label');
+            const banner = document.getElementById('calendar-empty-banner');
+            if (!grid || !label || !head) return; // view ainda não montada
+
+            banner.innerHTML = (!fullSchedule.length) ? `
+                <div class="cycle-empty" style="margin-bottom:18px;">
+                    <i class="fas fa-calendar-plus"></i>
+                    <h3>Nenhum ciclo automático gerado ainda</h3>
+                    <p>Vá em "Início" e clique em "Gerar Ciclo" para o sistema montar seu cronograma completo aqui no calendário — ou use a aba "Ciclo Livre" se preferir escolher você mesmo o que estudar a cada dia.</p>
+                    <a class="btn btn-primary" href="index.html"><i class="fas fa-arrow-right"></i> Ir para Início</a>
+                </div>` : '';
+
+            label.textContent = calendarViewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase());
+
+            const weekDayLabels = ['Segunda-Feira', 'Terça-Feira', 'Quarta-Feira', 'Quinta-Feira', 'Sexta-Feira', 'Sábado', 'Domingo'];
+            head.innerHTML = weekDayLabels.map(w => `<div class="calendar-weekday">${w}</div>`).join('');
+
+            const year = calendarViewDate.getFullYear();
+            const month = calendarViewDate.getMonth();
+            const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+            // Semana começa na Segunda: getDay() 0=Dom..6=Sáb vira 0=Seg..6=Dom.
+            const firstWeekdayMonFirst = (new Date(year, month, 1).getDay() + 6) % 7;
+            const totalRows = Math.ceil((firstWeekdayMonFirst + totalDaysInMonth) / 7);
+            const gridStart = new Date(year, month, 1 - firstWeekdayMonFirst);
+
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const todayKey = dateKeyOf(today);
+
+            let cellsHtml = '';
+            for (let i = 0; i < totalRows * 7; i++) {
+                const cellDate = new Date(gridStart);
+                cellDate.setDate(gridStart.getDate() + i);
+                const key = dateKeyOf(cellDate);
+                const isOutside = cellDate.getMonth() !== month;
+                const dayObj = findDayObjByKey(key);
+                const tasks = dayObj ? dayObj.tasks : [];
+                const dotsHtml = tasks.slice(0, 12).map(t =>
+                    `<span class="calendar-dot ${deriveTaskStatus(t) === 'concluido' ? 'done' : 'pending'}" title="${t.subject}"></span>`
+                ).join('');
+
+                cellsHtml += `
+                    <div class="calendar-cell ${key === todayKey ? 'is-today' : ''} ${isOutside ? 'is-outside' : ''}" onclick="openCalendarDayModal('${key}')">
+                        <div class="calendar-cell-top">
+                            <span class="calendar-cell-day">${cellDate.getDate()}</span>
+                            ${tasks.length ? `<span class="calendar-cell-hours">${tasks.filter(t => deriveTaskStatus(t) === 'concluido').length}/${tasks.length}</span>` : ''}
+                        </div>
+                        <div class="calendar-cell-dots">${dotsHtml}</div>
+                    </div>`;
+            }
+            grid.innerHTML = cellsHtml;
+        }
+
+        // --- MODAL DE TAREFAS DO DIA ---
+        function openCalendarDayModal(key) {
+            calendarSelectedDateKey = key;
+            renderCalendarDayModal();
+            document.getElementById('calendar-day-modal').classList.add('open');
+        }
+
+        function closeCalendarDayModal() {
+            document.getElementById('calendar-day-modal').classList.remove('open');
+            calendarSelectedDateKey = null;
+        }
+
+        function renderCalendarDayModal() {
+            if (!calendarSelectedDateKey) return;
+            const [y, m, d] = calendarSelectedDateKey.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            const titleEl = document.getElementById('calendar-day-modal-title');
+            titleEl.innerHTML = `<i class="fas fa-calendar-day" style="color: var(--accent);"></i> ${dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^\w/, c => c.toUpperCase())}`;
+
+            const select = document.getElementById('calendar-add-subject-select');
+            select.innerHTML = subjectsConfig.map(s => `<option value="${s.name}">${s.name} (Peso ${s.weight})</option>`).join('');
+
+            const dayObj = findDayObjByKey(calendarSelectedDateKey);
+            const tasks = dayObj ? dayObj.tasks : [];
+            const container = document.getElementById('calendar-day-modal-tasks');
+
+            if (!tasks.length) {
+                container.innerHTML = `
+                    <div class="cycle-empty">
+                        <i class="fas fa-mug-hot"></i>
+                        <h3>Nada planejado nesse dia</h3>
+                        <p>Adicione uma matéria acima se quiser estudar algo mesmo assim.</p>
+                    </div>`;
+                return;
+            }
+
+            const activeTaskId = (activeSession && activeSession.dayDate && dateKeyOf(activeSession.dayDate) === calendarSelectedDateKey)
+                ? tasks[activeSession.taskIndex]?.id : null;
+
+            container.innerHTML = `<div class="cycle-list">` + tasks.map((task, index) => {
+                const status = deriveTaskStatus(task);
+                const isActive = task.id === activeTaskId;
+                const isDone = status === 'concluido' && !isActive;
+                const target = task.durationTarget || 3600;
+                const spent = task.timeSpent || 0;
+                const percent = Math.min(100, Math.round((spent / target) * 100));
+                const statusChipClass = status === 'concluido' ? 'ok' : (status === 'nao_concluido' ? 'ic' : 'ns');
+                const statusLabel = status === 'concluido' ? 'Concluído' : (status === 'nao_concluido' ? 'Em andamento' : 'Não iniciado');
+                const actionHtml = isActive
+                    ? `<span class="status-pill ic"><i class="fas fa-stopwatch"></i> Estudando</span>`
+                    : `<button class="start-btn" onclick="startCalendarTask('${task.id}')"><i class="fas fa-play"></i> ${spent > 0 ? 'Continuar' : 'Iniciar Estudo'}</button>`;
+                return `
+                    <div class="cycle-card ${isActive ? 'is-active' : ''} ${isDone ? 'is-done' : ''}">
+                        <div class="cycle-num">${isDone ? '<i class="fas fa-check"></i>' : index + 1}</div>
+                        <div class="cycle-card-body">
+                            <div class="cycle-card-top">
+                                <span class="cycle-card-name">${task.subject}</span>
+                                <span class="tag-${task.type === 'Específico' ? 'spec' : 'basic'}">${task.type}</span>
+                                <span class="status-pill ${statusChipClass}">${statusLabel}</span>
+                            </div>
+                            <div class="cycle-card-track"><div class="cycle-card-fill" style="width:${percent}%"></div></div>
+                            <div class="cycle-card-meta">${formatTime(spent)} de ${formatTime(target)} · Peso ${task.weight || 1}</div>
+                        </div>
+                        <div class="cycle-card-actions">
+                            ${actionHtml}
+                            <button class="cycle-remove-btn" title="Remover desse dia" onclick="removeCalendarTask('${task.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
+            }).join('') + `</div>`;
+        }
+
+        function removeCalendarTask(taskId) {
+            if (activeSession && activeSession.dayDate && dateKeyOf(activeSession.dayDate) === calendarSelectedDateKey) {
+                const dayObj = findDayObjByKey(calendarSelectedDateKey);
+                if (dayObj && dayObj.tasks[activeSession.taskIndex] && dayObj.tasks[activeSession.taskIndex].id === taskId) {
+                    showToast('Não é possível remover a matéria em estudo agora.', 'warning');
+                    return;
+                }
+            }
+            const dayObj = findDayObjByKey(calendarSelectedDateKey);
+            if (!dayObj) return;
+            dayObj.tasks = dayObj.tasks.filter(t => t.id !== taskId);
+            persistSchedule();
+            renderCalendarDayModal();
+            renderCalendarMonth();
+            updateStats();
+        }
+
+        function addSubjectToCalendarDay() {
+            const select = document.getElementById('calendar-add-subject-select');
+            if (!select || !select.value || !calendarSelectedDateKey) return;
+            const subConfig = subjectsConfig.find(s => s.name === select.value);
+            const dayObj = getOrCreateDayObjByKey(calendarSelectedDateKey);
+            dayObj.tasks.push({
+                id: `task-adhoc-${Date.now()}`,
+                subject: select.value,
+                type: subConfig ? subConfig.type : 'Básico',
+                weight: subConfig ? subConfig.weight : 1,
+                completed: false,
+                timeSpent: 0,
+                durationTarget: 3600,
+                note: ''
+            });
+            persistSchedule();
+            renderCalendarDayModal();
+            renderCalendarMonth();
+            showToast(`"${select.value}" adicionada a esse dia.`, 'success');
+        }
+
+        /**
+         * Inicia o cronômetro pra uma tarefa do dia aberto no modal (igual ao "Iniciar Estudo"
+         * do Ciclo Livre) — funciona em qualquer dia do calendário, não só hoje.
+         */
+        function startCalendarTask(taskId) {
+            const dayObj = getOrCreateDayObjByKey(calendarSelectedDateKey);
+            const index = dayObj.tasks.findIndex(t => t.id === taskId);
+            if (index === -1) return;
+            if (beginActiveSession(dayObj, index)) { renderCalendarDayModal(); renderCalendarMonth(); }
+        }
+
+        // (cronômetro, modo foco, salvar/cancelar sessão e atalhos de teclado ficam em core.js —
+        // compartilhados com cicloestudolivre.html, ver a seção "sessão ativa de estudo" lá)
+
+
+        function init() {
+            initCoreData();
+            renderCalendarMonth();
+            restoreActiveSessionFromStorage();
+            checkPendingSessionActionOnLoad();
+        }
+        initTheme();
+        hydrateFromDisk().then(() => { init(); });
+    </script>
+</body>
+</html>

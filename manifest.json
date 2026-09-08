@@ -1,0 +1,16 @@
+{
+  "name": "Ciclo de Estudo",
+  "short_name": "Ciclo Estudo",
+  "description": "Planejamento e acompanhamento de estudos para concursos: ciclo de estudos, cronômetro, resumos e conteúdo programático.",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFF8F1",
+  "theme_color": "#F97316",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

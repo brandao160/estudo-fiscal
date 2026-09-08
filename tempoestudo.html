@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo de Estudo · Ciclo Estudo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="core.css">
+</head>
+<body>
+    <script id="persistence-data">window.HARDCODED_DATA = null;</script>
+    <div id="toast-container"></div>
+
+    <header class="app-header glass-panel">
+        <div class="app-header-row">
+            <div class="brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Ciclo de Estudo</span>
+            </div>
+            <div id="profile-switcher" class="profile-switcher"><!-- JS generated --></div>
+        </div>
+
+        <div class="app-header-row">
+            <nav class="topnav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-house"></i>
+                    <span>Início</span>
+                </a>
+                <a href="planejamento.html" class="nav-item">
+                    <i class="fas fa-map"></i>
+                    <span>Planejamento</span>
+                </a>
+                <a href="materias.html" class="nav-item">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Matérias</span>
+                </a>
+                <a href="cicloestudo.html" class="nav-item">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Ciclo de Estudo</span>
+                </a>
+                <a href="cicloestudolivre.html" class="nav-item">
+                    <i class="fas fa-hand-pointer"></i>
+                    <span>Ciclo Livre</span>
+                </a>
+                <a href="resumo.html" class="nav-item">
+                    <i class="fas fa-pencil-alt"></i>
+                    <span>Meus Resumos</span>
+                </a>
+                <a href="listacompleta.html" class="nav-item">
+                    <i class="fas fa-list"></i>
+                    <span>Lista Completa</span>
+                </a>
+                <a href="conteudoprogramatico.html" class="nav-item">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Conteúdo Programático</span>
+                </a>
+                <a href="questoes.html" class="nav-item">
+                    <i class="fas fa-list-check"></i>
+                    <span>Questões</span>
+                </a>
+                <div class="nav-item active">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Tempo de Estudo</span>
+                </div>
+                <a href="historico.html" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="app-header-row subnav-row">
+            <div class="header-stats">
+                <div class="header-stat">
+                    <div class="header-stat-label">Dias até a Prova</div>
+                    <div class="header-stat-value" id="days-left-stat">0</div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Progresso</div>
+                    <div class="header-stat-value" id="total-progress-stat">0%</div>
+                    <div class="progress-circle">
+                        <div class="progress-fill" id="total-progress-bar"></div>
+                    </div>
+                </div>
+                <div class="header-stat">
+                    <div class="header-stat-label">Sequência 🔥</div>
+                    <div class="header-stat-value" id="streak-stat">0 dias</div>
+                </div>
+            </div>
+
+            <div style="flex:1;"></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1 id="page-title-text">Tempo de Estudo</h1>
+                <p id="page-subtitle-text">Foco na meta: Ciclo de Estudo</p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="theme-toggle" style="padding: 8px 12px; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onclick="toggleTheme()" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="view-time-stats" class="view-section active">
+                <div style="display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap;">
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0; text-align: center;">Distribuição do Tempo</h3>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="studyTimeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0; text-align: center;">Evolução (últimos 14 dias)</h3>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="weeklyTrendChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0;">Tempo Total por Matéria</h3>
+                        <div id="time-stats-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- JS Generated -->
+                        </div>
+                    </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 20px 0;">Contagem de PDF por Matéria</h3>
+                        <div id="pdf-stats-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- JS Generated -->
+                        </div>
+                    </div>
+                    <div class="subject-card" style="flex: 1; min-width: 300px;">
+                        <h3 style="margin: 0 0 10px 0;">Calibração do Ciclo</h3>
+                        <div id="calibration-panel" style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Curva Peso (beta)</label>
+                                <input type="range" id="beta-range" min="0.5" max="2" step="0.05" />
+                                <input type="number" id="beta-num" min="0.5" max="2" step="0.05" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Viés Peso diário</label>
+                                <input type="range" id="weightBias-range" min="0" max="2" step="0.05" />
+                                <input type="number" id="weightBias-num" min="0" max="2" step="0.05" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Dispersão Semanal</label>
+                                <input type="range" id="dispersion-range" min="0" max="1" step="0.05" />
+                                <input type="number" id="dispersion-num" min="0" max="1" step="0.05" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Mín/Máx rep.</label>
+                                <input type="number" id="minRep-num" min="1" max="20" step="1" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                                <input type="number" id="maxRep-num" min="1" max="20" step="1" style="width:80px; background:#1f2937; color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:6px;" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Normalizar Semana</label>
+                                <input type="checkbox" id="normalizeWeekly-check" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Cobertura Mínima</label>
+                                <input type="checkbox" id="minCoverage-check" />
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <label style="width:120px; color: var(--text-muted);">Evitar Dias Consecutivos</label>
+                                <input type="checkbox" id="avoidConsecutive-check" />
+                            </div>
+                            <div>
+                                <button onclick="saveCalibrationParams()" style="background: var(--accent-color); color:#fff; border:none; padding:6px 10px; border-radius:6px;">Aplicar</button>
+                                <button onclick="renderCalibrationPreview()" style="background: transparent; border:1px solid var(--border-color); color:#fff; padding:6px 10px; border-radius:6px; margin-left:10px;">Preview</button>
+                            </div>
+                            <div id="calibration-preview" style="margin-top:10px; display:flex; flex-direction:column; gap:6px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="core.js"></script>
+    <script>
+        // --- TIME STATS LOGIC ---
+        let studyTimeChart = null;
+
+        function renderTimeStats() {
+            const chartAvailable = (typeof Chart !== 'undefined');
+            // Calculate total time per subject
+            const subjectTimes = {};
+            let totalSeconds = 0;
+
+            // Initialize with config
+            subjectsConfig.forEach(sub => {
+                subjectTimes[sub.name] = 0;
+            });
+
+            // Sum up from fullSchedule
+            fullSchedule.forEach(day => {
+                day.tasks.forEach(t => {
+                    if(t.timeSpent) {
+                        subjectTimes[t.subject] = (subjectTimes[t.subject] || 0) + t.timeSpent;
+                        totalSeconds += t.timeSpent;
+                    }
+                });
+            });
+
+            // Convert to array for sorting
+            const sortedSubjects = Object.entries(subjectTimes)
+                .map(([name, seconds]) => ({ name, seconds }))
+                .sort((a, b) => b.seconds - a.seconds);
+
+            // Render List
+            const listContainer = document.getElementById('time-stats-list');
+            if(listContainer) {
+                listContainer.innerHTML = '';
+                if(totalSeconds === 0) {
+                    listContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum tempo registrado ainda.</div>';
+                } else {
+                    sortedSubjects.forEach(item => {
+                        if(item.seconds > 0) {
+                            const percent = ((item.seconds / totalSeconds) * 100).toFixed(1);
+                            
+                            // Filter history for this subject
+                            const subjectHistory = studyHistory
+                                .filter(h => h.subject === item.name)
+                                .sort((a, b) => new Date(b.date) - new Date(a.date));
+                                
+                            const row = document.createElement('div');
+                            row.style.borderBottom = '1px solid var(--border-color)';
+                            row.style.padding = '8px 0';
+
+                            let historyHtml = '';
+                            if (subjectHistory.length > 0) {
+                                historyHtml = '<div style="margin-top:5px; padding-left:10px; border-left: 2px solid var(--border-color);">';
+                                subjectHistory.forEach(h => {
+                                    const d = new Date(h.date);
+                                    historyHtml += `
+                                        <div style="margin-bottom: 8px; font-size: 0.85rem;">
+                                            <div style="color: var(--text-muted); display:flex; justify-content:space-between;">
+                                                <span><i class="far fa-calendar-alt"></i> ${d.toLocaleDateString('pt-BR')} <i class="far fa-clock" style="margin-left:5px;"></i> ${d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
+                                                <span style="color: var(--text-color); font-weight:600;">${formatTime(h.duration)}</span>
+                                            </div>
+                                            ${h.note ? `<div style="color: var(--text-muted); font-style: italic; font-size: 0.85rem; margin-top:2px;">"${h.note}"</div>` : ''}
+                                        </div>
+                                    `;
+                                });
+                                historyHtml += '</div>';
+                            }
+
+                            row.innerHTML = `
+                                <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                    <div>
+                                        <div style="font-weight: 500;">${item.name}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                                            ${formatTime(item.seconds)}
+                                        </div>
+                                    </div>
+                                    <div style="font-weight: 600; color: var(--accent-color);">${percent}% <i class="fas fa-chevron-down" style="font-size:0.7rem; margin-left:5px;"></i></div>
+                                </div>
+                                <div style="display:none; margin-top:8px;">
+                                    ${historyHtml || '<div style="font-size:0.8rem; color:var(--text-muted);">Sem histórico detalhado.</div>'}
+                                </div>
+                            `;
+                            listContainer.appendChild(row);
+                        }
+                    });
+                }
+            }
+
+            // Render Chart
+            const ctx = document.getElementById('studyTimeChart');
+            if(ctx && chartAvailable) {
+                if(studyTimeChart) studyTimeChart.destroy();
+                const colors = ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#E7E9ED','#76D7C4','#F1948A','#85C1E9','#F7DC6F','#D2B4DE'];
+                const labels = sortedSubjects.filter(i => i.seconds > 0).map(i => i.name);
+                const data = sortedSubjects.filter(i => i.seconds > 0).map(i => i.seconds / 3600);
+                const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+                if(labels.length > 0) {
+                    studyTimeChart = new Chart(ctx, { 
+                        type: 'pie', 
+                        data: { 
+                            labels, 
+                            datasets: [{ 
+                                data, 
+                                backgroundColor: colors.slice(0, labels.length), 
+                                borderWidth: 1,
+                                borderColor: getComputedStyle(document.body).getPropertyValue('--card-bg').trim()
+                            }] 
+                        }, 
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { 
+                                    position: 'bottom', 
+                                    labels: { 
+                                        color: textColor, 
+                                        boxWidth: 10, 
+                                        font: { size: 10 } 
+                                    } 
+                                } 
+                            } 
+                        } 
+                    });
+                }
+            }
+
+            // Render PDF Stats
+            const pdfContainer = document.getElementById('pdf-stats-list');
+            if(pdfContainer) {
+                pdfContainer.innerHTML = '';
+                const sortedPdf = [...subjectsConfig].sort((a,b) => (b.qtdePaginas || 0) - (a.qtdePaginas || 0));
+                
+                if(sortedPdf.every(s => !s.qtdePdf && !s.qtdePaginas)) {
+                     pdfContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum dado de PDF/Páginas configurado.</div>';
+                } else {
+                    sortedPdf.forEach(sub => {
+                        const pdfs = sub.qtdePdf || 0;
+                        const pags = sub.qtdePaginas || 0;
+                        if(pdfs > 0 || pags > 0) {
+                             const row = document.createElement('div');
+                             row.style.borderBottom = '1px solid var(--border-color)';
+                             row.style.padding = '8px 0';
+                             row.innerHTML = `
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="font-weight: 500;">${sub.name}</div>
+                                    <div style="text-align:right;">
+                                        <div style="font-weight: 600; color: var(--accent-color);">${pags} págs</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">${pdfs} PDFs</div>
+                                    </div>
+                                </div>
+                             `;
+                             pdfContainer.appendChild(row);
+                        }
+                    });
+                }
+            }
+
+            renderWeeklyTrendChart();
+        }
+
+        let weeklyTrendChart = null;
+
+        /**
+         * Gráfico de evolução: horas estudadas por dia nos últimos 14 dias, a partir do
+         * studyHistory real (timestamps de sessões salvas) — complementa a pizza de distribuição
+         * total (que não mostra quando o tempo foi estudado, só o total acumulado por matéria).
+         */
+        function renderWeeklyTrendChart() {
+            const ctx = document.getElementById('weeklyTrendChart');
+            if (!ctx || typeof Chart === 'undefined') return;
+
+            const days = [];
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date(today); d.setDate(d.getDate() - i);
+                days.push(d);
+            }
+
+            const secondsByDay = days.map(d => {
+                const dayStart = d.getTime();
+                const dayEnd = dayStart + 86400000;
+                return studyHistory.reduce((sum, h) => {
+                    const t = new Date(h.date).getTime();
+                    return (t >= dayStart && t < dayEnd) ? sum + (h.duration || 0) : sum;
+                }, 0);
+            });
+
+            const labels = days.map(d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+            const hours = secondsByDay.map(s => Math.round((s / 3600) * 10) / 10);
+            const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+            const gridColor = getComputedStyle(document.body).getPropertyValue('--border-color').trim();
+
+            if (weeklyTrendChart) weeklyTrendChart.destroy();
+            weeklyTrendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Horas estudadas',
+                        data: hours,
+                        backgroundColor: '#F97316',
+                        borderRadius: 4,
+                        maxBarThickness: 28
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor } }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Inicializa painel de calibração e sincroniza campos.
+         */
+        function initCalibrationPanel() {
+            // Nova lógica: Parâmetros fixos baseados no Peso.
+            // Desabilitar controles legados para evitar confusão.
+            const ids = [
+                'beta-range', 'beta-num', 
+                'weightBias-range', 'weightBias-num',
+                'dispersion-range', 'dispersion-num',
+                'minRep-num', 'maxRep-num',
+                'normalizeWeekly-check', 'minCoverage-check', 'avoidConsecutive-check'
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.disabled = true;
+                    el.title = "Gerenciado automaticamente pelo Ciclo Mestre (Peso = Frequência)";
+                    if(el.parentElement) el.parentElement.style.opacity = '0.5';
+                }
+            });
+            
+            // Renderiza o preview inicial
+            renderCalibrationPreview();
+        }
+
+        /**
+         * Salva parâmetros de calibração.
+         * (Mantido para compatibilidade, mas agora apenas confirma a ação)
+         */
+        function saveCalibrationParams() {
+            setGenerateButtonState('pending');
+            alert('Configuração de Ciclo Mestre ativa. A frequência é definida exclusivamente pelo PESO da matéria na aba Matérias.');
+        }
+
+        /**
+         * Renderiza preview da distribuição de repetições por matéria.
+         */
+        function renderCalibrationPreview() {
+            const container = document.getElementById('calibration-preview');
+            if (!container) return;
+            
+            // New logic: Reps = Weight (Master Cycle Method)
+            const entries = subjectsConfig.map(s => {
+                const wRaw = Math.round(s.weight || 0);
+                // If <= 0, it should be 0.
+                const w = wRaw <= 0 ? 0 : Math.max(1, wRaw);
+                return { name: s.name, reps: w };
+            });
+
+            const maxRep = entries.reduce((m,e)=>Math.max(m,e.reps), 0);
+            
+            container.innerHTML = entries.map(e => {
+                const pct = maxRep > 0 ? Math.round((e.reps / maxRep) * 100) : 0;
+                // If reps is 0, show a different style or just 0x
+                const barColor = e.reps === 0 ? 'var(--border-color)' : 'var(--accent-color)';
+                const text = e.reps === 0 ? '<span style="color:var(--text-muted)">(Excluído)</span>' : `${e.reps}x / ciclo`;
+
+                return `<div style="display:flex; align-items:center; gap:10px; padding:4px 0;">
+                    <span style="width:200px; color:${e.reps===0?'var(--text-muted)':'var(--text-color)'}; ${e.reps===0?'text-decoration:line-through;':''}">${e.name}</span>
+                    <div style="flex:1; height:6px; background:var(--border-color); border-radius:4px; overflow:hidden;">
+                        <div style="width:${pct}%; height:100%; background: ${barColor}; border-radius:4px;"></div>
+                    </div>
+                    <span style="width:100px; text-align:right; font-size:0.85em; color:var(--text-muted);">${text}</span>
+                </div>`;
+            }).join('');
+        }
+
+
+
+        window.addEventListener('themechange', () => setTimeout(renderTimeStats, 50));
+
+
+        function init() {
+            initCoreData();
+            renderTimeStats();
+            initCalibrationPanel();
+        }
+        initTheme();
+        hydrateFromDisk().then(() => { init(); });
+    </script>
+</body>
+</html>

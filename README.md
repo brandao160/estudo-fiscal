@@ -18,7 +18,7 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 | `resumo.html` | Meus Resumos: editor de resumos e flashcards por matéria/tópico (`ciclo_cards_v3`). |
 | `listacompleta.html` | Lista completa de tarefas/tópicos, filtrável por status e matéria. |
 | `conteudoprogramatico.html` | Conteúdo programático (syllabus) estruturado por categoria/matéria/tópico. |
-| `questoes.html` | Banco de questões: gera questões de múltipla escolha por tópico via IA (Gemini/Claude, com a chave do próprio usuário) e permite resolvê-las, estilo cursinho de questões. |
+| `questoes.html` | Banco de questões: gera questões de múltipla escolha por tópico via IA (automático, sem chave do usuário — ver seção abaixo) e permite resolvê-las, estilo cursinho de questões. |
 | `tempoestudo.html` | Estatísticas de tempo de estudo e painel legado de "Calibração do Ciclo" (ver nota abaixo). |
 | `historico.html` | Histórico de sessões de estudo (data, matéria, duração, anotações). |
 | `core.css` / `core.js` | Estilos e lógica compartilhados: perfis, tema, modelo de dados, geração do ciclo, estatísticas, revisão espaçada. |
@@ -33,7 +33,7 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 - Cadastre as matérias e pesos em **Matérias**, ajuste **Planejamento** (fases e horas semanais) e gere o cronograma em **Ciclo de Estudo**.
 - Em **Planejamento → Contagem regressiva**, defina diretamente o **início e o fim do ciclo** (`inicioCiclo`/`fimCiclo` no modelo) pelos campos de data — não depende mais de importar planilha/PDF para isso; dá pra ajustar a qualquer momento.
 - Use **Ciclo Livre** para estudar fora do cronograma quando quiser.
-- Gere e resolva questões de múltipla escolha por tópico em **Questões**, usando Gemini ou Claude com sua própria chave de API.
+- Gere e resolva questões de múltipla escolha por tópico em **Questões** — automático, sem precisar de chave própria (limitado a algumas gerações por dia por visitante).
 - Registre resumos/flashcards em **Meus Resumos**, acompanhe tudo em **Lista Completa**, **Conteúdo Programático**, **Tempo de Estudo** e **Histórico**.
 - Clique em **Salvar** (cabeçalho) para baixar uma cópia HTML autocontida com todos os seus dados embutidos — útil como backup ou para continuar em outro computador.
 
@@ -56,14 +56,20 @@ A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método 
 
 ## Banco de Questões (`questoes.html`)
 
-- Para cada tópico do conteúdo programático, gera questões de múltipla escolha (5 alternativas, A a E, com comentário explicativo) usando a IA escolhida — **Gemini** (grátis, com chave do usuário), **Claude** (pago, com chave do usuário) ou **OpenRouter (automático)** (sem chave, usa um proxy compartilhado — ver seção abaixo). Não há modo "sem IA": gerar distratores plausíveis e comentários exige um modelo de linguagem.
-- **Busca por questões reais antes de gerar**: a IA usa busca na web (`google_search` no Gemini, `web_search` no Claude) tentando achar uma questão já aplicada em prova real de concurso sobre aquele tópico antes de criar uma inédita. Cada questão fica marcada como `origem: "real"` (com `fonte`: banca/prova/ano/link, mostrada como selo verde ao resolver) ou `origem: "gerada"` — o prompt proíbe explicitamente marcar como "real" sem uma fonte confirmada, e o app também valida isso no código antes de aceitar (se não vier fonte com banca ou ano, força para "gerada"). Ainda assim, é uma mitigação, não uma garantia: a IA pode ocasionalmente errar a classificação, então trate o selo como um forte indício, não como certeza absoluta. No Gemini a busca entra na cota gratuita (5.000 buscas/mês); no Claude cada busca consome créditos à parte dos tokens.
+- Para cada tópico do conteúdo programático, gera questões de múltipla escolha (5 alternativas, A a E, com comentário explicativo) automaticamente — **sem o usuário precisar de chave de API nenhuma**. A chamada vai para um proxy próprio do site (`functions/questoes-proxy.js`, ver seção abaixo), que fala com a OpenRouter usando uma chave paga configurada só pelo administrador do site.
 - Geração **sob demanda, por tópico**: cada tópico aceita até 100 questões, geradas em lotes de até 20 por chamada (limite de tokens de resposta da API não permite gerar 100 de uma vez). O botão "Gerar +N" mostra quantas faltam e some quando o tópico chega a 100/100.
 - Resolução estilo cursinho de questões: escolhe uma alternativa, vê o gabarito e o comentário na hora, e navega para a próxima. Prioriza questões ainda não respondidas.
 - O desempenho de cada sessão (acertos/total, por matéria) é gravado em `estudoFiscalStudyHistory` — as mesmas estatísticas de "% de acerto em questões" usadas em Matérias e nas prioridades de Planejamento passam a refletir também o que foi resolvido aqui.
-- As chaves de API e o modo (Gemini/Claude) são compartilhados com o modal "Importar Edital PDF" do Menu Inicial (`estudoFiscalGeminiKey` / `estudoFiscalAnthropicKey`, namespaced por perfil) — configurar uma vez vale para os dois lugares.
-- A configuração de IA fica atrás do botão **"IA"** (abre um modal, mesmo padrão visual do "Importar Edital PDF" do Menu Inicial). O resultado de cada "Gerar questões" (sucesso ou erro) aparece de forma persistente logo abaixo dos botões do Banco de Questões — não só num toast que some sozinho — igual ao comportamento do modal de importação de edital.
-- **Modo "OpenRouter (automático)"** (`functions/questoes-proxy.js`): opcional, pensado pra quando os limites de Gemini/Claude apertam. Em vez de cada pessoa colar sua própria chave, o app chama uma Cloudflare Pages Function que guarda a chave paga da OpenRouter **só no servidor** e limita quantas gerações por dia cada visitante (por IP) pode fazer — dividindo a cota da conta (ex.: 1.000 req/dia com $10 de crédito) entre todo mundo. Como o repositório já está conectado ao Cloudflare Pages (deploy automático a cada push), esse arquivo em `/functions` vira uma rota sozinho, sem precisar criar um Worker separado. **Importante, e é de propósito**: essa chave nunca poderia ficar só no HTML/JS do site — qualquer texto enviado ao navegador é visível a qualquer visitante (DevTools, "ver código-fonte", bots que varrem repositórios públicos atrás de chave vazada) — "ofuscar" não resolve isso. Um servidor guardando a chave como variável de ambiente secreta (nunca enviada ao cliente) é a única forma de mantê-la privada com vários usuários compartilhando o mesmo app. Ver instruções completas de configuração nos comentários do topo do arquivo.
+- O resultado de cada "Gerar questões" (sucesso ou erro, incluindo o aviso de limite diário atingido) aparece de forma persistente logo abaixo dos botões do Banco de Questões — não só num toast que some sozinho.
+- Como o modelo grátis usado (via OpenRouter) não tem ferramenta de busca embutida, as questões são sempre inéditas geradas pela IA — não há tentativa de buscar questões reais de provas aplicadas.
+
+### Proxy de geração (`functions/questoes-proxy.js`)
+
+- É uma **Cloudflare Pages Function**: um arquivo em `/functions` na raiz do repositório vira uma rota automaticamente assim que o projeto está conectado ao Cloudflare Pages (deploy automático a cada push) — não precisa criar um Worker separado.
+- Guarda a chave paga da OpenRouter como variável de ambiente **secreta** (Settings → Variables and secrets → `OPENROUTER_API_KEY`, tipo Secret) — nunca é enviada ao navegador de quem visita o site.
+- Limita quantas gerações por dia cada visitante (por IP) pode fazer (`DAILY_LIMIT_PER_IP` no topo do arquivo), usando um KV namespace opcional (`RATE_LIMIT_KV`) — divide a cota total da conta (ex.: 1.000 req/dia com $10 de crédito na OpenRouter) entre todo mundo, em vez de deixar uma pessoa só esgotar tudo.
+- A URL do proxy fica fixa numa constante (`QZ_PROXY_URL`) no `<script>` de `questoes.html` — ajuste ali se o domínio/projeto do Cloudflare mudar.
+- **Importante, e é de propósito estar assim**: essa chave nunca poderia ficar só no HTML/JS do site — qualquer texto enviado ao navegador é visível a qualquer visitante (DevTools, "ver código-fonte", bots que varrem repositórios públicos atrás de chave vazada) — "ofuscar" não resolve isso. Um servidor guardando a chave como variável de ambiente secreta é a única forma de mantê-la privada com vários usuários compartilhando o mesmo app. Instruções completas de configuração nos comentários do topo do arquivo.
 - **Integração com a sessão de estudo ativa**: durante uma sessão em `cicloestudo.html`/`cicloestudolivre.html`, o botão **"Questões IA"** na barra de cronômetro pausa o timer e abre `questoes.html?materia=<matéria>` já resolvendo questões dessa matéria (ou com o acordeão dela aberto no Banco, se ainda não houver questões geradas). Cada questão respondida ali é somada em `estudoFiscalActiveSession` (campos `quizQuestions`/`quizCorrect`); ao voltar e clicar em "Salvar" o estudo, os campos **Questões Feitas** e **Acertos** já vêm preenchidos com o que foi resolvido de verdade (ainda editáveis à mão). Isso evita duplicar o mesmo desempenho no histórico: enquanto a sessão de estudo daquela matéria estiver ativa, `questoes.html` não cria um lançamento próprio para ela — só matérias sem sessão ativa no momento geram um histórico imediato.
 
 ## Persistência (localStorage)
@@ -81,10 +87,9 @@ Chaves principais (por perfil, com sufixo `__<id>` quando não é o perfil "Prin
 - `estudoFiscalActiveSession`: sessão de estudo (Pomodoro) em andamento — inclui `quizQuestions`/`quizCorrect`, acumulados a partir de `questoes.html` enquanto a sessão está ativa.
 - `ciclo_cards_v3`: resumos/flashcards.
 - `estudoFiscalQuestoes`: banco de questões geradas por IA, por matéria/tópico (ver `questoes.html`).
-- `estudoFiscalGeminiKey` / `estudoFiscalAnthropicKey`: chaves de API do usuário (Gemini/Claude), usadas tanto na importação de edital em PDF quanto na geração de questões.
+- `estudoFiscalGeminiKey` / `estudoFiscalAnthropicKey`: chaves de API do usuário (Gemini/Claude), usadas na importação de edital em PDF (`index.html`).
 - `estudoFiscalProfiles` / `estudoFiscalActiveProfile`: registro e perfil ativo (não é namespaceada por perfil).
 - `theme`, `estudoFiscalTutorialSeen`, `estudoFiscalOnboardingSeen`, `estudoFiscalConcursoName`: preferências de UI, globais (sem sufixo de perfil).
-- `estudoFiscalQuestoesProxyUrl`: URL do proxy Cloudflare Worker usado pelo modo "OpenRouter (automático)" em `questoes.html` — global (não é segredo, é só um endereço), configurada uma vez por quem administra a instalação.
 
 ## Fluxo de Salvar e Carregar
 

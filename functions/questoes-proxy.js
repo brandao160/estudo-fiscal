@@ -1,11 +1,13 @@
 /* ==========================================================
    functions/questoes-proxy.js — Cloudflare Pages Function
 
-   Proxy entre questoes.html e a OpenRouter: guarda a chave paga da OpenRouter
-   como variável de ambiente secreta (nunca chega ao navegador de quem visita
-   o site) e limita quantas gerações por dia cada visitante pode fazer, pra
-   dividir a cota de 1.000 requisições/dia da conta entre todo mundo sem um
-   usuário só (ou um bot) estourar tudo sozinho.
+   Proxy genérico ("prompt" entra, texto da IA sai) usado por duas telas do
+   app: geração de questões (questoes.html) e extração de matérias/conteúdo
+   programático a partir do PDF do edital (index.html, "Importar Edital PDF").
+   Guarda a chave paga da OpenRouter como variável de ambiente secreta (nunca
+   chega ao navegador de quem visita o site) e limita quantas chamadas por dia
+   cada visitante pode fazer, pra dividir a cota de 1.000 requisições/dia da
+   conta entre todo mundo sem um usuário só (ou um bot) estourar tudo sozinho.
 
    Isso substitui o "cloudflare-worker/questoes-proxy.js" original: como o
    projeto já está conectado ao Cloudflare Pages (deploy automático a cada
@@ -28,10 +30,13 @@
         Sem esse passo o proxy ainda funciona, só que sem limite por visitante.
    3. Faça um novo commit/push (ou "Retry deployment" no dashboard) pra esse
       arquivo entrar no ar — variáveis de ambiente e bindings só valem a
-      partir do próximo deployment depois de configurados.
-   4. Copie a URL final (https://estudo-fiscal.pages.dev/questoes-proxy, ou
-      o domínio customizado) e cole no campo "URL do proxy" da aba OpenRouter,
-      dentro do modal "IA" de questoes.html.
+      partir do próximo deployment depois de configurados. Depois do deploy,
+      confira no log de build se ele lista este arquivo como Function (se
+      aparecer "No functions dir at /functions found", o Pages não achou a
+      pasta — confira se o "Root directory" do projeto está na raiz do repo).
+   4. A URL fica fixa em código, não precisa configurar nada na interface:
+      `QZ_PROXY_URL` em questoes.html e `EDITAL_PROXY_URL` em index.html —
+      ajuste as duas se o domínio/projeto do Cloudflare mudar.
    ========================================================== */
 
 // Ajuste aqui se quiser trocar de modelo grátis mais pra frente — a lista
@@ -73,7 +78,7 @@ export async function onRequestPost(context) {
         count = parseInt(await env.RATE_LIMIT_KV.get(kvKey), 10) || 0;
         if (count >= DAILY_LIMIT_PER_IP) {
             return new Response(JSON.stringify({
-                error: `Limite diário de geração automática atingido (${DAILY_LIMIT_PER_IP}/dia por visitante). Tente de novo amanhã ou use sua própria chave (Gemini/Claude/OpenRouter) no modal "IA".`
+                error: `Limite diário de uso automático da IA atingido (${DAILY_LIMIT_PER_IP}/dia por visitante). Tente de novo amanhã.`
             }), { status: 429, headers: { ...cors, 'content-type': 'application/json' } });
         }
     }
@@ -90,6 +95,9 @@ export async function onRequestPost(context) {
             status: 400, headers: { ...cors, 'content-type': 'application/json' }
         });
     }
+    // O cliente pode pedir mais tokens de saída (ex.: extração de edital grande gera JSON extenso),
+    // mas com um teto pra não deixar ninguém pedir uma resposta absurdamente cara.
+    const maxTokens = Math.min(Math.max(parseInt(body.max_tokens, 10) || 4000, 256), 8000);
 
     let orRes;
     try {
@@ -101,7 +109,7 @@ export async function onRequestPost(context) {
                 'HTTP-Referer': env.ALLOWED_ORIGIN || 'https://cicloestudo.com.br',
                 'X-Title': 'Ciclo de Estudo'
             },
-            body: JSON.stringify({ model: MODEL, messages: [{ role: 'user', content: prompt }] })
+            body: JSON.stringify({ model: MODEL, messages: [{ role: 'user', content: prompt }], max_tokens: maxTokens })
         });
     } catch (e) {
         return new Response(JSON.stringify({ error: 'Falha ao chamar a OpenRouter: ' + e.message }), {

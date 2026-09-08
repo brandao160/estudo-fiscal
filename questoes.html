@@ -178,12 +178,9 @@
                 <div class="subject-card" style="margin-bottom: 20px;">
                     <h3><i class="fas fa-layer-group" style="color: var(--accent);"></i> Banco de Questões</h3>
                     <p style="color: var(--ink-3); font-size: 0.85rem; margin: 0 0 14px;">
-                        Gere questões inéditas de múltipla escolha (A a E) para cada tópico do seu conteúdo programático — até 100 por tópico, em lotes de até 20 por vez — e resolva no estilo de um cursinho de questões. O desempenho entra automaticamente nas suas estatísticas de Planejamento e Matérias.
+                        Gere questões inéditas de múltipla escolha (A a E) para cada tópico do seu conteúdo programático — até 100 por tópico, em lotes de até 20 por vez — e resolva no estilo de um cursinho de questões. O desempenho entra automaticamente nas suas estatísticas de Planejamento e Matérias. Geração automática (sem precisar de chave própria); tem um limite diário de uso.
                     </p>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button class="btn btn-primary" onclick="startPractice(null, null)"><i class="fas fa-play"></i> Resolver questões de todas as matérias</button>
-                        <button class="btn btn-secondary" onclick="openQzAIModal()" title="Configurar Gemini/Claude para gerar questões"><i class="fas fa-robot"></i> IA</button>
-                    </div>
+                    <button class="btn btn-primary" onclick="startPractice(null, null)"><i class="fas fa-play"></i> Resolver questões de todas as matérias</button>
                     <div id="qz-generation-status" class="edital-ai-status" style="display:none; margin-top:14px;"></div>
                 </div>
 
@@ -204,127 +201,14 @@
         </div>
     </main>
 
-    <!-- IA PARA GERAR QUESTÕES (mesmo padrão do modal "Importar Edital em PDF" do Menu Inicial) -->
-    <div class="modal-overlay" id="qz-ai-modal">
-        <div class="modal" style="width: 560px;">
-            <div class="modal-header">
-                <div class="modal-title"><i class="fas fa-robot" style="color: var(--accent);"></i> IA para Gerar Questões</div>
-                <button class="close-modal" onclick="closeQzAIModal()"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <p style="font-size:0.86rem; color: var(--ink-2); margin: 0 0 14px;">
-                    Escolha Gemini (grátis, precisa de uma chave de API do Google AI Studio) ou Claude (pago, precisa de uma chave de API da Anthropic). A chave fica salva só neste navegador e a chamada vai direto daqui pra IA — este site não vê nem guarda sua chave. Se você já configurou uma chave ao importar o edital em PDF no Menu Inicial, ela já aparece preenchida abaixo.
-                </p>
-                <div class="edital-mode-tabs">
-                    <button class="edital-mode-tab active" id="qz-mode-tab-gemini" onclick="setQzMode('gemini')">
-                        <i class="fas fa-wand-magic-sparkles"></i> Gemini (grátis)
-                    </button>
-                    <button class="edital-mode-tab" id="qz-mode-tab-claude" onclick="setQzMode('claude')">
-                        <i class="fas fa-wand-magic-sparkles"></i> Claude (pago)
-                    </button>
-                    <button class="edital-mode-tab" id="qz-mode-tab-openrouter" onclick="setQzMode('openrouter')">
-                        <i class="fas fa-bolt"></i> OpenRouter (automático)
-                    </button>
-                </div>
-                <div id="qz-mode-gemini-panel">
-                    <div class="edital-ai-warning">
-                        <i class="fas fa-circle-info"></i>
-                        <div>
-                            Crie sua própria chave de API no Google AI Studio (não pede cartão de crédito, tem cota diária gratuita generosa). A IA primeiro pesquisa na web tentando achar questões reais já aplicadas em provas antes de criar uma inédita (buscas incluídas na cota grátis — 5.000/mês).
-                            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Criar chave grátis →</a>
-                        </div>
-                    </div>
-                    <label class="note-label" for="qz-gemini-key-input">Sua chave de API do Google Gemini</label>
-                    <input type="password" id="qz-gemini-key-input" class="note-input" placeholder="AIza..." style="margin-bottom:12px;" oninput="saveQzGeminiKey(this.value)">
-                    <label class="note-label" for="qz-gemini-model-select">Modelo</label>
-                    <select id="qz-gemini-model-select" class="note-input">
-                        <option value="gemini-flash-latest" selected>Gemini Flash (recomendado)</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash — versão estável</option>
-                        <option value="gemini-flash-lite-latest">Gemini Flash-Lite — mais rápido, cota maior</option>
-                    </select>
-                </div>
-                <div id="qz-mode-claude-panel" style="display:none;">
-                    <div class="edital-ai-warning">
-                        <i class="fas fa-triangle-exclamation"></i>
-                        <div>
-                            Precisa da sua própria chave de API da Anthropic (Claude), que é paga. A IA pesquisa na web tentando achar questões reais antes de criar uma inédita — cada busca consome créditos à parte dos tokens, além do custo normal do lote.
-                            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Criar/gerenciar chave →</a>
-                        </div>
-                    </div>
-                    <label class="note-label" for="qz-claude-key-input">Sua chave de API da Anthropic</label>
-                    <input type="password" id="qz-claude-key-input" class="note-input" placeholder="sk-ant-..." style="margin-bottom:12px;" oninput="saveQzClaudeKey(this.value)">
-                    <label class="note-label" for="qz-claude-model-select">Modelo</label>
-                    <select id="qz-claude-model-select" class="note-input">
-                        <option value="claude-opus-5">Claude Opus 5 — mais capaz, mais caro</option>
-                        <option value="claude-sonnet-5" selected>Claude Sonnet 5 — bom equilíbrio (recomendado)</option>
-                        <option value="claude-haiku-4-5">Claude Haiku 4.5 — mais barato e rápido</option>
-                    </select>
-                </div>
-                <div id="qz-mode-openrouter-panel" style="display:none;">
-                    <div class="edital-ai-warning">
-                        <i class="fas fa-circle-info"></i>
-                        <div>
-                            Modo automático: usa uma cota compartilhada da OpenRouter (configurada por quem administra este site), sem precisar colar chave nenhuma — mas tem limite diário por pessoa. Se esgotar, use Gemini, Claude ou sua própria chave OpenRouter. Não pesquisa questões reais (só gera inéditas).
-                        </div>
-                    </div>
-                    <label class="note-label" for="qz-openrouter-url-input">URL do proxy (configurada pelo administrador do site)</label>
-                    <input type="text" id="qz-openrouter-url-input" class="note-input" placeholder="https://estudo-fiscal.pages.dev/questoes-proxy" style="margin-bottom:4px;" oninput="saveQzOpenRouterUrl(this.value)">
-                    <p style="font-size:0.76rem; color: var(--ink-3); margin: 4px 0 0;">Só precisa preencher uma vez (fica salvo neste navegador). Veja <code>functions/questoes-proxy.js</code> no repositório do projeto pra saber como implantar esse proxy (Cloudflare Pages Functions).</p>
-                </div>
-                <div id="qz-ai-status" class="edital-ai-status" style="display:none;"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeQzAIModal()">Fechar</button>
-            </div>
-        </div>
-    </div>
-
     <script src="core.js"></script>
     <script>
-        // ─── Config de IA (chaves compartilhadas com o modal de Importar Edital do Menu Inicial) ───
-        function qzMode() { return localStorage.getItem(K('estudoFiscalQuestoesMode')) || 'gemini'; }
+        // ─── Geração automática via proxy (chave da OpenRouter fica só no servidor, ver
+        // functions/questoes-proxy.js — nunca é enviada nem vista pelo navegador). ───
+        // Ajuste aqui se o domínio do proxy mudar (ex.: outro projeto/subdomínio no Cloudflare Pages).
+        const QZ_PROXY_URL = 'https://estudo-fiscal.pages.dev/questoes-proxy';
 
-        function setQzMode(mode) {
-            localStorage.setItem(K('estudoFiscalQuestoesMode'), mode);
-            ['gemini', 'claude', 'openrouter'].forEach(m => {
-                document.getElementById('qz-mode-tab-' + m).classList.toggle('active', m === mode);
-                document.getElementById('qz-mode-' + m + '-panel').style.display = m === mode ? 'block' : 'none';
-            });
-        }
-
-        function saveQzGeminiKey(v) {
-            if (v) localStorage.setItem(K('estudoFiscalGeminiKey'), v);
-            else localStorage.removeItem(K('estudoFiscalGeminiKey'));
-        }
-        function saveQzClaudeKey(v) {
-            if (v) localStorage.setItem(K('estudoFiscalAnthropicKey'), v);
-            else localStorage.removeItem(K('estudoFiscalAnthropicKey'));
-        }
-        // URL do proxy é uma configuração do site (não do perfil de estudo) — fica global, sem K(),
-        // pra não precisar preencher de novo ao trocar de perfil.
-        function saveQzOpenRouterUrl(v) {
-            if (v) localStorage.setItem('estudoFiscalQuestoesProxyUrl', v.trim());
-            else localStorage.removeItem('estudoFiscalQuestoesProxyUrl');
-        }
-
-        function loadQzConfig() {
-            document.getElementById('qz-gemini-key-input').value = localStorage.getItem(K('estudoFiscalGeminiKey')) || '';
-            document.getElementById('qz-claude-key-input').value = localStorage.getItem(K('estudoFiscalAnthropicKey')) || '';
-            document.getElementById('qz-openrouter-url-input').value = localStorage.getItem('estudoFiscalQuestoesProxyUrl') || '';
-            setQzMode(qzMode());
-        }
-
-        /** Status persistente dentro do modal de IA (mesmo padrão de setEditalAIStatus em index.html). */
-        function setQzAIStatus(html, kind) {
-            const el = document.getElementById('qz-ai-status');
-            if (!el) return;
-            if (!html) { el.style.display = 'none'; el.innerHTML = ''; return; }
-            el.style.display = 'flex';
-            el.className = 'edital-ai-status' + (kind ? ' ' + kind : '');
-            el.innerHTML = html;
-        }
-
-        /** Status persistente do último "Gerar questões" (fica visível no Banco de Questões, fora do modal). */
+        /** Status persistente do último "Gerar questões" (fica visível no Banco de Questões). */
         function setQzGenerationStatus(html, kind) {
             const el = document.getElementById('qz-generation-status');
             if (!el) return;
@@ -332,19 +216,6 @@
             el.style.display = 'flex';
             el.className = 'edital-ai-status' + (kind ? ' ' + kind : '');
             el.innerHTML = html;
-        }
-
-        function openQzAIModal() {
-            const modal = document.getElementById('qz-ai-modal');
-            if (!modal) return;
-            loadQzConfig();
-            setQzAIStatus('', '');
-            modal.classList.add('open');
-        }
-
-        function closeQzAIModal() {
-            const modal = document.getElementById('qz-ai-modal');
-            if (modal) modal.classList.remove('open');
         }
 
         function getModelInfo() {
@@ -396,65 +267,13 @@
             return JSON.parse(cleaned);
         }
 
-        async function callClaudeForQuestions(apiKey, model, promptText) {
-            const res = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-                body: JSON.stringify({
-                    model, max_tokens: 8192, messages: [{ role: 'user', content: promptText }],
-                    // Deixa o Claude pesquisar na web pra tentar achar questões reais antes de criar
-                    // uma inédita (ver buildQuestionsPrompt) — cada busca consome créditos à parte.
-                    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }]
-                })
-            });
-            if (!res.ok) {
-                let detail = '';
-                try { detail = (await res.json()).error?.message || ''; } catch (e) {}
-                if (res.status === 401) throw new Error('Chave de API inválida ou sem permissão. ' + detail);
-                if (res.status === 429) throw new Error('Limite de uso da API atingido. Tente novamente em instantes. ' + detail);
-                throw new Error(`Erro da API Anthropic (${res.status}). ${detail}`);
-            }
-            const data = await res.json();
-            // Com web_search habilitado a resposta pode ter vários blocos de texto intercalados com
-            // buscas — o texto final (com o JSON) é o ÚLTIMO bloco de texto, não o primeiro.
-            const textBlocks = (data.content || []).filter(b => b.type === 'text');
-            const textBlock = textBlocks[textBlocks.length - 1];
-            if (!textBlock) throw new Error('A IA não retornou texto na resposta.');
-            return textBlock.text;
-        }
-
-        async function callGeminiForQuestions(apiKey, model, promptText) {
-            // A chave vai no header x-goog-api-key (não mais em ?key= na URL — o Google passou a
-            // rejeitar chaves novas nesse formato com 401 "Expected OAuth 2 access token...").
-            // Sem responseMimeType aqui: a API do Gemini rejeita (ou trunca) JSON forçado junto com
-            // o tool de busca — o "responda só com JSON" do prompt + qzExtractJSON dão conta.
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], tools: [{ google_search: {} }] })
-            });
-            if (!res.ok) {
-                let detail = '';
-                try { detail = (await res.json()).error?.message || ''; } catch (e) {}
-                if (res.status === 401) throw new Error('Chave de API inválida, expirada ou revogada. Gere uma nova em aistudio.google.com/apikey. ' + detail);
-                if (res.status === 400 || res.status === 403) throw new Error('Chave de API inválida ou sem permissão. ' + detail);
-                if (res.status === 429) throw new Error('Cota grátis do Gemini esgotada por agora (limite diário/por minuto). Tente novamente mais tarde. ' + detail);
-                throw new Error(`Erro da API Gemini (${res.status}). ${detail}`);
-            }
-            const data = await res.json();
-            const parts = data.candidates?.[0]?.content?.parts || [];
-            const text = parts.map(p => p.text || '').join('');
-            if (!text) throw new Error('A IA não retornou texto na resposta.');
-            return text;
-        }
-
         async function callOpenRouterForQuestions(proxyUrl, promptText) {
             let res;
             try {
                 res = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ prompt: promptText })
+                    body: JSON.stringify({ prompt: promptText, max_tokens: 6000 })
                 });
             } catch (e) {
                 throw new Error('Não consegui falar com o proxy. Confira a URL configurada. ' + e.message);
@@ -472,33 +291,24 @@
         /**
          * Monta o prompt de geração de questões. Manda as últimas questões já existentes desse
          * tópico (resumidas) pra IA tentar variar o subtema/ângulo e não repetir a mesma ideia.
-         * `podeBuscar` desliga a parte de busca por questões reais pra provedores sem essa
-         * ferramenta (ex.: modelos grátis via OpenRouter) — só pede questões inéditas.
          */
-        function buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao, podeBuscar) {
+        function buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao) {
             const contexto = [concurso, orgao].filter(Boolean).join(' — ') || 'concurso público brasileiro';
             const existentes = existingEnunciados.length
                 ? existingEnunciados.map((e, i) => `${i + 1}. ${e}`).join('\n')
                 : 'nenhuma ainda';
-            const buscaBloco = podeBuscar
-                ? `PRIMEIRO, use a busca pra tentar achar questões REAIS já aplicadas em provas de concursos públicos brasileiros sobre esse tópico — de preferência do(a) ${contexto}, ou de bancas/concursos parecidos pra mesma área/cargo. Provas aplicadas e gabaritos costumam ser publicados pela própria banca (CEBRASPE/Cespe, FGV, Cesgranrio, FCC, VUNESP etc.) logo depois do concurso.
-
-Regras sobre a origem de cada questão (MUITO IMPORTANTE):
-- Se encontrar uma questão real e conseguir confirmar de onde veio, use-a (pode adaptar levemente o enunciado pra funcionar como múltipla escolha, mantendo a essência) e marque "origem": "real", preenchendo "fonte" com banca, prova/cargo, ano e link (o que você souber).
-- Se NÃO encontrar uma questão real e verificável sobre esse tópico específico, crie uma questão INÉDITA de altíssima qualidade e marque "origem": "gerada", com "fonte": null.
-- NUNCA marque "origem": "real" sem ter uma fonte de verdade — é melhor marcar como "gerada" do que inventar uma banca/prova/ano falsos. Isso é uma regra crítica de honestidade com o estudante.`
-                : `Crie questões INÉDITAS de altíssima qualidade (você não tem acesso a busca nessa chamada — não invente fontes reais; todas devem vir marcadas como "origem": "gerada", "fonte": null).`;
             return `Você é um professor especialista em bancas de concursos públicos brasileiros, com o mesmo padrão de qualidade de questões do tecconcursos.com.br.
 
-Monte ${quantidade} questões de múltipla escolha (exatamente 5 alternativas, A a E, apenas uma correta) sobre o tópico "${topico}" da matéria "${materia}", no contexto de ${contexto}.
+Crie ${quantidade} questões INÉDITAS de múltipla escolha (exatamente 5 alternativas, A a E, apenas uma correta) sobre o tópico "${topico}" da matéria "${materia}", no nível de um concurso público brasileiro (${contexto}).
 
-${buscaBloco}
+Regras:
+- Enunciados claros e no estilo real de bancas examinadoras (afirmações para julgar, "assinale a alternativa correta", estudos de caso curtos, texto de apoio quando fizer sentido) — varie o estilo entre as questões.
 - Alternativas erradas devem ser plausíveis (erros conceituais comuns, pegadinhas reais de prova), nunca absurdas ou óbvias.
 - Cada questão deve ter um comentário curto e didático explicando por que a alternativa correta está certa.
 - Não repita o mesmo subtema/ângulo das questões já existentes listadas abaixo.
-- Responda APENAS com um JSON válido, sem nenhum texto antes ou depois (nem comentários sobre a busca), no formato exato abaixo:
+- Responda APENAS com um JSON válido, sem nenhum texto antes ou depois, no formato exato abaixo:
 
-{"questoes": [{"enunciado": "string", "alternativas": {"A": "string", "B": "string", "C": "string", "D": "string", "E": "string"}, "correta": "A", "comentario": "string", "origem": "real ou gerada", "fonte": {"banca": "string", "prova": "string", "ano": "string", "link": "string"} ou null}]}
+{"questoes": [{"enunciado": "string", "alternativas": {"A": "string", "B": "string", "C": "string", "D": "string", "E": "string"}, "correta": "A", "comentario": "string"}]}
 
 Questões já existentes sobre este tópico (não repetir o mesmo conteúdo):
 ${existentes}`;
@@ -536,29 +346,6 @@ ${existentes}`;
 
         /** Gera um novo lote de questões (até QZ_BATCH_SIZE, respeitando o teto de QZ_MAX_PER_TOPIC) para um tópico. */
         async function gerarQuestoes(materia, topico, btnEl) {
-            const mode = qzMode();
-            let apiKey = '', model = '', proxyUrl = '';
-
-            if (mode === 'openrouter') {
-                proxyUrl = (localStorage.getItem('estudoFiscalQuestoesProxyUrl') || '').trim();
-                if (!proxyUrl) {
-                    setQzGenerationStatus('Configure a URL do proxy OpenRouter antes de gerar questões. Clique em "IA" para configurar.', 'error');
-                    return;
-                }
-            } else {
-                // Lê a chave direto do localStorage (não do input do modal) — assim funciona mesmo que
-                // o usuário nunca tenha aberto o modal "IA" nesta página (ex.: já configurou a chave ao
-                // importar o edital em PDF no Menu Inicial).
-                apiKey = (localStorage.getItem(K(mode === 'gemini' ? 'estudoFiscalGeminiKey' : 'estudoFiscalAnthropicKey')) || '').trim();
-                if (!apiKey) {
-                    setQzGenerationStatus(`Cole sua chave de API do ${mode === 'gemini' ? 'Google Gemini' : 'Anthropic (Claude)'} antes de gerar questões. Clique em "IA" para configurar.`, 'error');
-                    return;
-                }
-                model = mode === 'gemini'
-                    ? document.getElementById('qz-gemini-model-select').value
-                    : document.getElementById('qz-claude-model-select').value;
-            }
-
             const store = getQuestoesStore();
             const bucket = getOrCreateBucket(store, materia, topico);
             const remaining = QZ_MAX_PER_TOPIC - bucket.questions.length;
@@ -567,20 +354,13 @@ ${existentes}`;
 
             const existingEnunciados = bucket.questions.slice(-15).map(q => q.enunciado.slice(0, 140));
             const { concurso, orgao } = getModelInfo();
-            const podeBuscar = mode !== 'openrouter';
-            const prompt = buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao, podeBuscar);
+            const prompt = buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao);
 
             if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...'; }
-            const statusMsg = podeBuscar
-                ? `Buscando questões reais e gerando para "${escHtml(topico)}"... pode levar um pouco mais que antes.`
-                : `Gerando questões para "${escHtml(topico)}"...`;
-            setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> ${statusMsg}`, '');
+            setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> Gerando questões para "${escHtml(topico)}"...`, '');
 
             try {
-                let rawText;
-                if (mode === 'gemini') rawText = await callGeminiForQuestions(apiKey, model, prompt);
-                else if (mode === 'claude') rawText = await callClaudeForQuestions(apiKey, model, prompt);
-                else rawText = await callOpenRouterForQuestions(proxyUrl, prompt);
+                const rawText = await callOpenRouterForQuestions(QZ_PROXY_URL, prompt);
                 const parsed = qzExtractJSON(rawText);
                 const list = Array.isArray(parsed.questoes) ? parsed.questoes : [];
                 let added = 0, skipped = 0;
@@ -595,9 +375,8 @@ ${existentes}`;
                         },
                         correta: q.correta,
                         comentario: (q.comentario || '').trim(),
-                        origem: q.origem, // 'real' (achada por busca, com fonte) ou 'gerada' (inédita pela IA)
+                        origem: q.origem, // sempre 'gerada' (sem busca nesse modo)
                         fonte: q.fonte,
-                        geradaPor: mode, // qual IA gerou/buscou essa questão (gemini/claude) — só metadado interno
                         criadoEm: new Date().toISOString(),
                         vezesRespondida: 0,
                         acertos: 0,
@@ -609,10 +388,8 @@ ${existentes}`;
                 if (added === 0) {
                     setQzGenerationStatus('A IA não retornou questões válidas dessa vez. Tente novamente.', 'error');
                 } else {
-                    const reais = list.filter(q => q.origem === 'real').length;
-                    const reaisNote = reais ? ` (${reais} encontrada(s) real(is) de prova aplicada)` : '';
                     const skippedNote = skipped ? ` — ${skipped} descartada(s) por formato inválido` : '';
-                    setQzGenerationStatus(`<i class="fas fa-check"></i> ${added} questão(ões) geradas para "${escHtml(topico)}"${reaisNote}${skippedNote}.`, 'success');
+                    setQzGenerationStatus(`<i class="fas fa-check"></i> ${added} questão(ões) geradas para "${escHtml(topico)}"${skippedNote}.`, 'success');
                     showToast(`${added} questão(ões) geradas para "${topico}"!`, 'success');
                 }
             } catch (err) {
@@ -962,7 +739,6 @@ ${existentes}`;
 
         function init() {
             initCoreData();
-            loadQzConfig();
             renderBanco();
             handleIncomingQueryParams();
         }

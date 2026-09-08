@@ -165,48 +165,19 @@
 
         <div class="content-area">
 
-            <div id="view-banco" class="view-section active">
-                <div class="subject-card" style="margin-bottom: 20px;">
-                    <h3><i class="fas fa-robot" style="color: var(--accent);"></i> IA para gerar questões</h3>
-                    <p style="color: var(--ink-3); font-size: 0.85rem; margin: 0 0 14px;">
-                        Escolha Gemini (grátis, precisa de uma chave de API do Google AI Studio) ou Claude (pago, precisa de uma chave de API da Anthropic). A chave fica salva só neste navegador e a chamada vai direto daqui pra IA — este site não vê nem guarda sua chave. Se você já configurou uma chave ao importar o edital em PDF no Menu Inicial, ela já aparece preenchida abaixo.
-                    </p>
-                    <div class="edital-mode-tabs">
-                        <button class="edital-mode-tab active" id="qz-mode-tab-gemini" onclick="setQzMode('gemini')">
-                            <i class="fas fa-wand-magic-sparkles"></i> Gemini (grátis)
-                        </button>
-                        <button class="edital-mode-tab" id="qz-mode-tab-claude" onclick="setQzMode('claude')">
-                            <i class="fas fa-wand-magic-sparkles"></i> Claude (pago)
-                        </button>
-                    </div>
-                    <div id="qz-mode-gemini-panel">
-                        <label class="note-label" for="qz-gemini-key-input">Sua chave de API do Google Gemini</label>
-                        <input type="password" id="qz-gemini-key-input" class="note-input" placeholder="AIza..." style="margin-bottom:12px;" oninput="saveQzGeminiKey(this.value)">
-                        <label class="note-label" for="qz-gemini-model-select">Modelo</label>
-                        <select id="qz-gemini-model-select" class="note-input">
-                            <option value="gemini-flash-latest" selected>Gemini Flash (recomendado)</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash — versão estável</option>
-                            <option value="gemini-flash-lite-latest">Gemini Flash-Lite — mais rápido, cota maior</option>
-                        </select>
-                    </div>
-                    <div id="qz-mode-claude-panel" style="display:none;">
-                        <label class="note-label" for="qz-claude-key-input">Sua chave de API da Anthropic</label>
-                        <input type="password" id="qz-claude-key-input" class="note-input" placeholder="sk-ant-..." style="margin-bottom:12px;" oninput="saveQzClaudeKey(this.value)">
-                        <label class="note-label" for="qz-claude-model-select">Modelo</label>
-                        <select id="qz-claude-model-select" class="note-input">
-                            <option value="claude-opus-5">Claude Opus 5 — mais capaz, mais caro</option>
-                            <option value="claude-sonnet-5" selected>Claude Sonnet 5 — bom equilíbrio (recomendado)</option>
-                            <option value="claude-haiku-4-5">Claude Haiku 4.5 — mais barato e rápido</option>
-                        </select>
-                    </div>
-                </div>
+            <div id="qz-back-to-study" style="display:none; margin-bottom:14px;"></div>
 
+            <div id="view-banco" class="view-section active">
                 <div class="subject-card" style="margin-bottom: 20px;">
                     <h3><i class="fas fa-layer-group" style="color: var(--accent);"></i> Banco de Questões</h3>
                     <p style="color: var(--ink-3); font-size: 0.85rem; margin: 0 0 14px;">
                         Gere questões inéditas de múltipla escolha (A a E) para cada tópico do seu conteúdo programático — até 100 por tópico, em lotes de até 20 por vez — e resolva no estilo de um cursinho de questões. O desempenho entra automaticamente nas suas estatísticas de Planejamento e Matérias.
                     </p>
-                    <button class="btn btn-primary" onclick="startPractice(null, null)"><i class="fas fa-play"></i> Resolver questões de todas as matérias</button>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="startPractice(null, null)"><i class="fas fa-play"></i> Resolver questões de todas as matérias</button>
+                        <button class="btn btn-secondary" onclick="openQzAIModal()" title="Configurar Gemini/Claude para gerar questões"><i class="fas fa-robot"></i> IA</button>
+                    </div>
+                    <div id="qz-generation-status" class="edital-ai-status" style="display:none; margin-top:14px;"></div>
                 </div>
 
                 <div id="qz-banco-container"><!-- JS generated --></div>
@@ -214,7 +185,7 @@
 
             <div id="view-resolver" class="view-section">
                 <div class="qz-session-bar">
-                    <button class="btn btn-secondary" onclick="exitPractice()"><i class="fas fa-arrow-left"></i> Finalizar e voltar ao banco</button>
+                    <button class="btn btn-secondary" id="qz-exit-btn" onclick="exitPractice()"><i class="fas fa-arrow-left"></i> Finalizar e voltar ao banco</button>
                     <div class="qz-session-stats">
                         <span id="qz-session-scope"></span>
                         <span>Acertos: <strong id="qz-session-correct">0</strong>/<span id="qz-session-total">0</span></span>
@@ -225,6 +196,67 @@
 
         </div>
     </main>
+
+    <!-- IA PARA GERAR QUESTÕES (mesmo padrão do modal "Importar Edital em PDF" do Menu Inicial) -->
+    <div class="modal-overlay" id="qz-ai-modal">
+        <div class="modal" style="width: 560px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-robot" style="color: var(--accent);"></i> IA para Gerar Questões</div>
+                <button class="close-modal" onclick="closeQzAIModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.86rem; color: var(--ink-2); margin: 0 0 14px;">
+                    Escolha Gemini (grátis, precisa de uma chave de API do Google AI Studio) ou Claude (pago, precisa de uma chave de API da Anthropic). A chave fica salva só neste navegador e a chamada vai direto daqui pra IA — este site não vê nem guarda sua chave. Se você já configurou uma chave ao importar o edital em PDF no Menu Inicial, ela já aparece preenchida abaixo.
+                </p>
+                <div class="edital-mode-tabs">
+                    <button class="edital-mode-tab active" id="qz-mode-tab-gemini" onclick="setQzMode('gemini')">
+                        <i class="fas fa-wand-magic-sparkles"></i> Gemini (grátis)
+                    </button>
+                    <button class="edital-mode-tab" id="qz-mode-tab-claude" onclick="setQzMode('claude')">
+                        <i class="fas fa-wand-magic-sparkles"></i> Claude (pago)
+                    </button>
+                </div>
+                <div id="qz-mode-gemini-panel">
+                    <div class="edital-ai-warning">
+                        <i class="fas fa-circle-info"></i>
+                        <div>
+                            Crie sua própria chave de API no Google AI Studio (não pede cartão de crédito, tem cota diária gratuita generosa).
+                            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Criar chave grátis →</a>
+                        </div>
+                    </div>
+                    <label class="note-label" for="qz-gemini-key-input">Sua chave de API do Google Gemini</label>
+                    <input type="password" id="qz-gemini-key-input" class="note-input" placeholder="AIza..." style="margin-bottom:12px;" oninput="saveQzGeminiKey(this.value)">
+                    <label class="note-label" for="qz-gemini-model-select">Modelo</label>
+                    <select id="qz-gemini-model-select" class="note-input">
+                        <option value="gemini-flash-latest" selected>Gemini Flash (recomendado)</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash — versão estável</option>
+                        <option value="gemini-flash-lite-latest">Gemini Flash-Lite — mais rápido, cota maior</option>
+                    </select>
+                </div>
+                <div id="qz-mode-claude-panel" style="display:none;">
+                    <div class="edital-ai-warning">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <div>
+                            Precisa da sua própria chave de API da Anthropic (Claude), que é paga. Cada lote de questões geradas consome créditos da sua conta Anthropic.
+                            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Criar/gerenciar chave →</a>
+                        </div>
+                    </div>
+                    <label class="note-label" for="qz-claude-key-input">Sua chave de API da Anthropic</label>
+                    <input type="password" id="qz-claude-key-input" class="note-input" placeholder="sk-ant-..." style="margin-bottom:12px;" oninput="saveQzClaudeKey(this.value)">
+                    <label class="note-label" for="qz-claude-model-select">Modelo</label>
+                    <select id="qz-claude-model-select" class="note-input">
+                        <option value="claude-opus-5">Claude Opus 5 — mais capaz, mais caro</option>
+                        <option value="claude-sonnet-5" selected>Claude Sonnet 5 — bom equilíbrio (recomendado)</option>
+                        <option value="claude-haiku-4-5">Claude Haiku 4.5 — mais barato e rápido</option>
+                    </select>
+                </div>
+                <div id="qz-ai-status" class="edital-ai-status" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeQzAIModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
 
     <script src="core.js"></script>
     <script>
@@ -252,6 +284,39 @@
             document.getElementById('qz-gemini-key-input').value = localStorage.getItem(K('estudoFiscalGeminiKey')) || '';
             document.getElementById('qz-claude-key-input').value = localStorage.getItem(K('estudoFiscalAnthropicKey')) || '';
             setQzMode(qzMode());
+        }
+
+        /** Status persistente dentro do modal de IA (mesmo padrão de setEditalAIStatus em index.html). */
+        function setQzAIStatus(html, kind) {
+            const el = document.getElementById('qz-ai-status');
+            if (!el) return;
+            if (!html) { el.style.display = 'none'; el.innerHTML = ''; return; }
+            el.style.display = 'flex';
+            el.className = 'edital-ai-status' + (kind ? ' ' + kind : '');
+            el.innerHTML = html;
+        }
+
+        /** Status persistente do último "Gerar questões" (fica visível no Banco de Questões, fora do modal). */
+        function setQzGenerationStatus(html, kind) {
+            const el = document.getElementById('qz-generation-status');
+            if (!el) return;
+            if (!html) { el.style.display = 'none'; el.innerHTML = ''; return; }
+            el.style.display = 'flex';
+            el.className = 'edital-ai-status' + (kind ? ' ' + kind : '');
+            el.innerHTML = html;
+        }
+
+        function openQzAIModal() {
+            const modal = document.getElementById('qz-ai-modal');
+            if (!modal) return;
+            loadQzConfig();
+            setQzAIStatus('', '');
+            modal.classList.add('open');
+        }
+
+        function closeQzAIModal() {
+            const modal = document.getElementById('qz-ai-modal');
+            if (modal) modal.classList.remove('open');
         }
 
         function getModelInfo() {
@@ -385,11 +450,12 @@ ${existentes}`;
         /** Gera um novo lote de questões (até QZ_BATCH_SIZE, respeitando o teto de QZ_MAX_PER_TOPIC) para um tópico. */
         async function gerarQuestoes(materia, topico, btnEl) {
             const mode = qzMode();
-            const apiKey = (mode === 'gemini'
-                ? document.getElementById('qz-gemini-key-input').value
-                : document.getElementById('qz-claude-key-input').value).trim();
+            // Lê a chave direto do localStorage (não do input do modal) — assim funciona mesmo que o
+            // usuário nunca tenha aberto o modal "IA" nesta página (ex.: já configurou a chave ao
+            // importar o edital em PDF no Menu Inicial).
+            const apiKey = (localStorage.getItem(K(mode === 'gemini' ? 'estudoFiscalGeminiKey' : 'estudoFiscalAnthropicKey')) || '').trim();
             if (!apiKey) {
-                showToast(`Cole sua chave de API do ${mode === 'gemini' ? 'Google Gemini' : 'Anthropic (Claude)'} antes de gerar questões.`, 'error');
+                setQzGenerationStatus(`Cole sua chave de API do ${mode === 'gemini' ? 'Google Gemini' : 'Anthropic (Claude)'} antes de gerar questões. Clique em "IA" para configurar.`, 'error');
                 return;
             }
             const model = mode === 'gemini'
@@ -399,7 +465,7 @@ ${existentes}`;
             const store = getQuestoesStore();
             const bucket = getOrCreateBucket(store, materia, topico);
             const remaining = QZ_MAX_PER_TOPIC - bucket.questions.length;
-            if (remaining <= 0) { showToast('Este tópico já tem 100 questões geradas.', 'info'); return; }
+            if (remaining <= 0) { setQzGenerationStatus('Este tópico já tem 100 questões geradas.', ''); return; }
             const quantidade = Math.min(QZ_BATCH_SIZE, remaining);
 
             const existingEnunciados = bucket.questions.slice(-15).map(q => q.enunciado.slice(0, 140));
@@ -407,8 +473,8 @@ ${existentes}`;
             const prompt = buildQuestionsPrompt(materia, topico, quantidade, existingEnunciados, concurso, orgao);
 
             if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...'; }
+            setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> Gerando questões para "${escHtml(topico)}"...`, '');
 
-            let toastMsg = null, toastKind = 'success';
             try {
                 const rawText = mode === 'gemini'
                     ? await callGeminiForQuestions(apiKey, model, prompt)
@@ -437,18 +503,17 @@ ${existentes}`;
                 });
                 saveQuestoesStore(store);
                 if (added === 0) {
-                    toastMsg = 'A IA não retornou questões válidas dessa vez. Tente novamente.';
-                    toastKind = 'error';
+                    setQzGenerationStatus('A IA não retornou questões válidas dessa vez. Tente novamente.', 'error');
                 } else {
-                    toastMsg = `${added} questão(ões) geradas para "${topico}"` + (skipped ? ` (${skipped} descartada(s) por formato inválido)` : '') + '.';
+                    const skippedNote = skipped ? ` (${skipped} descartada(s) por formato inválido)` : '';
+                    setQzGenerationStatus(`<i class="fas fa-check"></i> ${added} questão(ões) geradas para "${escHtml(topico)}"${skippedNote}.`, 'success');
+                    showToast(`${added} questão(ões) geradas para "${topico}"!`, 'success');
                 }
             } catch (err) {
                 console.error('Erro ao gerar questões:', err);
-                toastMsg = 'Erro ao gerar questões: ' + err.message;
-                toastKind = 'error';
+                setQzGenerationStatus('Erro ao gerar questões: ' + escHtml(err.message), 'error');
             } finally {
                 renderBanco(); // reconstrói os botões do zero (contagens e labels atualizados)
-                if (toastMsg) showToast(toastMsg, toastKind);
             }
         }
 
@@ -530,6 +595,13 @@ ${existentes}`;
 
         // ─── Modo de resolução (prática estilo cursinho de questões) ───
         let qzSession = null; // { scope:{materia,topico}, queue:[{materia,topico,question}], idx, correct, answered, answeredBySubject, answeredNow }
+        let qzReturnUrl = null; // setado quando chega aqui a partir de uma sessão de estudo ativa (ver handleIncomingQueryParams)
+
+        function exitBtnLabel() {
+            return qzReturnUrl
+                ? '<i class="fas fa-arrow-left"></i> Finalizar e voltar para o Estudo'
+                : '<i class="fas fa-arrow-left"></i> Finalizar e voltar ao banco';
+        }
 
         function collectQuestionsForScope(materia, topico) {
             const store = getQuestoesStore();
@@ -566,6 +638,7 @@ ${existentes}`;
 
             qzSession = { scope: { materia, topico }, queue: list, idx: 0, correct: 0, answered: 0, answeredBySubject: {}, answeredNow: false };
             document.getElementById('qz-session-scope').textContent = topico ? `${materia} — ${topico}` : (materia || 'Todas as matérias');
+            document.getElementById('qz-exit-btn').innerHTML = exitBtnLabel();
             showQzView('resolver');
             renderCurrentQuestion();
         }
@@ -573,6 +646,7 @@ ${existentes}`;
         function exitPractice() {
             finalizeSessionHistory();
             qzSession = null;
+            if (qzReturnUrl) { location.href = qzReturnUrl; return; }
             showQzView('banco');
             renderBanco();
         }
@@ -589,7 +663,7 @@ ${existentes}`;
                         <i class="fas fa-flag-checkered"></i>
                         <h3>Sessão concluída!</h3>
                         <p>Você respondeu ${qzSession.answered} questão(ões), com ${qzSession.correct} acerto(s)${qzSession.answered ? ` (${pct}%)` : ''}.</p>
-                        <button class="btn btn-primary" onclick="exitPractice()"><i class="fas fa-arrow-left"></i> Voltar ao banco de questões</button>
+                        <button class="btn btn-primary" onclick="exitPractice()">${exitBtnLabel()}</button>
                     </div>`;
                 return;
             }
@@ -641,6 +715,7 @@ ${existentes}`;
             subjStats.total++;
             if (acertou) subjStats.correct++;
             subjStats.topicos.add(item.topico);
+            bumpActiveSessionQuizStats(item.materia, acertou);
 
             document.getElementById('qz-session-correct').textContent = qzSession.correct;
             document.getElementById('qz-session-total').textContent = qzSession.answered;
@@ -666,11 +741,39 @@ ${existentes}`;
             renderCurrentQuestion();
         }
 
+        /** Se houver uma sessão de estudo ativa (cicloestudo/cicloestudolivre) na mesma matéria, soma
+         *  o que foi resolvido aqui — assim já vem preenchido no modal de "Salvar" quando o usuário
+         *  voltar pra lá (ver finishSession em core.js), em vez de precisar digitar na mão. */
+        function bumpActiveSessionQuizStats(materia, acertou) {
+            const raw = localStorage.getItem(K('estudoFiscalActiveSession'));
+            if (!raw) return;
+            let session;
+            try { session = JSON.parse(raw); } catch (e) { return; }
+            if (!session || session.subject !== materia) return;
+            session.quizQuestions = (session.quizQuestions || 0) + 1;
+            if (acertou) session.quizCorrect = (session.quizCorrect || 0) + 1;
+            localStorage.setItem(K('estudoFiscalActiveSession'), JSON.stringify(session));
+        }
+
+        function getActiveSessionSubject() {
+            try {
+                const raw = localStorage.getItem(K('estudoFiscalActiveSession'));
+                if (!raw) return null;
+                const s = JSON.parse(raw);
+                return (s && s.subject) || null;
+            } catch (e) { return null; }
+        }
+
         /** Registra o desempenho da sessão no histórico de estudo, um lançamento por matéria praticada
-         *  (assim "% de acerto em questões" no Planejamento/Matérias reflete o que foi resolvido aqui). */
+         *  (assim "% de acerto em questões" no Planejamento/Matérias reflete o que foi resolvido aqui).
+         *  Pula a matéria que estiver com uma sessão de estudo ativa agora — esse desempenho já vai
+         *  entrar no histórico quando aquela sessão for salva (evita duplicar as mesmas questões). */
         function finalizeSessionHistory() {
             if (!qzSession || qzSession.answered === 0) return;
+            const activeSubject = getActiveSessionSubject();
+            let registradas = 0;
             Object.keys(qzSession.answeredBySubject).forEach(materia => {
+                if (materia === activeSubject) return;
                 const stats = qzSession.answeredBySubject[materia];
                 const topicos = Array.from(stats.topicos);
                 const notaTopicos = topicos.length > 2 ? `${topicos.slice(0, 2).join(', ')} e mais ${topicos.length - 2}` : topicos.join(', ');
@@ -682,15 +785,69 @@ ${existentes}`;
                     questions: stats.total,
                     correct: stats.correct
                 });
+                registradas += stats.total;
             });
-            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
-            showToast(`Sessão registrada: ${qzSession.correct}/${qzSession.answered} corretas no total.`, 'success');
+            if (registradas > 0) {
+                localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
+            }
+            if (activeSubject && qzSession.answeredBySubject[activeSubject]) {
+                showToast(`Resultado de "${activeSubject}" vai entrar no histórico quando você salvar a sessão de estudo.`, 'success');
+            } else if (registradas > 0) {
+                showToast(`Sessão registrada: ${qzSession.correct}/${qzSession.answered} corretas no total.`, 'success');
+            }
+        }
+
+        /**
+         * Chegada vinda do botão "Questões IA" da barra de sessão ativa (cicloestudo/cicloestudolivre):
+         * ?materia=<matéria da sessão>&voltar=<página de origem>. Se já houver questões geradas pra
+         * essa matéria, começa a resolver direto; senão, só abre o Banco de Questões já com o
+         * acordeão da matéria expandido, pra gerar algumas primeiro.
+         */
+        function handleIncomingQueryParams() {
+            const params = new URLSearchParams(location.search);
+            const materia = params.get('materia');
+            const voltar = params.get('voltar');
+
+            if (voltar) {
+                qzReturnUrl = voltar;
+                const banner = document.getElementById('qz-back-to-study');
+                banner.style.display = 'block';
+                banner.innerHTML = `<a href="${escHtml(voltar)}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar para o Estudo</a>`;
+            }
+
+            if (materia) {
+                const store = getQuestoesStore();
+                const hasQuestions = store.some(b => b.materia === materia && b.questions.length > 0);
+                if (hasQuestions) {
+                    startPractice(materia, null);
+                } else {
+                    showToast(`Ainda não há questões geradas para "${materia}" — gere algumas abaixo primeiro.`, 'info');
+                    highlightSubjectInBanco(materia);
+                }
+            }
+        }
+
+        /** Abre o acordeão da matéria informada no Banco de Questões e rola até ela. */
+        function highlightSubjectInBanco(materia) {
+            const titles = document.querySelectorAll('#qz-banco-container .syllabus-title');
+            for (const titleEl of titles) {
+                if (titleEl.textContent !== materia) continue;
+                const card = titleEl.closest('.syllabus-category');
+                if (!card) continue;
+                const content = card.querySelector('.syllabus-content');
+                const icon = card.querySelector('.accordion-icon');
+                if (content) content.classList.add('open');
+                if (icon) icon.textContent = '▼';
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                break;
+            }
         }
 
         function init() {
             initCoreData();
             loadQzConfig();
             renderBanco();
+            handleIncomingQueryParams();
         }
         initTheme();
         hydrateFromDisk().then(() => { init(); });

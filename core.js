@@ -1287,7 +1287,9 @@
                 paused: !!activeSession.paused,
                 target: activeSession.target,
                 alarmPlayed: !!activeSession.alarmPlayed,
-                lastResumeEpochMs: activeSession.lastResumeEpochMs || null
+                lastResumeEpochMs: activeSession.lastResumeEpochMs || null,
+                quizQuestions: activeSession.quizQuestions || 0,
+                quizCorrect: activeSession.quizCorrect || 0
             };
             localStorage.setItem(K('estudoFiscalActiveSession'), JSON.stringify(payload));
         }
@@ -1314,7 +1316,9 @@
                 interval: null,
                 target: Number(data.target || 3600),
                 alarmPlayed: !!data.alarmPlayed,
-                lastResumeEpochMs: data.lastResumeEpochMs ? Number(data.lastResumeEpochMs) : null
+                lastResumeEpochMs: data.lastResumeEpochMs ? Number(data.lastResumeEpochMs) : null,
+                quizQuestions: Number(data.quizQuestions || 0),
+                quizCorrect: Number(data.quizCorrect || 0)
             };
 
             const bar = document.getElementById('active-study-bar');
@@ -1371,7 +1375,9 @@
                 interval: null,
                 target: Number(task.durationTarget || 3600),
                 alarmPlayed: false,
-                lastResumeEpochMs: Date.now()
+                lastResumeEpochMs: Date.now(),
+                quizQuestions: 0,
+                quizCorrect: 0
             };
 
             const bar = document.getElementById('active-study-bar');
@@ -1453,6 +1459,19 @@
             persistActiveSessionToStorage();
         }
 
+        /** Pausa o cronômetro e manda pra Questões (IA) já filtrado na matéria da sessão ativa —
+         *  ao voltar (link "Voltar para o Estudo" em questoes.html), a sessão continua pausada de
+         *  onde parou, e o que foi resolvido lá já vem preenchido no modal de "Salvar" (ver
+         *  finishSession / qzResponder). */
+        function goToQuizForActiveSubject() {
+            if (!activeSession) return;
+            pauseTimer();
+            const pauseBtn = document.getElementById('btn-pause-resume');
+            if (pauseBtn) pauseBtn.innerHTML = '<i class="fas fa-play"></i> Continuar';
+            const voltar = location.pathname.split('/').pop() || 'cicloestudo.html';
+            location.href = 'questoes.html?materia=' + encodeURIComponent(activeSession.subject) + '&voltar=' + encodeURIComponent(voltar);
+        }
+
         function openFocusMode() {
             if (!activeSession) return;
             const overlay = document.getElementById('focus-mode-overlay');
@@ -1515,8 +1534,14 @@
             closeFocusMode();
             document.getElementById('note-modal').classList.add('open');
             document.getElementById('note-textarea').value = '';
-            document.getElementById('note-questions-total').value = '';
-            document.getElementById('note-questions-correct').value = '';
+            // Se o usuário foi pra aba Questões (IA) resolver questões dessa matéria durante a
+            // sessão, os campos já vêm preenchidos com o que foi resolvido de verdade — ainda dá
+            // pra editar à mão se quiser ajustar.
+            const qTotal = activeSession.quizQuestions || 0;
+            document.getElementById('note-questions-total').value = qTotal ? qTotal : '';
+            document.getElementById('note-questions-correct').value = qTotal ? (activeSession.quizCorrect || 0) : '';
+            const hint = document.getElementById('note-questions-quiz-hint');
+            if (hint) hint.style.display = qTotal ? 'flex' : 'none';
         }
 
         function cancelSession(skipConfirm) {

@@ -31,7 +31,9 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 
 - Abra `index.html` direto no navegador (duplo clique) ou hospede os arquivos em qualquer servidor estático.
 - Cadastre as matérias e pesos em **Matérias**, ajuste **Planejamento** (fases e horas semanais) e gere o cronograma em **Ciclo de Estudo**.
+- Em **Planejamento → Contagem regressiva**, defina diretamente o **início e o fim do ciclo** (`inicioCiclo`/`fimCiclo` no modelo) pelos campos de data — não depende mais de importar planilha/PDF para isso; dá pra ajustar a qualquer momento.
 - Use **Ciclo Livre** para estudar fora do cronograma quando quiser.
+- Gere e resolva questões de múltipla escolha por tópico em **Questões**, usando Gemini ou Claude com sua própria chave de API.
 - Registre resumos/flashcards em **Meus Resumos**, acompanhe tudo em **Lista Completa**, **Conteúdo Programático**, **Tempo de Estudo** e **Histórico**.
 - Clique em **Salvar** (cabeçalho) para baixar uma cópia HTML autocontida com todos os seus dados embutidos — útil como backup ou para continuar em outro computador.
 
@@ -50,6 +52,7 @@ A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método 
 - `index.html` permite baixar/exportar/importar o modelo (matérias, pesos, tópicos). Quando a biblioteca `xlsx.js` (carregada via CDN) está disponível, o formato é Excel; sem ela (ex.: offline sem cache do CDN), cai automaticamente para CSV.
 - Também é possível extrair o conteúdo programático diretamente de um PDF de edital ("Importar Edital PDF"), em três modos: **Sem IA** (heurística local, grátis, roda 100% no navegador), **Gemini** (grátis, com chave de API do usuário) e **Claude** (pago, com chave de API do usuário). A extração usa `pdf.js` para ler o texto do PDF.
 - O modelo resultante (`estudoFiscalModel`) é a mesma chave lida por todas as páginas do app — qualquer forma de importação (planilha, CSV ou PDF) fica visível automaticamente em Planejamento, Matérias, Ciclo de Estudo, Ciclo Livre, Resumos, Lista Completa, Conteúdo Programático e Questões, sem precisar repetir a importação em cada aba.
+- **Autenticação com a API do Gemini**: a chave é enviada no header `x-goog-api-key` (não mais como `?key=` na URL). O Google passou a rejeitar chaves nesse segundo formato com erro 401 "Expected OAuth 2 access token..." a partir de set/2026 — se voltar a usar `?key=`, o Gemini para de funcionar com esse mesmo erro. A chamada à API do Claude (Anthropic) não foi afetada.
 
 ## Banco de Questões (`questoes.html`)
 
@@ -58,6 +61,8 @@ A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método 
 - Resolução estilo cursinho de questões: escolhe uma alternativa, vê o gabarito e o comentário na hora, e navega para a próxima. Prioriza questões ainda não respondidas.
 - O desempenho de cada sessão (acertos/total, por matéria) é gravado em `estudoFiscalStudyHistory` — as mesmas estatísticas de "% de acerto em questões" usadas em Matérias e nas prioridades de Planejamento passam a refletir também o que foi resolvido aqui.
 - As chaves de API e o modo (Gemini/Claude) são compartilhados com o modal "Importar Edital PDF" do Menu Inicial (`estudoFiscalGeminiKey` / `estudoFiscalAnthropicKey`, namespaced por perfil) — configurar uma vez vale para os dois lugares.
+- A configuração de IA fica atrás do botão **"IA"** (abre um modal, mesmo padrão visual do "Importar Edital PDF" do Menu Inicial). O resultado de cada "Gerar questões" (sucesso ou erro) aparece de forma persistente logo abaixo dos botões do Banco de Questões — não só num toast que some sozinho — igual ao comportamento do modal de importação de edital.
+- **Integração com a sessão de estudo ativa**: durante uma sessão em `cicloestudo.html`/`cicloestudolivre.html`, o botão **"Questões IA"** na barra de cronômetro pausa o timer e abre `questoes.html?materia=<matéria>` já resolvendo questões dessa matéria (ou com o acordeão dela aberto no Banco, se ainda não houver questões geradas). Cada questão respondida ali é somada em `estudoFiscalActiveSession` (campos `quizQuestions`/`quizCorrect`); ao voltar e clicar em "Salvar" o estudo, os campos **Questões Feitas** e **Acertos** já vêm preenchidos com o que foi resolvido de verdade (ainda editáveis à mão). Isso evita duplicar o mesmo desempenho no histórico: enquanto a sessão de estudo daquela matéria estiver ativa, `questoes.html` não cria um lançamento próprio para ela — só matérias sem sessão ativa no momento geram um histórico imediato.
 
 ## Persistência (localStorage)
 
@@ -71,7 +76,7 @@ Chaves principais (por perfil, com sufixo `__<id>` quando não é o perfil "Prin
 - `estudoFiscalReviews`: fila de revisão espaçada.
 - `estudoFiscalPlanPhases` / `estudoFiscalWeeklyHours`: dados de planejamento geral.
 - `estudoFiscalRolloverMissed` / `estudoFiscalRolloverLastRun`: controle de tarefas não cumpridas transferidas entre dias.
-- `estudoFiscalActiveSession`: sessão de estudo (Pomodoro) em andamento.
+- `estudoFiscalActiveSession`: sessão de estudo (Pomodoro) em andamento — inclui `quizQuestions`/`quizCorrect`, acumulados a partir de `questoes.html` enquanto a sessão está ativa.
 - `ciclo_cards_v3`: resumos/flashcards.
 - `estudoFiscalQuestoes`: banco de questões geradas por IA, por matéria/tópico (ver `questoes.html`).
 - `estudoFiscalGeminiKey` / `estudoFiscalAnthropicKey`: chaves de API do usuário (Gemini/Claude), usadas tanto na importação de edital em PDF quanto na geração de questões.

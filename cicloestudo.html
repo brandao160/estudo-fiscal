@@ -168,6 +168,10 @@
                         <input type="number" id="note-questions-correct" class="note-input" placeholder="0" min="0" style="width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 6px;">
                     </div>
                 </div>
+                <div id="note-questions-quiz-hint" style="display:none; gap:6px; align-items:flex-start; font-size:0.78rem; color:var(--green, #10b981); margin-bottom:10px; line-height:1.4;">
+                    <i class="fas fa-circle-check" style="margin-top:2px;"></i>
+                    <span>Preenchido automaticamente com o que você resolveu em Questões (IA) durante essa sessão — pode ajustar se quiser.</span>
+                </div>
                 <div style="display:flex; gap:6px; align-items:flex-start; font-size:0.78rem; color:var(--text-secondary, #999); margin-bottom:10px; line-height:1.4;">
                     <i class="fas fa-lightbulb" style="color:var(--accent-color); margin-top:2px;"></i>
                     <span>Antes de fechar: resolva 5-10 questões dessa matéria e dê uma revisada rápida nos pontos principais — reforça muito mais do que só ler.</span>
@@ -198,6 +202,9 @@
         <div class="bar-controls">
             <button class="bar-btn btn-cancel" onclick="openFocusMode()" title="Modo Foco (tela cheia)">
                 <i class="fas fa-expand"></i> Modo Foco
+            </button>
+            <button class="bar-btn btn-continue" onclick="goToQuizForActiveSubject()" title="Pausa o cronômetro e abre questões de IA dessa matéria">
+                <i class="fas fa-list-check"></i> Questões IA
             </button>
             <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
                 <i class="fas fa-pause"></i> Pausar

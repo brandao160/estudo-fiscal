@@ -938,6 +938,12 @@
         }
         .bar-target { margin-left: 7px; font-size: 0.76rem; color: rgba(255,255,255,0.4); font-family: monospace; }
         .bar-controls { display: flex; gap: 7px; }
+        /* Com 5 botões (Modo Foco, Questões IA, Pausar, Salvar, Cancelar) a barra não cabe mais numa
+           linha só em telas estreitas — deixa quebrar e crescer em altura em vez de cortar botão. */
+        @media (max-width: 900px) {
+            #active-study-bar { height: auto; min-height: 62px; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+            .bar-controls { flex-wrap: wrap; justify-content: flex-end; }
+        }
         .bar-btn {
             border: none; padding: 6px 14px; border-radius: var(--r);
             font-weight: 700; cursor: pointer;

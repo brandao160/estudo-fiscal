@@ -49,7 +49,7 @@ import { corsHeaders, resolveModel } from './_shared/ai-core.js';
 
 // Quantas gerações por dia cada visitante (por IP) pode fazer. Ajuste conforme
 // o tamanho do seu público — o teto da conta é 1.000/dia no total.
-const DAILY_LIMIT_PER_IP = 15;
+const DAILY_LIMIT_PER_IP = 100;
 
 export async function onRequestOptions(context) {
     return new Response(null, { headers: corsHeaders(context.env) });

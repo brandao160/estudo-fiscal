@@ -1426,6 +1426,14 @@
         const OPEN_NOTE_ON_LOAD_KEY = 'estudoFiscalOpenNoteOnLoad';
         const CANCEL_SESSION_ON_LOAD_KEY = 'estudoFiscalCancelSessionOnLoad';
 
+        // Alarmes de marco de tempo estudado (independente da meta da tarefa): tocam uma vez cada
+        // ao cruzar 1h, 1h30 e 2h de tempo total (elapsedAtStart + elapsedSession) na sessão ativa.
+        const STUDY_MILESTONES = [
+            { seconds: 3600, label: '1 hora' },
+            { seconds: 5400, label: '1 hora e 30 minutos' },
+            { seconds: 7200, label: '2 horas' }
+        ];
+
         let activeSession = null;
 
         function persistActiveSessionToStorage() {
@@ -1440,6 +1448,7 @@
                 paused: !!activeSession.paused,
                 target: activeSession.target,
                 alarmPlayed: !!activeSession.alarmPlayed,
+                milestonesPlayed: activeSession.milestonesPlayed || [],
                 lastResumeEpochMs: activeSession.lastResumeEpochMs || null,
                 quizQuestions: activeSession.quizQuestions || 0,
                 quizCorrect: activeSession.quizCorrect || 0
@@ -1469,6 +1478,7 @@
                 interval: null,
                 target: Number(data.target || 3600),
                 alarmPlayed: !!data.alarmPlayed,
+                milestonesPlayed: Array.isArray(data.milestonesPlayed) ? data.milestonesPlayed : [],
                 lastResumeEpochMs: data.lastResumeEpochMs ? Number(data.lastResumeEpochMs) : null,
                 quizQuestions: Number(data.quizQuestions || 0),
                 quizCorrect: Number(data.quizCorrect || 0)
@@ -1528,6 +1538,7 @@
                 interval: null,
                 target: Number(task.durationTarget || 3600),
                 alarmPlayed: false,
+                milestonesPlayed: [],
                 lastResumeEpochMs: Date.now(),
                 quizQuestions: 0,
                 quizCorrect: 0
@@ -1561,6 +1572,28 @@
             document.getElementById('btn-pause-resume').innerHTML = label;
             const focusBtn = document.getElementById('focus-pause-icon')?.closest('button');
             if (focusBtn) focusBtn.innerHTML = label;
+        }
+
+        /** Zera o cronômetro da sessão ativa (volta a exibir 0h 0m 0s) sem afetar o tempo já
+         *  salvo anteriormente na tarefa — esse tempo antigo continua contado normalmente quando
+         *  a sessão for finalizada (finishSession soma task.timeSpent + elapsedSession). */
+        function restartSession() {
+            if (!activeSession) return;
+            if (!confirm('Deseja reiniciar o cronômetro desta sessão? O tempo exibido voltará a 0h 0m 0s.')) return;
+
+            activeSession.elapsedAtStart = 0;
+            activeSession.elapsedSession = 0;
+            activeSession.startTime = Date.now();
+            activeSession.lastResumeEpochMs = activeSession.paused ? null : Date.now();
+            activeSession.alarmPlayed = false;
+            activeSession.milestonesPlayed = [];
+
+            const timerEl = document.getElementById('bar-timer-display');
+            if (timerEl) { timerEl.style.color = ''; timerEl.style.textShadow = 'none'; }
+
+            updateBarTimer();
+            persistActiveSessionToStorage();
+            showToast('Cronômetro reiniciado.', 'success');
         }
 
         function resumeTimer() {
@@ -1663,6 +1696,19 @@
                 if (ffill) ffill.style.width = pct + '%';
                 if (flabel) flabel.textContent = `Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
             }
+            if (!activeSession.milestonesPlayed) activeSession.milestonesPlayed = [];
+            STUDY_MILESTONES.forEach(m => {
+                if (total >= m.seconds && !activeSession.milestonesPlayed.includes(m.seconds)) {
+                    activeSession.milestonesPlayed.push(m.seconds);
+                    playAlarm();
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        new Notification("Alarme de Estudo", { body: `Você atingiu ${m.label} de estudo!` });
+                    } else {
+                        showToast(`⏰ ${m.label} de estudo!`, 'success');
+                    }
+                    persistActiveSessionToStorage();
+                }
+            });
             if(!activeSession.alarmPlayed && total >= target) {
                 activeSession.alarmPlayed = true;
                 playAlarm();

@@ -209,6 +209,9 @@
             <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
                 <i class="fas fa-pause"></i> Pausar
             </button>
+            <button class="bar-btn btn-cancel" onclick="restartSession()" title="Zera o cronômetro desta sessão">
+                <i class="fas fa-rotate-left"></i> Reiniciar
+            </button>
             <button class="bar-btn btn-save" onclick="finishSession()">
                 <i class="fas fa-check"></i> Salvar
             </button>
@@ -226,6 +229,7 @@
         <div class="focus-target" id="focus-target-label"></div>
         <div class="focus-controls">
             <button class="bar-btn btn-continue" onclick="togglePauseResume()"><i class="fas fa-pause" id="focus-pause-icon"></i> Pausar</button>
+            <button class="bar-btn btn-cancel" onclick="restartSession()" title="Zera o cronômetro desta sessão"><i class="fas fa-rotate-left"></i> Reiniciar</button>
             <button class="bar-btn btn-save" onclick="finishSession()"><i class="fas fa-check"></i> Salvar</button>
             <button class="bar-btn btn-cancel" onclick="closeFocusMode()"><i class="fas fa-compress"></i> Sair do Modo Foco</button>
         </div>

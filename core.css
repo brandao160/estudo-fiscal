@@ -510,6 +510,13 @@
             transition: all 0.14s;
         }
         .cycle-remove-btn:hover { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+        .cycle-manual-btn {
+            background: transparent; border: 1px solid var(--border); color: var(--ink-3);
+            width: 30px; height: 30px; border-radius: var(--r); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+            transition: all 0.14s;
+        }
+        .cycle-manual-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 
         .cycle-builder {
             background: var(--surface); border: 1px solid var(--border);
@@ -1003,6 +1010,19 @@
             backdrop-filter: blur(5px);
         }
         #note-modal.open { display: flex; }
+
+        /* ─── LANÇAMENTO MANUAL DE TEMPO (mesmo visual do note-modal) ── */
+        #manual-time-modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.72);
+            z-index: 2100; display: none;
+            justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        #manual-time-modal.open { display: flex; }
+        .manual-time-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .manual-time-row > div { flex: 1; }
+
         .note-modal-content {
             background: var(--surface); color: var(--ink);
             width: 520px; max-width: 95vw;

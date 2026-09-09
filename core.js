@@ -1579,7 +1579,6 @@
          *  a sessão for finalizada (finishSession soma task.timeSpent + elapsedSession). */
         function restartSession() {
             if (!activeSession) return;
-            if (!confirm('Deseja reiniciar o cronômetro desta sessão? O tempo exibido voltará a 0h 0m 0s.')) return;
 
             activeSession.elapsedAtStart = 0;
             activeSession.elapsedSession = 0;
@@ -1843,6 +1842,101 @@
             renderCalendarDayModal();
             updateStats();
             window.removeEventListener('keydown', barKeyHandler);
+        }
+
+        // ── lançamento manual de tempo estudado ──
+        // Pra quem esqueceu de clicar "Iniciar Estudo"/"Continuar" e já estudou sem o cronômetro
+        // rodando: registra um tempo direto numa tarefa existente, sem precisar de activeSession.
+        // Compartilhado entre cicloestudo.html e cicloestudolivre.html (mesmo padrão de
+        // beginActiveSession — cada página acha o dayObj/index do jeito que faz sentido pra ela e
+        // chama openManualTimeEntry(dayObj, index)).
+        let manualEntryTarget = null;
+
+        function openManualTimeEntry(dayObj, index) {
+            const task = dayObj.tasks[index];
+            if (!task) return;
+            manualEntryTarget = { dayDateMs: dayObj.date.getTime(), taskIndex: index };
+
+            document.getElementById('manual-time-subject').textContent = task.subject;
+            document.getElementById('manual-time-hours').value = '';
+            document.getElementById('manual-time-minutes').value = '';
+            document.getElementById('manual-time-note').value = '';
+
+            const dt = new Date();
+            dt.setSeconds(0, 0);
+            const pad = n => String(n).padStart(2, '0');
+            document.getElementById('manual-time-datetime').value =
+                `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+            document.getElementById('manual-time-modal').classList.add('open');
+        }
+
+        function closeManualTimeEntry() {
+            const modal = document.getElementById('manual-time-modal');
+            if (modal) modal.classList.remove('open');
+            manualEntryTarget = null;
+        }
+
+        function saveManualTimeEntry() {
+            if (!manualEntryTarget) return;
+            const dayObj = fullSchedule.find(d => d.date.getTime() === manualEntryTarget.dayDateMs);
+            const task = dayObj ? dayObj.tasks[manualEntryTarget.taskIndex] : null;
+            if (!task) { closeManualTimeEntry(); return; }
+
+            const hours = Math.max(0, parseInt(document.getElementById('manual-time-hours').value) || 0);
+            const minutes = Math.max(0, parseInt(document.getElementById('manual-time-minutes').value) || 0);
+            const durationSeconds = hours * 3600 + minutes * 60;
+            if (durationSeconds <= 0) {
+                alert('Informe um tempo maior que zero.');
+                return;
+            }
+
+            const noteText = document.getElementById('manual-time-note').value;
+            const whenRaw = document.getElementById('manual-time-datetime').value;
+            const when = whenRaw ? new Date(whenRaw) : new Date();
+
+            const historyItem = {
+                id: Date.now().toString(),
+                date: when.toISOString(),
+                subject: task.subject,
+                duration: durationSeconds,
+                startTime: when.getTime(),
+                note: noteText,
+                questions: 0,
+                correct: 0,
+                manual: true
+            };
+            studyHistory.unshift(historyItem);
+            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
+
+            task.timeSpent = (task.timeSpent || 0) + durationSeconds;
+            const derivedStatus = deriveTaskStatus(task);
+            task.completed = (derivedStatus === 'concluido');
+            if (noteText) {
+                const timeString = when.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                task.note = (task.note ? task.note + '\n' : '') + `[${timeString}] ${noteText}`;
+            }
+
+            const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+            if (!savedData[task.id]) savedData[task.id] = {};
+            savedData[task.id].status = derivedStatus;
+            savedData[task.id].note = task.note;
+            savedData[task.id].timeSpent = task.timeSpent;
+            savedData[task.id].durationTarget = task.durationTarget || 3600;
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
+            syncToDisk();
+
+            closeManualTimeEntry();
+            showToast(`Tempo adicionado: ${formatHM(durationSeconds)} em ${task.subject}.`, 'success');
+
+            renderHistory();
+            renderCalendar();
+            renderList();
+            renderTimeStats();
+            renderCalendarMonth();
+            renderCalendarDayModal();
+            updateStats();
         }
 
         function barKeyHandler(e) {

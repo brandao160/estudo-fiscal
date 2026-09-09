@@ -474,8 +474,9 @@
 
             <div class="plan-card" style="text-align:center;">
                 <h2><i class="fas fa-sync-alt"></i> Gerar Ciclo</h2>
-                <p class="plan-card-sub">Já ajustou peso, dificuldade e carga de cada matéria acima? Gere (ou regenere) seu Ciclo de Estudo completo agora, com esses valores.</p>
-                <button class="btn btn-primary" onclick="generateCycleFromPlanejamento()"><i class="fas fa-sync-alt"></i> Gerar Ciclo</button>
+                <p class="plan-card-sub">Ajuste datas, rotina semanal, peso, dificuldade e carga de cada matéria acima e gere (ou regenere) seu Ciclo de Estudo completo com esses valores.</p>
+                <p id="cycle-status-msg" style="font-weight:600; margin: 4px 0 12px;"></p>
+                <button id="generate-cycle-btn-plan" class="btn btn-primary" onclick="generateCycleFromPlanejamento()"><i class="fas fa-sync-alt"></i> Gerar Ciclo</button>
             </div>
 
         </div>
@@ -686,6 +687,7 @@
             renderPace();
             renderWeeklyPriorities();
             const adjustedCycle = regenerateFutureSchedule();
+            if (!adjustedCycle) markCycleDirty(); else updateCycleGenerateButton();
             showToast(adjustedCycle ? 'Rotina salva — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Rotina salva — o Ciclo de Estudo vai usar esses horários ao gerar a agenda.', 'success');
         }
 
@@ -727,6 +729,7 @@
             renderPace();
             renderWeeklyPriorities();
             const adjustedCycle = regenerateFutureSchedule();
+            if (!adjustedCycle) markCycleDirty(); else updateCycleGenerateButton();
             showToast(adjustedCycle ? 'Rotina aumentada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Rotina semanal aumentada em ~17,5%.', 'success');
         }
 
@@ -739,6 +742,7 @@
             renderPace();
             renderWeeklyPriorities();
             const adjustedCycle = regenerateFutureSchedule();
+            if (!adjustedCycle) markCycleDirty(); else updateCycleGenerateButton();
             showToast(adjustedCycle ? 'Preferência atualizada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Preferência atualizada.', 'success');
         }
 
@@ -749,6 +753,7 @@
             renderPace();
             renderWeeklyPriorities();
             const adjustedCycle = regenerateFutureSchedule();
+            if (!adjustedCycle) markCycleDirty(); else updateCycleGenerateButton();
             showToast(adjustedCycle ? 'Horas de discursiva salvas — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Horas de discursiva salvas.', 'success');
         }
 
@@ -1054,10 +1059,48 @@
         }
 
         /**
-         * Gera o Ciclo de Estudo do zero (mesmo botão/ação de "Início"), usando o peso/dificuldade/
-         * carga/rotina/discursiva atuais — pra o usuário poder ajustar tudo aqui em Planejamento e
-         * já gerar, sem precisar voltar pra Início. Substitui qualquer ciclo já gerado (mesmo
-         * comportamento do botão "Gerar Ciclo" de Início: começa do zero a partir de "Início do Ciclo").
+         * true se o Ciclo de Estudo gerado (estudoFiscalScheduleStructure) pode estar desatualizado
+         * em relação às configurações atuais (datas, rotina, peso/dificuldade/carga, discursiva) —
+         * ou nunca foi gerado. Usado pra pintar o botão "Gerar Ciclo" no final desta página de
+         * vermelho (precisa gerar/regenerar) ou verde (em dia).
+         */
+        function isCycleDirty() {
+            if (!localStorage.getItem(K('estudoFiscalScheduleStructure'))) return true;
+            return localStorage.getItem(K('estudoFiscalCycleDirty')) === '1';
+        }
+
+        /** Marca o ciclo como desatualizado (ver isCycleDirty) e repinta o botão de vermelho. Chamado
+         *  sempre que um ajuste aqui não pôde ser aplicado automaticamente ao calendário já gerado
+         *  (data do ciclo, nova matéria) ou quando não havia calendário pra ajustar ainda. */
+        function markCycleDirty() {
+            localStorage.setItem(K('estudoFiscalCycleDirty'), '1');
+            updateCycleGenerateButton();
+        }
+
+        /** Pinta o botão/mensagem "Gerar Ciclo" (vermelho = precisa gerar, verde = em dia com as
+         *  configurações atuais). */
+        function updateCycleGenerateButton() {
+            const btn = document.getElementById('generate-cycle-btn-plan');
+            const msg = document.getElementById('cycle-status-msg');
+            if (!btn) return;
+            if (isCycleDirty()) {
+                btn.style.background = '#ef4444';
+                btn.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Gerar Ciclo';
+                if (msg) { msg.textContent = 'Ajuste o Ciclo de Estudo — gere para aplicar essas configurações ao calendário.'; msg.style.color = '#ef4444'; }
+            } else {
+                btn.style.background = '#10b981';
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Ciclo Gerado com Sucesso';
+                if (msg) { msg.textContent = 'Seu Ciclo de Estudo está em dia com essas configurações.'; msg.style.color = '#10b981'; }
+            }
+        }
+
+        /**
+         * Gera o Ciclo de Estudo do zero, usando as datas/peso/dificuldade/carga/rotina/discursiva
+         * atuais — único ponto de geração do ciclo automático no app (o botão equivalente que
+         * existia em Início foi removido: agora Início só importa/exporta o modelo e manda a pessoa
+         * pra cá pra revisar tudo antes de gerar). Sempre começa do zero a partir de "Início do
+         * Ciclo", substituindo qualquer cronograma já gerado. Ao terminar, marca o ciclo como "em
+         * dia" (ver isCycleDirty/updateCycleGenerateButton) — pinta o botão de verde.
          */
         function generateCycleFromPlanejamento() {
             if (!sharedModel) {
@@ -1096,6 +1139,8 @@
             }
 
             localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));
+            localStorage.removeItem(K('estudoFiscalCycleDirty'));
+            updateCycleGenerateButton();
             showToast('Ciclo gerado! Confira em "Ciclo de Estudo".', 'success');
         }
 
@@ -1108,6 +1153,7 @@
             localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
             loadAllData();
             const adjustedCycle = regenerateFutureSchedule();
+            if (!adjustedCycle) markCycleDirty(); else updateCycleGenerateButton();
             renderSubjectDistribution();
             renderWeeklyPriorities();
             showToast(adjustedCycle ? 'Matéria atualizada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Matéria atualizada.', 'success');
@@ -1210,6 +1256,7 @@
 
             localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
             loadAllData();
+            markCycleDirty(); // matéria nova nunca é aplicada automaticamente — precisa gerar de novo
             renderSubjectDistribution();
             renderWeeklyPriorities();
             renderCountdown();
@@ -1249,6 +1296,7 @@
             renderCountdown();
             renderPace();
             renderWeeklyPriorities();
+            markCycleDirty(); // mudar datas nunca é aplicado automaticamente — precisa gerar de novo
 
             if (endDate <= startDate) {
                 showToast('Atenção: a data de fim está antes (ou igual) à data de início.', 'warning');
@@ -1540,6 +1588,7 @@
             renderPace();
             renderWeeklyPriorities();
             renderSubjectDistribution();
+            updateCycleGenerateButton();
         }
 
         // Init

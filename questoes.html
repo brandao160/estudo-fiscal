@@ -495,6 +495,86 @@ ${existentes}`;
             return true;
         }
 
+        /** Converte uma questão vinda do banco compartilhado (KV) no formato de item local, e marca seu
+         *  enunciado normalizado como já visto em `jaTemos` (evita duplicar a mesma questão no bucket). */
+        function appendSharedQuestion(bucket, q, jaTemos) {
+            bucket.questions.push({
+                id: qzUid(),
+                enunciado: q.enunciado,
+                alternativas: q.alternativas,
+                correta: q.correta,
+                comentario: q.comentario || '',
+                origem: q.origem || 'gerada',
+                fonte: q.fonte || null,
+                criadoEm: new Date().toISOString(),
+                vezesRespondida: 0,
+                acertos: 0,
+                ultimaResposta: null
+            });
+            jaTemos.add(normEnunciado(q.enunciado));
+        }
+
+        /**
+         * Puxa pro estoque LOCAL (estudoFiscalQuestoes) as questões que o banco compartilhado (KV,
+         * via bankGet) já tem pra este tópico — sem gastar cota de IA, só uma leitura no KV. Só faz
+         * sentido chamar quando o tópico ainda não tem nenhuma questão local (ver hydrateMateriaFromBank).
+         * Retorna true se alguma questão nova foi adicionada (pra saber se vale re-renderizar o banco).
+         */
+        async function hydrateTopicFromBank(materia, topico) {
+            const store = getQuestoesStore();
+            const bucket = findBucket(store, materia, topico);
+            if (bucket && bucket.questions.length > 0) return false; // já tem local, nada a puxar
+            const sharedBank = await bankGet(bankKeyFor(materia, topico));
+            if (!sharedBank.length) return false;
+
+            const freshBucket = getOrCreateBucket(store, materia, topico);
+            const jaTemos = new Set(freshBucket.questions.map(q => normEnunciado(q.enunciado)));
+            let added = 0;
+            sharedBank.slice(0, QZ_MAX_PER_TOPIC).forEach(q => {
+                if (!q || !q.enunciado || jaTemos.has(normEnunciado(q.enunciado))) return;
+                appendSharedQuestion(freshBucket, q, jaTemos);
+                added++;
+            });
+            if (added > 0) saveQuestoesStore(store);
+            return added > 0;
+        }
+
+        /** Lista os tópicos cadastrados (conteúdo programático) de uma matéria. */
+        function topicsForMateria(materiaName) {
+            for (const section of syllabusData) {
+                const sub = (section.subjects || []).find(s => s.name === materiaName);
+                if (sub) return sub.topics || [];
+            }
+            return [];
+        }
+
+        // Matérias já hidratadas do banco compartilhado nesta visita — evita repetir a mesma leva de
+        // leituras no KV toda vez que a pessoa abre/fecha o mesmo acordeão.
+        const hydratedMaterias = new Set();
+
+        /**
+         * Ao abrir o acordeão de uma matéria, puxa em background (sem exigir clique em "Gerar") as
+         * questões que o banco compartilhado já tem pros tópicos que essa matéria ainda não tem
+         * nenhuma questão localmente — é exatamente o que já estava salvo no KV compartilhado
+         * (QZ_RATE_LIMIT), só que antes só entrava no estoque local depois de clicar "Gerar" em
+         * cada tópico um por um. Silencioso: não mostra "gerando", só atualiza os botões quando
+         * chega (de "Gerar" pra "Resolver").
+         */
+        async function hydrateMateriaFromBank(materiaName) {
+            if (hydratedMaterias.has(materiaName)) return;
+            hydratedMaterias.add(materiaName);
+
+            const store = getQuestoesStore();
+            const topicsToFetch = topicsForMateria(materiaName).filter(t => {
+                const b = findBucket(store, materiaName, t);
+                return !b || b.questions.length === 0;
+            });
+            if (!topicsToFetch.length) return;
+
+            const results = await Promise.all(topicsToFetch.map(t => hydrateTopicFromBank(materiaName, t)));
+            if (results.some(Boolean)) renderBanco();
+        }
+
         /** Gera um novo lote de questões (até QZ_BATCH_SIZE, respeitando o teto de QZ_MAX_PER_TOPIC) para um
          *  tópico. Antes de chamar a IA, reaproveita o quanto puder do banco compartilhado (outros
          *  visitantes que já geraram pra este mesmo tópico) — só o que faltar é gerado de novo. */
@@ -514,22 +594,7 @@ ${existentes}`;
             const reused = sharedBank
                 .filter(q => q && q.enunciado && !jaTemos.has(normEnunciado(q.enunciado)))
                 .slice(0, quantidade);
-            reused.forEach(q => {
-                bucket.questions.push({
-                    id: qzUid(),
-                    enunciado: q.enunciado,
-                    alternativas: q.alternativas,
-                    correta: q.correta,
-                    comentario: q.comentario || '',
-                    origem: q.origem || 'gerada',
-                    fonte: q.fonte || null,
-                    criadoEm: new Date().toISOString(),
-                    vezesRespondida: 0,
-                    acertos: 0,
-                    ultimaResposta: null
-                });
-                jaTemos.add(normEnunciado(q.enunciado));
-            });
+            reused.forEach(q => appendSharedQuestion(bucket, q, jaTemos));
 
             const deficit = quantidade - reused.length;
             let added = reused.length, skipped = 0, aiErrorMsg = '';
@@ -641,11 +706,16 @@ ${existentes}`;
         }
 
         // ─── Banco de questões (accordion por categoria > matéria > tópico) ───
+        // Matérias com o acordeão aberto no momento — preservado entre chamadas de renderBanco()
+        // (ex.: depois que hydrateMateriaFromBank() atualiza os botões) pra não fechar tudo de novo.
+        const openMaterias = new Set();
         window.toggleAccordion = function(header) {
             const content = header.nextElementSibling;
             content.classList.toggle('open');
-            const icon = header.querySelector('.accordion-icon');
-            icon.textContent = content.classList.contains('open') ? '▼' : '▶';
+            const isOpen = content.classList.contains('open');
+            header.querySelector('.accordion-icon').textContent = isOpen ? '▼' : '▶';
+            const materia = header.dataset.materiaHeader;
+            if (materia) { if (isOpen) openMaterias.add(materia); else openMaterias.delete(materia); }
         };
 
         function renderBanco() {
@@ -671,7 +741,7 @@ ${existentes}`;
                     const card = document.createElement('div');
                     card.className = 'syllabus-category';
                     card.innerHTML = `
-                        <div class="syllabus-header" onclick="toggleAccordion(this)">
+                        <div class="syllabus-header" data-materia-header="${escHtml(sub.name)}">
                             <div class="syllabus-title-group">
                                 <span class="accordion-icon">▶</span>
                                 <div>
@@ -700,6 +770,10 @@ ${existentes}`;
                             }).join('')}
                         </div>`;
                     container.appendChild(card);
+                    if (openMaterias.has(sub.name)) {
+                        card.querySelector('.syllabus-content').classList.add('open');
+                        card.querySelector('.accordion-icon').textContent = '▼';
+                    }
                 });
             });
         }
@@ -707,6 +781,14 @@ ${existentes}`;
         // Delegação de eventos: evita ter que escapar matéria/tópico dentro de atributos onclick=""
         // (nomes de matéria/tópico vêm de dados importados/gerados por IA e podem ter aspas etc.).
         document.getElementById('qz-banco-container').addEventListener('click', function(e) {
+            const header = e.target.closest('[data-materia-header]');
+            if (header) {
+                toggleAccordion(header);
+                // Puxa em background o que o banco compartilhado já tem pra essa matéria (ver
+                // hydrateMateriaFromBank) — não bloqueia o toggle, só atualiza os botões quando chegar.
+                hydrateMateriaFromBank(header.dataset.materiaHeader);
+                return;
+            }
             const genBtn = e.target.closest('.qz-gerar-btn');
             if (genBtn && !genBtn.disabled) {
                 gerarQuestoes(genBtn.dataset.materia, genBtn.dataset.topico, genBtn);

@@ -281,7 +281,7 @@
          * Desenha o mês inteiro: cabeçalho (Segunda..Domingo) + uma célula por dia (incluindo
          * dias do mês anterior/seguinte pra completar as semanas), com pontinhos indicando as
          * matérias planejadas (laranja = a fazer, verde = concluída) — o cronograma já vem
-         * pronto de fullSchedule (gerado em Início via "Gerar Ciclo").
+         * pronto de fullSchedule (gerado em Planejamento via "Gerar Ciclo").
          */
         function renderCalendarMonth() {
             const head = document.getElementById('calendar-grid-head');
@@ -294,8 +294,8 @@
                 <div class="cycle-empty" style="margin-bottom:18px;">
                     <i class="fas fa-calendar-plus"></i>
                     <h3>Nenhum ciclo automático gerado ainda</h3>
-                    <p>Vá em "Início" e clique em "Gerar Ciclo" para o sistema montar seu cronograma completo aqui no calendário — ou use a aba "Ciclo Livre" se preferir escolher você mesmo o que estudar a cada dia.</p>
-                    <a class="btn btn-primary" href="index.html"><i class="fas fa-arrow-right"></i> Ir para Início</a>
+                    <p>Vá em "Planejamento", ajuste datas/rotina/pesos e clique em "Gerar Ciclo" no final da página para o sistema montar seu cronograma completo aqui no calendário — ou use a aba "Ciclo Livre" se preferir escolher você mesmo o que estudar a cada dia.</p>
+                    <a class="btn btn-primary" href="planejamento.html"><i class="fas fa-arrow-right"></i> Ir para Planejamento</a>
                 </div>` : '';
 
             label.textContent = calendarViewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase());

@@ -16,7 +16,7 @@ const PROFILE_DATA_KEYS = [
     'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
     'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
     'estudoFiscalActiveSession', 'ciclo_cards_v3',
-    'estudoFiscalQuestoes'
+    'estudoFiscalQuestoes', 'estudoFiscalCycleDirty'
 ];
 
 /**

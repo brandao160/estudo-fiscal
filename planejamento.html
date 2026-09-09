@@ -1126,22 +1126,38 @@
                 return;
             }
 
-            const discursivaHoras = getDiscursivaHoras();
-            const schedule = [];
-            let cur = new Date(startDate);
-            while (cur <= endDate) {
-                const weekDates = [];
-                for (let i = 0; i < 7 && cur <= endDate; i++) {
-                    weekDates.push(new Date(cur));
-                    cur.setDate(cur.getDate() + 1);
-                }
-                schedule.push(...buildWeeklyScheduleDays(weekDates, slots, discursivaHoras));
+            // Teto de segurança (10 anos): se as datas do ciclo estiverem malformadas/absurdamente
+            // distantes, evita que o loop abaixo trave a aba gerando milhares de semanas em vez de
+            // simplesmente avisar o problema.
+            const MAX_WEEKS = 520;
+            if ((endDate - startDate) / (7 * 86400000) > MAX_WEEKS) {
+                showToast('O período entre início e fim do ciclo está grande demais (mais de 10 anos) — confira as datas.', 'error');
+                return;
             }
 
-            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));
-            localStorage.removeItem(K('estudoFiscalCycleDirty'));
-            updateCycleGenerateButton();
-            showToast('Ciclo gerado! Confira em "Ciclo de Estudo".', 'success');
+            try {
+                const discursivaHoras = getDiscursivaHoras();
+                const schedule = [];
+                let cur = new Date(startDate);
+                let weekGuard = 0;
+                while (cur <= endDate && weekGuard < MAX_WEEKS) {
+                    weekGuard++;
+                    const weekDates = [];
+                    for (let i = 0; i < 7 && cur <= endDate; i++) {
+                        weekDates.push(new Date(cur));
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                    schedule.push(...buildWeeklyScheduleDays(weekDates, slots, discursivaHoras));
+                }
+
+                localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));
+                localStorage.removeItem(K('estudoFiscalCycleDirty'));
+                updateCycleGenerateButton();
+                showToast('Ciclo gerado! Confira em "Ciclo de Estudo".', 'success');
+            } catch (err) {
+                console.error('Falha ao gerar o Ciclo de Estudo:', err);
+                showToast('Erro ao gerar o ciclo: ' + (err && err.message ? err.message : err), 'error');
+            }
         }
 
         /** Atualiza um campo (peso/dificuldade/carga) de uma matéria direto no modelo compartilhado. */

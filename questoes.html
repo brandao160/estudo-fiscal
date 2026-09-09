@@ -235,6 +235,10 @@
 
         // ─── Armazenamento das questões geradas (por perfil, via K()) ───
         const QZ_MAX_PER_TOPIC = 100;
+        // Um lote de 20 pedido numa chamada só demorava muito (resposta grande = geração lenta,
+        // sem nenhum retorno até terminar tudo). Lotes são divididos em pedaços de até este tamanho,
+        // pedidos em paralelo (ver splitIntoChunks/gerarQuestoes) — reduz a espera percebida bastante.
+        const QZ_CHUNK_SIZE = 10;
         const QZ_BATCH_SIZE = 20;
         const QZ_LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
@@ -284,12 +288,14 @@
                 return Array.isArray(data.questoes) ? data.questoes : [];
             } catch (e) { return []; } // banco compartilhado é só um bônus — se falhar, segue só com a IA
         }
-        function bankSave(bankKey, questoes) {
+        function bankSave(bankKey, questoes, materia, topico) {
             // "Fire-and-forget": não trava a resposta pro usuário nem quebra o fluxo se der erro.
+            // materia/topico (nome legível, não a bankKey normalizada) são salvos junto só pro
+            // pré-aquecimento (functions/warmup-questoes.js) conseguir montar um prompt depois.
             fetch(QZ_PROXY_URL, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ action: 'bankSave', bankKey, questoes })
+                body: JSON.stringify({ action: 'bankSave', bankKey, questoes, materia, topico })
             }).catch(() => {});
         }
 
@@ -360,25 +366,76 @@
             return String(err);
         }
 
-        async function callOpenRouterForQuestions(proxyUrl, promptText) {
+        /** Divide um total em pedaços de até chunkSize (ex.: 20 → [10,10], 7 → [7], 15 → [10,5]).
+         *  Cada pedaço vira uma chamada separada ao proxy, disparada em paralelo — uma resposta
+         *  menor é gerada mais rápido pela IA, e várias em paralelo terminam antes que uma só
+         *  pedindo tudo de uma vez. */
+        function splitIntoChunks(total, chunkSize) {
+            const chunks = [];
+            let remaining = total;
+            while (remaining > 0) {
+                const n = Math.min(chunkSize, remaining);
+                chunks.push(n);
+                remaining -= n;
+            }
+            return chunks;
+        }
+
+        /** Chama o proxy em modo streaming (Server-Sent Events da OpenRouter, repassados sem
+         *  bufferizar pelo Cloudflare Function) e vai acumulando o texto conforme chega, chamando
+         *  onProgress(tamanhoAcumulado) a cada pedaço — só pra dar feedback visual de que algo está
+         *  acontecendo, não muda o resultado final. Se o proxy responder com erro (não streaming),
+         *  cai no mesmo tratamento de erro de antes. */
+        async function streamOpenRouterForQuestions(proxyUrl, promptText, maxTokens, onProgress) {
             let res;
             try {
                 res = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ prompt: promptText, max_tokens: 6000 })
+                    body: JSON.stringify({ prompt: promptText, max_tokens: maxTokens, stream: true })
                 });
             } catch (e) {
                 throw new Error('Não consegui falar com o proxy. Confira a URL configurada. ' + e.message);
             }
-            let data;
-            try { data = await res.json(); } catch (e) { throw new Error('O proxy não retornou um JSON válido.'); }
-            if (!res.ok) {
+
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('text/event-stream')) {
+                let data;
+                try { data = await res.json(); } catch (e) { throw new Error('O proxy não retornou um JSON válido.'); }
                 throw new Error(proxyErrorMessage(data) || `Erro do proxy (${res.status}).`);
             }
-            const text = data.choices?.[0]?.message?.content;
-            if (!text) throw new Error('A IA não retornou texto na resposta.');
-            return text;
+            if (!res.body || !res.body.getReader) {
+                // Navegador sem suporte a streaming de fetch — não deveria acontecer em navegadores
+                // modernos, mas evita travar sem explicação se acontecer.
+                throw new Error('Este navegador não suporta streaming de resposta.');
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '', accumulated = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // última linha pode estar incompleta — guarda pro próximo pedaço
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed.startsWith('data:')) continue;
+                    const payload = trimmed.slice(5).trim();
+                    if (!payload || payload === '[DONE]') continue;
+                    try {
+                        const json = JSON.parse(payload);
+                        const delta = json.choices?.[0]?.delta?.content || '';
+                        if (delta) {
+                            accumulated += delta;
+                            if (onProgress) onProgress(accumulated.length);
+                        }
+                    } catch (e) { /* pedaço de SSE cortado no meio de um chunk de rede — ignora, o resto da linha completa na próxima leitura */ }
+                }
+            }
+            if (!accumulated) throw new Error('A IA não retornou texto na resposta.');
+            return accumulated;
         }
 
         /**
@@ -477,40 +534,78 @@ ${existentes}`;
             let added = reused.length, skipped = 0, aiErrorMsg = '';
 
             if (deficit > 0) {
-                setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> Gerando ${deficit} questão(ões) nova(s) com IA para "${escHtml(topico)}"...`, '');
-                try {
-                    const existingEnunciados = bucket.questions.slice(-15).map(q => q.enunciado.slice(0, 140));
-                    const { concurso, orgao } = getModelInfo();
-                    const prompt = buildQuestionsPrompt(materia, topico, deficit, existingEnunciados, concurso, orgao);
-                    const rawText = await callOpenRouterForQuestions(QZ_PROXY_URL, prompt);
-                    const parsed = qzExtractJSON(rawText);
-                    const list = Array.isArray(parsed.questoes) ? parsed.questoes : [];
-                    list.forEach(q => {
-                        if (!validateGeneratedQuestion(q)) { skipped++; return; }
-                        if (jaTemos.has(normEnunciado(q.enunciado))) { skipped++; return; } // repetiu uma já reaproveitada
-                        const questao = {
-                            id: qzUid(),
-                            enunciado: q.enunciado.trim(),
-                            alternativas: {
-                                A: q.alternativas.A.trim(), B: q.alternativas.B.trim(), C: q.alternativas.C.trim(),
-                                D: q.alternativas.D.trim(), E: q.alternativas.E.trim()
-                            },
-                            correta: q.correta,
-                            comentario: (q.comentario || '').trim(),
-                            origem: q.origem, // sempre 'gerada' (sem busca nesse modo)
-                            fonte: q.fonte,
-                            criadoEm: new Date().toISOString(),
-                            vezesRespondida: 0,
-                            acertos: 0,
-                            ultimaResposta: null
-                        };
-                        bucket.questions.push(questao);
-                        jaTemos.add(normEnunciado(questao.enunciado));
-                        added++;
-                    });
-                } catch (err) {
-                    console.error('Erro ao gerar questões:', err);
-                    aiErrorMsg = err.message;
+                // Em vez de uma chamada só pedindo "deficit" questões (lenta: resposta grande, sem
+                // retorno até terminar tudo), divide em pedaços de até QZ_CHUNK_SIZE e dispara todos
+                // em paralelo, cada um em streaming — o total de tokens gerados é o mesmo, mas o
+                // tempo de espera cai porque as chamadas rodam ao mesmo tempo, não uma atrás da outra.
+                const chunkSizes = splitIntoChunks(deficit, QZ_CHUNK_SIZE);
+                const progress = new Array(chunkSizes.length).fill(0);
+                const updateProgress = () => {
+                    const total = progress.reduce((a, b) => a + b, 0);
+                    setQzGenerationStatus(`<i class="fas fa-spinner fa-spin"></i> Gerando ${deficit} questão(ões) nova(s) com IA para "${escHtml(topico)}"... (${total} caracteres recebidos)`, '');
+                };
+                const existingEnunciados = bucket.questions.slice(-15).map(q => q.enunciado.slice(0, 140));
+                const { concurso, orgao } = getModelInfo();
+
+                const chunkResults = await Promise.all(chunkSizes.map((n, idx) => {
+                    const prompt = buildQuestionsPrompt(materia, topico, n, existingEnunciados, concurso, orgao);
+                    // ~320 tokens/questão (enunciado + 5 alternativas + comentário) é a mesma
+                    // proporção usada antes (6000 tokens para até 20 questões).
+                    const maxTokens = Math.min(10000, Math.max(800, Math.round(320 * n)));
+                    return streamOpenRouterForQuestions(QZ_PROXY_URL, prompt, maxTokens, (len) => { progress[idx] = len; updateProgress(); })
+                        .then(text => ({ ok: true, text }))
+                        .catch(err => ({ ok: false, error: err }));
+                }));
+
+                // Os pedaços rodam em paralelo e não veem as questões um do outro enquanto geram —
+                // então, ao contrário do lote único de antes, dois pedaços podem coincidir num mesmo
+                // subtema. Aceitável: a deduplicação por enunciado abaixo (jaTemos) já existia e
+                // continua pegando repetições exatas; uma sobreposição de "ângulo" ocasional é o
+                // preço aceito pelo ganho de velocidade.
+                let combinedList = [];
+                let firstError = null;
+                chunkResults.forEach(r => {
+                    if (r.ok) {
+                        try {
+                            const parsed = qzExtractJSON(r.text);
+                            const list = Array.isArray(parsed.questoes) ? parsed.questoes : [];
+                            combinedList = combinedList.concat(list);
+                        } catch (e) { if (!firstError) firstError = e; }
+                    } else if (!firstError) {
+                        firstError = r.error;
+                    }
+                });
+
+                combinedList.forEach(q => {
+                    if (!validateGeneratedQuestion(q)) { skipped++; return; }
+                    if (jaTemos.has(normEnunciado(q.enunciado))) { skipped++; return; } // repetiu uma já reaproveitada/de outro pedaço
+                    const questao = {
+                        id: qzUid(),
+                        enunciado: q.enunciado.trim(),
+                        alternativas: {
+                            A: q.alternativas.A.trim(), B: q.alternativas.B.trim(), C: q.alternativas.C.trim(),
+                            D: q.alternativas.D.trim(), E: q.alternativas.E.trim()
+                        },
+                        correta: q.correta,
+                        comentario: (q.comentario || '').trim(),
+                        origem: q.origem, // sempre 'gerada' (sem busca nesse modo)
+                        fonte: q.fonte,
+                        criadoEm: new Date().toISOString(),
+                        vezesRespondida: 0,
+                        acertos: 0,
+                        ultimaResposta: null
+                    };
+                    bucket.questions.push(questao);
+                    jaTemos.add(normEnunciado(questao.enunciado));
+                    added++;
+                });
+
+                // aiErrorMsg alimenta as duas mensagens finais logo abaixo: se nenhum pedaço deu
+                // certo (added === 0), vira o erro principal; se pelo menos um deu certo, vira só
+                // a nota "(parte da geração falhou: ...)" ao lado do sucesso parcial.
+                if (firstError) {
+                    console.error('Erro ao gerar questões:', firstError);
+                    aiErrorMsg = firstError.message;
                 }
             }
 
@@ -527,7 +622,7 @@ ${existentes}`;
                 const merged = sharedBank.concat(bankShaped).filter((q, i, arr) =>
                     arr.findIndex(x => normEnunciado(x.enunciado) === normEnunciado(q.enunciado)) === i
                 ).slice(0, QZ_MAX_PER_TOPIC);
-                bankSave(bankKey, merged);
+                bankSave(bankKey, merged, materia, topico);
             }
 
             if (added === 0) {

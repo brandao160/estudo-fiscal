@@ -394,7 +394,10 @@
                     </div>
                     <label class="switch"><input type="checkbox" id="pref-edital-publicado" onchange="updateEditalPublicado(this.checked)"><span class="switch-slider"></span></label>
                 </div>
-                <div class="pace-status warn" id="edital-publicado-tip" style="display:none;"><i class="fas fa-arrow-up"></i> Considere aumentar sua rotina semanal em ~15-20% enquanto durar a reta final até a prova.</div>
+                <div class="pace-status warn" id="edital-publicado-tip" style="display:none; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <span><i class="fas fa-arrow-up"></i> Considere aumentar sua rotina semanal em ~15-20% enquanto durar a reta final até a prova.</span>
+                    <button class="btn btn-secondary" style="padding:4px 10px; font-size:0.78rem;" onclick="aplicarAumentoRitmoEdital()">Aplicar aumento de ritmo (+15-20%)</button>
+                </div>
 
                 <div class="pref-row">
                     <div class="pref-row-body">
@@ -682,7 +685,8 @@
             renderRoutine();
             renderPace();
             renderWeeklyPriorities();
-            showToast('Rotina salva — o Ciclo de Estudo vai usar esses horários ao gerar a agenda.', 'success');
+            const adjustedCycle = regenerateFutureSchedule();
+            showToast(adjustedCycle ? 'Rotina salva — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Rotina salva — o Ciclo de Estudo vai usar esses horários ao gerar a agenda.', 'success');
         }
 
         function renderRoutine() {
@@ -707,6 +711,25 @@
             showToast(checked ? 'Marcado — considere apertar o ritmo.' : 'Preferência atualizada.', 'success');
         }
 
+        /**
+         * Botão "Aplicar aumento de ritmo" (Edital já publicado): aumenta a rotina semanal em
+         * ~17,5% (meio da faixa sugerida de 15-20%), só nos dias que já têm hora configurada (não
+         * força estudo em dia de descanso), arredondado pra 0.5h e com teto de 12h/dia. Ajuste
+         * manual e explícito — rotina semanal também depende da vida do usuário fora do app, não é
+         * algo pra mudar sozinho só porque o edital saiu.
+         */
+        function aplicarAumentoRitmoEdital() {
+            if (!sharedModel) return;
+            const slots = getRoutineSlots();
+            const bumped = slots.map(h => h > 0 ? Math.min(12, Math.round(h * 1.175 * 2) / 2) : 0);
+            saveRoutineSlots(bumped);
+            renderRoutine();
+            renderPace();
+            renderWeeklyPriorities();
+            const adjustedCycle = regenerateFutureSchedule();
+            showToast(adjustedCycle ? 'Rotina aumentada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Rotina semanal aumentada em ~17,5%.', 'success');
+        }
+
         function updateTemDiscursiva(checked) {
             if (!sharedModel) return;
             sharedModel.temDiscursiva = checked;
@@ -715,7 +738,8 @@
             document.getElementById('discursiva-hours-row').style.display = checked ? 'flex' : 'none';
             renderPace();
             renderWeeklyPriorities();
-            showToast('Preferência atualizada.', 'success');
+            const adjustedCycle = regenerateFutureSchedule();
+            showToast(adjustedCycle ? 'Preferência atualizada — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Preferência atualizada.', 'success');
         }
 
         function updateDiscursivaHoras(value) {
@@ -724,7 +748,8 @@
             localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(sharedModel));
             renderPace();
             renderWeeklyPriorities();
-            showToast('Horas de discursiva salvas.', 'success');
+            const adjustedCycle = regenerateFutureSchedule();
+            showToast(adjustedCycle ? 'Horas de discursiva salvas — o Ciclo de Estudo foi reajustado a partir de hoje.' : 'Horas de discursiva salvas.', 'success');
         }
 
         function updateRolloverPref(checked) {
@@ -799,11 +824,17 @@
             return Math.round((qCorrect / qTotal) * 100);
         }
 
-        /** Mesma fórmula do Ciclo de Estudo (peso do edital × dificuldade pessoal, reduzido em modo revisão). */
+        /**
+         * Mesma fórmula do Ciclo de Estudo (peso do edital × dificuldade pessoal, reduzido em modo
+         * revisão) — copiada aqui porque esta página não carrega core.js. A dificuldade é um
+         * multiplicador BRANDO (±30% na faixa 1-5): quem impede uma matéria de dominar a semana de
+         * verdade é o teto em `computeWeeklyBlocks`, não este multiplicador.
+         */
         function effectiveWeight(s) {
             const raw = Math.max(1, Math.round(s.weight || 0));
             const dificuldade = Number(s.dificuldade) || 3;
-            let w = Math.max(1, Math.round(raw * (dificuldade / 3)));
+            const dificuldadeMult = 1 + (dificuldade - 3) * 0.15; // 1..5 -> 0.7x..1.3x
+            let w = Math.max(1, Math.round(raw * dificuldadeMult));
             const syl = subjectSyllabusInfo(s.name);
             if (syl.total > 0 && (syl.done / syl.total) >= 0.9) w = Math.max(1, Math.ceil(w / 2));
             return w;
@@ -824,11 +855,156 @@
         }
 
         /**
+         * Distribui `weeklyHours` blocos entre `subjects` proporcionalmente ao `effectiveWeight`
+         * de cada um, com teto de ~25% da semana por matéria (excedente redistribuído entre as
+         * demais) — mesma lógica de `computeWeeklyBlocks` em core.js, copiada aqui pelo mesmo
+         * motivo. Ver comentário lá para a explicação completa do algoritmo.
+         */
+        function computeWeeklyBlocks(subjects, weeklyHours) {
+            const WEEKLY_SHARE_CAP = 0.25;
+            const active = subjects.filter(s => Math.round(s.weight || 0) > 0);
+            const result = {};
+            if (!active.length || weeklyHours <= 0) return result;
+
+            const scores = {};
+            active.forEach(s => { scores[s.name] = effectiveWeight(s); });
+
+            const capBlocks = Math.max(1, Math.ceil(weeklyHours * WEEKLY_SHARE_CAP));
+            let pool = active.slice();
+            let poolHours = weeklyHours;
+
+            for (;;) {
+                if (pool.length <= 1) break;
+                const totalScore = pool.reduce((a, s) => a + scores[s.name], 0);
+                if (totalScore <= 0) break;
+                let overCap = null;
+                pool.forEach(s => {
+                    const share = (scores[s.name] / totalScore) * poolHours;
+                    if (share > capBlocks + 1e-9 && (!overCap || scores[s.name] > scores[overCap.name])) overCap = s;
+                });
+                if (!overCap) break;
+                result[overCap.name] = capBlocks;
+                poolHours -= capBlocks;
+                pool = pool.filter(s => s !== overCap);
+            }
+
+            const totalScore = pool.reduce((a, s) => a + scores[s.name], 0);
+            const fracs = [];
+            let used = 0;
+            pool.forEach(s => {
+                const real = totalScore > 0 ? (scores[s.name] / totalScore) * poolHours : poolHours / pool.length;
+                const base = Math.max(0, Math.floor(real));
+                result[s.name] = base;
+                used += base;
+                fracs.push({ name: s.name, frac: real - base });
+            });
+            let remainder = Math.round(poolHours) - used;
+            fracs.sort((a, b) => b.frac - a.frac);
+            for (let i = 0; i < fracs.length && remainder > 0; i++, remainder--) result[fracs[i].name]++;
+
+            if (weeklyHours >= active.length) {
+                active.forEach(s => {
+                    if (result[s.name] > 0) return;
+                    const donor = active.reduce((best, x) => ((result[x.name] || 0) > (result[best.name] || 0) ? x : best), active[0]);
+                    if ((result[donor.name] || 0) > 1) {
+                        result[donor.name]--;
+                        result[s.name] = 1;
+                    }
+                });
+            }
+
+            return result;
+        }
+
+        /**
+         * Espalha `totalBlocks` blocos de discursiva pelos dias da semana com hora disponível
+         * (`weekHoursByDay`), 1 por dia por rodada — mesma lógica de `distribuirDiscursivaPelaSemana`
+         * em core.js, copiada aqui pelo mesmo motivo (esta página não carrega core.js).
+         */
+        function distribuirDiscursivaPelaSemana(weekHoursByDay, totalBlocks) {
+            const perDay = weekHoursByDay.map(() => 0);
+            if (totalBlocks <= 0) return perDay;
+            const activeIdxs = weekHoursByDay.map((h, i) => i).filter(i => weekHoursByDay[i] > 0);
+            if (!activeIdxs.length) return perDay;
+            let remaining = totalBlocks;
+            let round = 0;
+            while (remaining > 0) {
+                let placedThisRound = false;
+                for (let k = 0; k < activeIdxs.length && remaining > 0; k++) {
+                    const idx = activeIdxs[(k + round) % activeIdxs.length];
+                    if (perDay[idx] < weekHoursByDay[idx]) {
+                        perDay[idx]++;
+                        remaining--;
+                        placedThisRound = true;
+                    }
+                }
+                round++;
+                if (!placedThisRound) break;
+            }
+            return perDay;
+        }
+
+        /**
+         * Monta os dias de UMA janela de até 7 dias corridos (`weekDates`), recalculando a cota
+         * semanal (peso/dificuldade/carga atuais, com teto de ~25%/matéria) e reservando primeiro
+         * os blocos de discursiva (espalhados pelos dias) — mesmo algoritmo de `generateSchedule`
+         * em core.js, copiado aqui pelo mesmo motivo (esta página não carrega core.js). Retorna
+         * `[{date, tasks}]`.
+         */
+        function buildWeeklyScheduleDays(weekDates, slots, discursivaHoras) {
+            const weekHoursByDay = weekDates.map(d => slots[(d.getDay() + 6) % 7] || 0);
+            const totalHoursThisWeek = weekHoursByDay.reduce((a, b) => a + b, 0);
+            const discursivaTotal = discursivaHoras > 0 ? Math.min(Math.round(discursivaHoras), totalHoursThisWeek) : 0;
+            const discursivaPerDay = distribuirDiscursivaPelaSemana(weekHoursByDay, discursivaTotal);
+            const regularHoursByDay = weekHoursByDay.map((h, i) => Math.max(0, h - (discursivaPerDay[i] || 0)));
+            const regularHoursThisWeek = regularHoursByDay.reduce((a, b) => a + b, 0);
+
+            const active = subjectsConfig.filter(s => Math.round(s.weight || 0) > 0);
+            const weekCounts = computeWeeklyBlocks(active, regularHoursThisWeek);
+            let weekCycle = [];
+            let lastSub = null, lastCarga = null;
+            for (let i = 0; i < regularHoursThisWeek; i++) {
+                let candidates = active.filter(s => weekCounts[s.name] > 0);
+                if (!candidates.length) break;
+                let valid = candidates.filter(s => s.name !== lastSub);
+                if (!valid.length) valid = candidates;
+                valid.sort((a, b) => weekCounts[b.name] - weekCounts[a.name]);
+                const pick = pickAlternatingCarga(valid, lastCarga, s => weekCounts[s.name]);
+                weekCycle.push(pick);
+                weekCounts[pick.name]--;
+                lastSub = pick.name;
+                lastCarga = pick.carga || lastCarga;
+            }
+
+            let weekCycleIdx = 0;
+            return weekDates.map((date, i) => {
+                const tasks = [];
+                for (let h = 0; h < (discursivaPerDay[i] || 0); h++) {
+                    tasks.push({
+                        id: `task-${date.getTime()}-d${h}-r${Date.now()}`,
+                        subject: 'Redação/Discursiva', type: 'Discursiva', weight: 0, completed: false
+                    });
+                }
+                for (let h = 0; h < regularHoursByDay[i]; h++) {
+                    const sub = weekCycle[weekCycleIdx % Math.max(1, weekCycle.length)];
+                    weekCycleIdx++;
+                    if (!sub) continue;
+                    tasks.push({
+                        id: `task-${date.getTime()}-${h}-r${Date.now()}`,
+                        subject: sub.name, type: sub.type, weight: sub.weight, completed: false
+                    });
+                }
+                return { date, tasks };
+            });
+        }
+
+        /**
          * Reconstrói o calendário do "Ciclo de Estudo" a partir de HOJE (inclusive) em diante,
-         * usando peso/dificuldade/carga atuais — dias passados ficam intocados (histórico e
-         * progresso já registrados nunca são mexidos). Chamada sempre que o usuário ajusta Peso,
-         * Dificuldade ou Carga aqui, pra esses ajustes realmente valerem no ciclo automático
-         * (sem isso, um cronograma já gerado nunca via essas mudanças de novo).
+         * usando peso/dificuldade/carga/discursiva atuais, recalculados em janelas de 7 dias
+         * corridos — dias passados ficam intocados (histórico e progresso já registrados nunca são
+         * mexidos). Chamada sempre que o usuário ajusta Peso, Dificuldade, Carga ou as horas de
+         * discursiva aqui, pra esses ajustes realmente valerem no ciclo automático (sem isso, um
+         * cronograma já gerado nunca via essas mudanças de novo).
          */
         function regenerateFutureSchedule() {
             if (!sharedModel) return false;
@@ -839,55 +1015,30 @@
             if (!Array.isArray(schedule) || !schedule.length) return false;
 
             const today = new Date(); today.setHours(0, 0, 0, 0);
-
-            // Conta quantos blocos já foram consumidos em dias passados, pra continuar a
-            // sequência do ciclo mestre a partir do mesmo ponto (não reinicia do zero).
-            let consumedBlocks = 0;
-            schedule.forEach(day => {
-                const d = new Date(day.date); d.setHours(0, 0, 0, 0);
-                if (d.getTime() < today.getTime()) consumedBlocks += (day.tasks || []).length;
-            });
-
-            // Reconstrói o ciclo mestre com peso/dificuldade/carga atuais (mesmo algoritmo do core.js).
-            const counts = {};
-            subjectsConfig.forEach(s => {
-                if (Math.round(s.weight || 0) > 0) counts[s.name] = effectiveWeight(s);
-            });
-            const totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
-            let masterCycle = [];
-            let lastSub = null, lastCarga = null;
-            for (let i = 0; i < totalBlocks; i++) {
-                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
-                if (!candidates.length) break;
-                let valid = candidates.filter(s => s.name !== lastSub);
-                if (!valid.length) valid = candidates;
-                valid.sort((a, b) => counts[b.name] - counts[a.name]);
-                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
-                masterCycle.push(pick);
-                counts[pick.name]--;
-                lastSub = pick.name;
-                lastCarga = pick.carga || lastCarga;
-            }
-            if (!masterCycle.length) return false;
-
             const slots = getRoutineSlots(); // seg..dom
-            let cycleIndex = consumedBlocks;
+            const discursivaHoras = getDiscursivaHoras();
+
+            const futureDates = schedule
+                .map(day => { const d = new Date(day.date); d.setHours(0, 0, 0, 0); return d; })
+                .filter(d => d.getTime() >= today.getTime())
+                .sort((a, b) => a - b);
+            if (!futureDates.length) return false;
+
+            const newDaysByTime = {};
+            for (let i = 0; i < futureDates.length; i += 7) {
+                const weekDates = futureDates.slice(i, i + 7);
+                buildWeeklyScheduleDays(weekDates, slots, discursivaHoras).forEach(d => {
+                    newDaysByTime[d.date.getTime()] = d;
+                });
+            }
+
             let touchedDays = 0;
             schedule.forEach(day => {
                 const d = new Date(day.date); d.setHours(0, 0, 0, 0);
                 if (d.getTime() < today.getTime()) return; // preserva o passado
-                const dayIdxMonFirst = (d.getDay() + 6) % 7;
-                const hours = slots[dayIdxMonFirst] || 0;
-                const newTasks = [];
-                for (let h = 0; h < hours; h++) {
-                    const sub = masterCycle[cycleIndex % masterCycle.length];
-                    newTasks.push({
-                        id: `task-${d.getTime()}-${h}-r${Date.now()}`,
-                        subject: sub.name, type: sub.type, weight: sub.weight, completed: false
-                    });
-                    cycleIndex++;
-                }
-                day.tasks = newTasks;
+                const replacement = newDaysByTime[d.getTime()];
+                if (!replacement) return;
+                day.tasks = replacement.tasks;
                 touchedDays++;
             });
 
@@ -897,9 +1048,9 @@
 
         /**
          * Gera o Ciclo de Estudo do zero (mesmo botão/ação de "Início"), usando o peso/dificuldade/
-         * carga/rotina atuais — pra o usuário poder ajustar tudo aqui em Planejamento e já gerar,
-         * sem precisar voltar pra Início. Substitui qualquer ciclo já gerado (mesmo comportamento
-         * do botão "Gerar Ciclo" de Início: começa do zero a partir de "Início do Ciclo").
+         * carga/rotina/discursiva atuais — pra o usuário poder ajustar tudo aqui em Planejamento e
+         * já gerar, sem precisar voltar pra Início. Substitui qualquer ciclo já gerado (mesmo
+         * comportamento do botão "Gerar Ciclo" de Início: começa do zero a partir de "Início do Ciclo").
          */
         function generateCycleFromPlanejamento() {
             if (!sharedModel) {
@@ -910,46 +1061,23 @@
                 showToast('Cadastre suas matérias antes de gerar o ciclo.', 'warning');
                 return;
             }
-
-            const counts = {};
-            subjectsConfig.forEach(s => { if (Math.round(s.weight || 0) > 0) counts[s.name] = effectiveWeight(s); });
-            const totalBlocks = Object.values(counts).reduce((a, b) => a + b, 0);
-            if (!totalBlocks) {
+            const active = subjectsConfig.filter(s => Math.round(s.weight || 0) > 0);
+            if (!active.length) {
                 showToast('Nenhuma matéria com peso ativo pra gerar o ciclo.', 'warning');
                 return;
             }
 
-            let masterCycle = [];
-            let lastSub = null, lastCarga = null;
-            for (let i = 0; i < totalBlocks; i++) {
-                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
-                if (!candidates.length) break;
-                let valid = candidates.filter(s => s.name !== lastSub);
-                if (!valid.length) valid = candidates;
-                valid.sort((a, b) => counts[b.name] - counts[a.name]);
-                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
-                masterCycle.push(pick);
-                counts[pick.name]--;
-                lastSub = pick.name;
-                lastCarga = pick.carga || lastCarga;
-            }
-            if (!masterCycle.length) return;
-
             const slots = getRoutineSlots();
+            const discursivaHoras = getDiscursivaHoras();
             const schedule = [];
-            let cycleIndex = 0;
             let cur = new Date(startDate);
             while (cur <= endDate) {
-                const dayIdxMonFirst = (cur.getDay() + 6) % 7;
-                const hours = slots[dayIdxMonFirst] || 0;
-                const tasks = [];
-                for (let h = 0; h < hours; h++) {
-                    const sub = masterCycle[cycleIndex % masterCycle.length];
-                    tasks.push({ id: `task-${cur.getTime()}-${h}`, subject: sub.name, type: sub.type, weight: sub.weight, completed: false });
-                    cycleIndex++;
+                const weekDates = [];
+                for (let i = 0; i < 7 && cur <= endDate; i++) {
+                    weekDates.push(new Date(cur));
+                    cur.setDate(cur.getDate() + 1);
                 }
-                schedule.push({ date: new Date(cur), tasks });
-                cur.setDate(cur.getDate() + 1);
+                schedule.push(...buildWeeklyScheduleDays(weekDates, slots, discursivaHoras));
             }
 
             localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));

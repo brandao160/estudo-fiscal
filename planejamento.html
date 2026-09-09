@@ -1073,8 +1073,16 @@
                 showToast('Nenhuma matéria com peso ativo pra gerar o ciclo.', 'warning');
                 return;
             }
-
+            if (!(endDate > startDate)) {
+                showToast('A data de fim do ciclo precisa ser depois da data de início — ajuste as datas antes de gerar.', 'error');
+                return;
+            }
             const slots = getRoutineSlots();
+            if (slots.reduce((a, b) => a + b, 0) <= 0) {
+                showToast('A rotina semanal está com 0h em todos os dias — ajuste as horas por dia antes de gerar.', 'error');
+                return;
+            }
+
             const discursivaHoras = getDiscursivaHoras();
             const schedule = [];
             let cur = new Date(startDate);

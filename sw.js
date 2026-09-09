@@ -6,7 +6,7 @@
    CDNs (fontes, ícones, xlsx/pdf.js) e a API local /api/* não passam por aqui.
    ========================================================== */
 
-const CACHE_NAME = 'ciclo-estudo-v1';
+const CACHE_NAME = 'ciclo-estudo-v2';
 const PRECACHE_URLS = [
     'index.html', 'cicloestudo.html', 'cicloestudolivre.html', 'materias.html',
     'planejamento.html', 'resumo.html', 'listacompleta.html', 'conteudoprogramatico.html',
@@ -43,8 +43,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(req)
             .then((res) => {
-                const copy = res.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+                // Só grava no cache respostas de verdade bem-sucedidas — uma resposta de erro
+                // (404/500, ex.: durante a janela de um deploy) nunca deve "grudar" no cache e passar
+                // a ser servida pra sempre no lugar do arquivo real assim que ele voltar a existir.
+                if (res.ok) {
+                    const copy = res.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+                }
                 return res;
             })
             .catch(() => caches.match(req).then((cached) => cached || caches.match('index.html')))

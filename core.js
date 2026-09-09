@@ -92,6 +92,19 @@
          * Se uma página nova guardar algo por perfil, adicionar a chave em profile-keys.js.
          */
         function getProfileDataKeys() {
+            // Fallback defensivo: se profile-keys.js não tiver carregado por algum motivo (falha de
+            // rede, cache), não deixa Salvar/Carregar Progresso quebrar por completo — usa uma cópia
+            // fixa da mesma lista em vez de travar com "PROFILE_DATA_KEYS is not defined".
+            if (typeof PROFILE_DATA_KEYS === 'undefined') {
+                return [
+                    'estudoFiscalData', 'estudoFiscalSyllabus', 'estudoFiscalStudyHistory',
+                    'estudoFiscalScheduleStructure', 'estudoFiscalModel', 'estudoFiscalReviews',
+                    'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
+                    'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
+                    'estudoFiscalActiveSession', 'ciclo_cards_v3',
+                    'estudoFiscalQuestoes', 'estudoFiscalCycleDirty'
+                ];
+            }
             return PROFILE_DATA_KEYS;
         }
 
@@ -667,6 +680,11 @@
                 // É best-effort: se sobrar só matéria conflitante pra fechar a carga do dia, usa
                 // mesmo assim (nunca deixa hora vazia). Reabastece a fila (cíclico) se ela esvaziar
                 // antes do fim da semana, igual o wraparound por módulo que existia aqui antes.
+                // Chama subjectConflictsToday/normalizeSubjectName (profile-keys.js) de forma
+                // defensiva (typeof) — se esse arquivo não tiver carregado por algum motivo (falha
+                // de rede, cache), o ciclo ainda tem que ser gerado; só perde a checagem de conflito.
+                const hasConflictCheck = typeof subjectConflictsToday === 'function';
+                const safeNormalizeName = typeof normalizeSubjectName === 'function' ? normalizeSubjectName : (n => String(n || '').trim().toLowerCase());
                 let weekCyclePool = weekCycle.slice();
                 weekDates.forEach((date, i) => {
                     const dayTasks = [];
@@ -680,10 +698,10 @@
                     for (let h = 0; h < regularHoursByDay[i]; h++) {
                         if (!weekCyclePool.length) weekCyclePool = weekCycle.slice();
                         if (!weekCyclePool.length) break;
-                        let idx = weekCyclePool.findIndex(s => !subjectConflictsToday(s.name, daySubjectsNorm));
+                        let idx = hasConflictCheck ? weekCyclePool.findIndex(s => !subjectConflictsToday(s.name, daySubjectsNorm)) : 0;
                         if (idx === -1) idx = 0;
                         const sub = weekCyclePool.splice(idx, 1)[0];
-                        daySubjectsNorm.add(normalizeSubjectName(sub.name));
+                        daySubjectsNorm.add(safeNormalizeName(sub.name));
                         dayTasks.push({
                             id: `task-${date.getTime()}-${h}`,
                             subject: sub.name, type: sub.type, weight: sub.weight, completed: false

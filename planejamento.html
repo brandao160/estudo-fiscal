@@ -553,7 +553,16 @@
             const pid = activeProfileId();
             if (pid === 'default') { showToast('O perfil "Principal" não pode ser excluído.', 'warning'); return; }
             if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil serão apagados.`)) return;
-            PROFILE_DATA_KEYS.forEach(base => localStorage.removeItem(base + '__' + pid));
+            // Fallback defensivo: profile-keys.js pode não ter carregado (falha de rede/cache).
+            const keys = typeof PROFILE_DATA_KEYS !== 'undefined' ? PROFILE_DATA_KEYS : [
+                'estudoFiscalData', 'estudoFiscalSyllabus', 'estudoFiscalStudyHistory',
+                'estudoFiscalScheduleStructure', 'estudoFiscalModel', 'estudoFiscalReviews',
+                'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
+                'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
+                'estudoFiscalActiveSession', 'ciclo_cards_v3',
+                'estudoFiscalQuestoes', 'estudoFiscalCycleDirty'
+            ];
+            keys.forEach(base => localStorage.removeItem(base + '__' + pid));
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
             switchProfile('default');
@@ -983,7 +992,12 @@
 
             // Mesma lógica de preenchimento por dia com conflito de matérias de core.js
             // (SUBJECT_CONFLICT_GROUPS, profile-keys.js), copiada aqui pelo mesmo motivo (esta
-            // página não carrega core.js).
+            // página não carrega core.js). Chama subjectConflictsToday/normalizeSubjectName de
+            // forma defensiva (typeof) — se profile-keys.js não tiver carregado por algum motivo
+            // (falha de rede, cache), o Ciclo de Estudo ainda tem que ser gerado; só perde a
+            // checagem de matérias conflitantes no mesmo dia, em vez de travar tudo com um erro.
+            const hasConflictCheck = typeof subjectConflictsToday === 'function';
+            const safeNormalizeName = typeof normalizeSubjectName === 'function' ? normalizeSubjectName : (n => String(n || '').trim().toLowerCase());
             let weekCyclePool = weekCycle.slice();
             return weekDates.map((date, i) => {
                 const tasks = [];
@@ -997,10 +1011,10 @@
                 for (let h = 0; h < regularHoursByDay[i]; h++) {
                     if (!weekCyclePool.length) weekCyclePool = weekCycle.slice();
                     if (!weekCyclePool.length) break;
-                    let idx = weekCyclePool.findIndex(s => !subjectConflictsToday(s.name, daySubjectsNorm));
+                    let idx = hasConflictCheck ? weekCyclePool.findIndex(s => !subjectConflictsToday(s.name, daySubjectsNorm)) : 0;
                     if (idx === -1) idx = 0;
                     const sub = weekCyclePool.splice(idx, 1)[0];
-                    daySubjectsNorm.add(normalizeSubjectName(sub.name));
+                    daySubjectsNorm.add(safeNormalizeName(sub.name));
                     tasks.push({
                         id: `task-${date.getTime()}-${h}-r${Date.now()}`,
                         subject: sub.name, type: sub.type, weight: sub.weight, completed: false

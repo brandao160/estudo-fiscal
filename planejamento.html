@@ -481,6 +481,7 @@
         </div>
     </div>
 
+    <script src="profile-keys.js"></script>
     <script>
         /* --- TOAST LOGIC (igual ao Ciclo de Estudo) --- */
         function showToast(message, type = 'info') {
@@ -551,8 +552,7 @@
             const pid = activeProfileId();
             if (pid === 'default') { showToast('O perfil "Principal" não pode ser excluído.', 'warning'); return; }
             if (!confirm(`Excluir o perfil "${getActiveProfileName()}"? Todos os dados desse perfil serão apagados.`)) return;
-            ['estudoFiscalData','estudoFiscalSyllabus','estudoFiscalStudyHistory','estudoFiscalScheduleStructure','estudoFiscalModel','estudoFiscalReviews','estudoFiscalPlanPhases','estudoFiscalWeeklyHours','estudoFiscalRolloverMissed','estudoFiscalRolloverLastRun','estudoFiscalActiveSession','ciclo_cards_v3','estudoFiscalQuestoes']
-                .forEach(base => localStorage.removeItem(base + '__' + pid));
+            PROFILE_DATA_KEYS.forEach(base => localStorage.removeItem(base + '__' + pid));
             const custom = JSON.parse(localStorage.getItem(PROFILE_REGISTRY_KEY) || '[]').filter(p => p.id !== pid);
             localStorage.setItem(PROFILE_REGISTRY_KEY, JSON.stringify(custom));
             switchProfile('default');

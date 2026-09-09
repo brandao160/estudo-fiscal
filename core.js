@@ -87,17 +87,12 @@
          * Lista completa das chaves de dados "por perfil" usadas em qualquer página do app
          * (não só as que a própria página atual usa) — fonte única de verdade tanto pra limpar
          * um perfil excluído quanto pra montar/restaurar um backup completo (ver saveSelfContainedHTML
-         * em index.html). Se uma página nova guardar algo por perfil, adicionar a chave aqui também.
+         * em index.html). Vem de profile-keys.js (carregado antes de core.js em toda página) —
+         * é a MESMA lista usada por resumo.html/planejamento.html, que não carregam core.js.
+         * Se uma página nova guardar algo por perfil, adicionar a chave em profile-keys.js.
          */
         function getProfileDataKeys() {
-            return [
-                'estudoFiscalData', 'estudoFiscalSyllabus', 'estudoFiscalStudyHistory',
-                'estudoFiscalScheduleStructure', 'estudoFiscalModel', 'estudoFiscalReviews',
-                'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
-                'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
-                'estudoFiscalActiveSession', 'ciclo_cards_v3',
-                'estudoFiscalQuestoes'
-            ];
+            return PROFILE_DATA_KEYS;
         }
 
         /**

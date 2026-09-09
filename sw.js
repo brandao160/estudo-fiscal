@@ -11,7 +11,7 @@ const PRECACHE_URLS = [
     'index.html', 'cicloestudo.html', 'cicloestudolivre.html', 'materias.html',
     'planejamento.html', 'resumo.html', 'listacompleta.html', 'conteudoprogramatico.html',
     'questoes.html', 'tempoestudo.html', 'historico.html', 'core.css', 'core.js',
-    'manifest.json', 'icon.svg'
+    'profile-keys.js', 'manifest.json', 'icon.svg'
 ];
 
 self.addEventListener('install', (event) => {

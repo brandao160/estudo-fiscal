@@ -660,7 +660,7 @@
             { label: 'Dom', slotIdx: 6 }, { label: 'Seg', slotIdx: 0 }, { label: 'Ter', slotIdx: 1 },
             { label: 'Qua', slotIdx: 2 }, { label: 'Qui', slotIdx: 3 }, { label: 'Sex', slotIdx: 4 }, { label: 'Sáb', slotIdx: 5 },
         ];
-        const DEFAULT_SLOTS = [5, 5, 5, 5, 5, 8, 8]; // seg..dom, mesmo default do Ciclo de Estudo
+        const DEFAULT_SLOTS = [4, 4, 4, 4, 4, 5, 5]; // seg..dom: seg-sex 4h, sáb-dom 5h — mesmo default do Ciclo de Estudo
 
         function getRoutineSlots() {
             if (sharedModel && Array.isArray(sharedModel.slotsPorDia) && sharedModel.slotsPorDia.length === 7) {

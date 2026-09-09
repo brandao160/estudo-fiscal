@@ -367,7 +367,7 @@
         ];
 
         // Config padrão: matérias por dia (Seg..Dom)
-        let slotsPorDia = [5,5,5,5,5,8,8];
+        let slotsPorDia = [4,4,4,4,4,5,5]; // seg..dom: seg-sex 4h, sáb-dom 5h
 
 
         // ── model loader (index.html L2110-L2218) ──

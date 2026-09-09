@@ -1150,6 +1150,31 @@ ${editalText}
 """`;
         }
 
+        // Lista de REFERÊNCIA (não fechada) de matérias comuns em concursos públicos brasileiros,
+        // por área — dada à IA como âncora de reconhecimento, não como restrição. Adicionada porque
+        // a extração vinha falhando com frequência em editais mal formatados/com texto bagunçado
+        // pelo pdf.js (palavras coladas, quebras de linha estranhas): sem uma referência de nomes
+        // usuais, o modelo às vezes não reconhecia uma matéria mesmo com o conteúdo ali na frente,
+        // ou nomeava de um jeito inconsistente entre execuções. Cobre os concursos mais comuns
+        // (fiscal/SEFAZ, policial, judiciário, legislativo) por pedido explícito do usuário — pode
+        // crescer conforme surgirem outros tipos de concurso.
+        const MATERIA_REFERENCE_HINT = `LISTA DE REFERÊNCIA — nomes usuais de matérias em concursos públicos brasileiros (NÃO é uma lista fechada nem obrigatória: extraia só as matérias que realmente aparecem no edital; use esta lista apenas pra reconhecer/normalizar o nome quando o texto do edital usar abreviação, sigla ou grafia diferente de uma matéria conhecida — ex.: "Port." ou "Comunicação e Expressão" → "Língua Portuguesa"; "RLM" → "Raciocínio Lógico-Matemático"):
+
+Conhecimentos Básicos/Gerais (comuns à maioria dos concursos):
+Língua Portuguesa (também "Português", "Comunicação e Expressão", "Redação Oficial"); Raciocínio Lógico-Matemático (também "Raciocínio Lógico", "Matemática", "RLM"); Informática / Noções de Informática; Direito Constitucional; Direito Administrativo; Ética no Serviço Público / Ética e Cidadania; Atualidades / Conhecimentos Gerais; Legislação Institucional (regimento interno, lei orgânica do órgão).
+
+Fiscal / Tributário / Auditoria (SEFAZ estadual, Receita Federal, Auditor Fiscal, Analista Tributário):
+Direito Tributário; Legislação Tributária (Estadual, Municipal ou Federal, conforme o órgão); Contabilidade Geral; Contabilidade de Custos; Contabilidade Pública; Auditoria (Contábil, Governamental, Fiscal, de Sistemas); Direito Empresarial / Comercial; Direito Civil; Direito Penal (crimes contra a ordem tributária); Economia / Economia do Setor Público; Administração Financeira e Orçamentária (AFO); Administração Pública / Administração Geral; Estatística; Tecnologia da Informação.
+
+Policial (Polícia Civil, Federal, Rodoviária Federal, Militar):
+Direito Penal; Direito Processual Penal; Criminologia; Legislação Penal Especial (drogas, armas, ECA, violência doméstica, etc.); Medicina Legal; Direitos Humanos; Direito Constitucional (foco em segurança pública); Investigação Criminal / Ciências Forenses (conforme o cargo).
+
+Judiciário (Tribunais — TJ, TRF, TRT, TST, STJ, STF, Ministério Público):
+Direito Civil; Direito Processual Civil; Direito Constitucional; Direito Administrativo; Direito do Trabalho e Processual do Trabalho (tribunais trabalhistas); Direito Penal e Processual Penal (varas/tribunais criminais); Regimento Interno do Tribunal; Direito Eleitoral (Justiça Eleitoral/TRE).
+
+Legislativo (Câmara dos Deputados, Senado, Assembleias Legislativas, Câmaras Municipais):
+Direito Constitucional; Direito Administrativo; Processo Legislativo / Técnica Legislativa; Regimento Interno da Casa Legislativa; Direito Financeiro e Orçamentário; Ciência Política.`;
+
         /** Monta o prompt de extração estruturada do edital. Se `cargo` for informado, restringe a
          *  extração ao conteúdo básico comum + o específico só daquele cargo (edital com vários cargos). */
         function buildEditalPrompt(editalText, cargo) {
@@ -1158,10 +1183,14 @@ ${editalText}
                 : '';
             return `Você vai ler o conteúdo programático de um edital de concurso público brasileiro e extrair uma estrutura de dados em JSON para um app de ciclo de estudos.
 ${cargoInstrucao}
+${MATERIA_REFERENCE_HINT}
+
 Regras:
 - Separe as matérias em "Basico" (conhecimentos básicos/gerais) e "Especifico" (conhecimentos específicos do cargo).
 - Para cada matéria, sugira um "peso" de 1 a 3 baseado na quantidade e complexidade dos tópicos e na importância típica para o cargo (3 = matéria extensa/central, 1 = matéria curta/secundária).
 - Extraia os tópicos de cada matéria como uma lista de strings, exatamente como aparecem no edital (pode resumir levemente se estiverem muito longos, mas mantenha o conteúdo).
+- O texto extraído do PDF pode vir bagunçado (palavras coladas, quebras de linha em lugares estranhos, sem formatação clara de lista) — isso é esperado. NÃO desista de encontrar as matérias por causa disso: procure ativamente por nomes de matérias (usando a lista de referência acima como apoio) e por blocos de texto que pareçam ser tópicos de estudo, mesmo que estejam em parágrafos corridos em vez de listas numeradas.
+- Só retorne a lista de matérias vazia se o texto fornecido genuinamente não contiver nenhum conteúdo programático (ex.: só regras de inscrição, sem menção a nenhuma matéria de estudo) — não retorne vazio só porque a formatação está difícil de interpretar.
 - Se não conseguir identificar concurso/órgão, deixe como string vazia.
 - Responda APENAS com um objeto JSON válido, sem nenhum texto antes ou depois, no formato exato abaixo:
 
@@ -1235,6 +1264,50 @@ ${editalText}
         // desejado mais pra frente no texto.
         const EDITAL_AI_MAX_CHARS = 120000;
 
+        // Marca o início do bloco de "Conteúdo Programático" de verdade. Achado real, importante:
+        // cortar simplesmente os primeiros EDITAL_AI_MAX_CHARS caracteres (como era antes) MUITO
+        // frequentemente cortava exatamente a parte que interessa — editais reais costumam ter
+        // dezenas de páginas de regras de inscrição/recursos ANTES do anexo com o conteúdo
+        // programático, que fica perto do fim do documento. Resultado: a IA recebia só regras
+        // administrativas e reportava "PDF muito extenso" / nenhuma matéria encontrada, mesmo com o
+        // conteúdo estando lá, só que fora da janela enviada.
+        const SYLLABUS_MARKER_RE = /conte[uú]do\s+program[aá]tico/gi;
+
+        /** Em vez de cortar do início, localiza onde o conteúdo programático de verdade começa e
+         *  recorta a janela de caracteres em torno dali. Trata o caso de editais com o termo repetido
+         *  várias vezes: menções cedo no texto costumam ser só referências procedurais em regras de
+         *  inscrição ("...conforme consta do Anexo..."); o anexo de verdade quase sempre está nos
+         *  últimos ~50% do documento — por isso filtra por aí e pega a PRIMEIRA ocorrência dentro
+         *  dessa metade final (não a última): editais com vários cargos costumam repetir o termo uma
+         *  vez por cargo dentro do próprio anexo, e pegar a última pularia direto pro último cargo,
+         *  perdendo os básicos e os cargos anteriores — inclusive o que o usuário pode escolher depois. */
+        function truncateEditalText(fullText, maxChars) {
+            if (fullText.length <= maxChars) return { text: fullText, truncated: false, foundMarker: true };
+
+            const indices = [];
+            SYLLABUS_MARKER_RE.lastIndex = 0;
+            let m;
+            while ((m = SYLLABUS_MARKER_RE.exec(fullText))) indices.push(m.index);
+
+            if (indices.length === 0) {
+                // Não achou o marcador em lugar nenhum — mantém o comportamento antigo como último
+                // recurso (melhor que nada), mas sinaliza pro usuário que a extração é menos confiável
+                // nesse caso (ver uso de "foundMarker" no chamador).
+                return { text: fullText.slice(0, maxChars), truncated: true, foundMarker: false };
+            }
+
+            const lateThreshold = fullText.length * 0.5;
+            const lateIndices = indices.filter(i => i >= lateThreshold);
+            const anchor = lateIndices.length ? lateIndices[0] : indices[indices.length - 1];
+
+            // Um pouco de contexto ANTES do marcador — comum aparecer logo antes dele um cabeçalho
+            // útil tipo "ANEXO II — CARGO: AUDITOR FISCAL — CONTEÚDO PROGRAMÁTICO".
+            const prefixBuffer = 3000;
+            const start = Math.max(0, anchor - prefixBuffer);
+            const end = Math.min(fullText.length, start + maxChars);
+            return { text: fullText.slice(start, end), truncated: !(start === 0 && end === fullText.length), foundMarker: true };
+        }
+
         function escHtml(s) {
             return String(s == null ? '' : s)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1243,7 +1316,7 @@ ${editalText}
 
         // Guarda o texto já extraído do PDF entre a etapa de detecção de cargo e a extração de
         // verdade, pra não precisar reler o PDF de novo depois que o usuário escolhe o cargo.
-        let editalCargoContext = { editalText: '', truncated: false };
+        let editalCargoContext = { editalText: '', truncated: false, foundMarker: true };
 
         /** Pergunta à IA quais cargos distintos o edital cobre. Em caso de erro, segue sem filtro
          *  (mais seguro tratar como "cargo único" do que travar a importação por causa disso). */
@@ -1297,7 +1370,7 @@ ${editalText}
         /** Chama a IA pra extrair de verdade (matérias + conteúdo programático), já filtrando por
          *  `cargo` quando informado, e aplica o modelo resultante. */
         async function runEditalExtraction(cargo) {
-            const { editalText, truncated } = editalCargoContext;
+            const { editalText, truncated, foundMarker } = editalCargoContext;
             setEditalAIStatus('<i class="fas fa-spinner"></i> A IA está lendo o conteúdo programático (pode levar um tempinho)...', '');
             const aiText = await callProxyForEdital(buildEditalPrompt(editalText, cargo));
 
@@ -1316,7 +1389,11 @@ ${editalText}
                 return;
             }
             const allWarnings = warnings.slice();
-            if (truncated) allWarnings.push('O PDF era muito extenso e foi lido parcialmente (pode faltar conteúdo do final do edital).');
+            if (truncated) {
+                allWarnings.push(foundMarker
+                    ? 'O PDF era muito extenso — localizamos a seção "Conteúdo Programático" e priorizamos o texto ao redor dela, mas ainda pode faltar conteúdo (ex.: um cargo citado bem depois de outro, ou o início/fim do edital).'
+                    : 'O PDF era muito extenso e não encontramos a expressão "Conteúdo Programático" no texto extraído, então lemos só o começo do documento — se as matérias não aparecerem corretamente, é provável que o conteúdo esteja mais pra frente no PDF, fora da parte lida.');
+            }
             if (allWarnings.length > 0) {
                 const proceed = confirm('Avisos sobre a extração da IA:\n\n' + allWarnings.join('\n') + '\n\nAplicar mesmo assim?');
                 if (!proceed) { setEditalAIStatus('Importação cancelada.', ''); return; }
@@ -1340,13 +1417,19 @@ ${editalText}
 
             try {
                 setEditalAIStatus('<i class="fas fa-spinner"></i> Lendo o PDF...', '');
-                let editalText = await extractPdfText(file);
-                let truncated = false;
-                if (editalText.length > EDITAL_AI_MAX_CHARS) {
-                    editalText = editalText.slice(0, EDITAL_AI_MAX_CHARS);
-                    truncated = true;
+                const rawText = await extractPdfText(file);
+
+                // PDF escaneado (imagem, sem camada de texto) — pdf.js só lê texto embutido, não faz
+                // OCR. Sem essa checagem, isso seguia adiante e só falhava depois de gastar uma
+                // chamada de IA, com uma mensagem confusa ("não achou matérias") que não deixava claro
+                // que o problema era o PDF em si, não a extração.
+                if (rawText.replace(/\s/g, '').length < 1500) {
+                    setEditalAIStatus('O PDF parece não ter texto extraível (pode ser um documento escaneado/imagem, sem OCR) — esse tipo de PDF não é suportado. Confira se dá pra selecionar/copiar o texto dele em outro leitor de PDF; se não der, tente um PDF gerado a partir do arquivo original (não escaneado) ou passe por um OCR antes de importar.', 'error');
+                    return;
                 }
-                editalCargoContext = { editalText, truncated };
+
+                const { text: editalText, truncated, foundMarker } = truncateEditalText(rawText, EDITAL_AI_MAX_CHARS);
+                editalCargoContext = { editalText, truncated, foundMarker };
 
                 setEditalAIStatus('<i class="fas fa-spinner"></i> Verificando se o edital tem mais de um cargo...', '');
                 const cargos = await detectEditalCargos(editalText);

@@ -22,7 +22,7 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 | `tempoestudo.html` | Estatísticas de tempo de estudo e painel legado de "Calibração do Ciclo" (ver nota abaixo). |
 | `historico.html` | Histórico de sessões de estudo (data, matéria, duração, anotações). |
 | `core.css` / `core.js` | Estilos e lógica compartilhados: perfis, tema, modelo de dados, geração do ciclo, estatísticas, revisão espaçada. |
-| `profile-keys.js` | Lista única das chaves de dados "por perfil" (`PROFILE_DATA_KEYS`), carregada antes de `core.js` em toda página — inclusive `resumo.html`/`planejamento.html`, que não carregam `core.js`. |
+| `profile-keys.js` | Config leve compartilhada, carregada antes de `core.js` em toda página (inclusive `resumo.html`/`planejamento.html`, que não carregam `core.js`): lista única das chaves de dados "por perfil" (`PROFILE_DATA_KEYS`) e os pares de matérias que o gerador de ciclo evita colocar no mesmo dia (`SUBJECT_CONFLICT_GROUPS`). |
 | `manifest.json` / `sw.js` / `icon.svg` | PWA — permite instalar o app e funcionar offline (service worker *network-first*, cai para cache quando não há rede). |
 | `CNAME` | Domínio customizado para deploy via GitHub Pages. |
 
@@ -47,6 +47,8 @@ O app suporta múltiplos perfis no mesmo navegador (`estudoFiscalProfiles` / `es
 ## Como Funciona a Geração do Ciclo
 
 A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método **"Ciclo Mestre"**: a frequência de cada matéria é definida exclusivamente pelo **peso** (1 a 3) cadastrado em Matérias — peso maior gera mais blocos de estudo dessa matéria no ciclo, distribuídos evitando repetição excessiva no mesmo dia.
+
+Ao encaixar os blocos da semana nos dias, o gerador também evita (best-effort, nunca deixa hora vazia por causa disso) colocar no mesmo dia duas matérias de conteúdo parecido demais — ex: Direito Constitucional e Direito Administrativo, ou Contabilidade Pública e Contabilidade Geral. A lista de pares "conflitantes" fica em `SUBJECT_CONFLICT_GROUPS` (`profile-keys.js`); a mesma lógica é usada tanto por `generateSchedule` (core.js) quanto por `buildWeeklyScheduleDays` (planejamento.html, que gera o ciclo de forma independente por não carregar core.js).
 
 > O painel "Calibração do Ciclo" (em `tempoestudo.html`, parâmetros `beta`/`weightBias`/`dispersion`/`minCoverage`/`avoidConsecutive`/`minRep`/`maxRep`) é **legado**: os controles ficam desabilitados e servem apenas de preview informativo — a lógica de apportionment ponderado que eles descreviam não é mais usada. A regra atual é simples: quantidade de blocos = peso da matéria.
 

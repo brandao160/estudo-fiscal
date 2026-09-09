@@ -660,7 +660,14 @@
                     lastCarga = pick.carga || lastCarga;
                 }
 
-                let weekCycleIdx = 0;
+                // Preenche cada dia consumindo `weekCycle` (mesma ordem/distribuição de antes),
+                // mas pulando pra frente na fila quando o próximo item do topo gera conflito com
+                // uma matéria já colocada nesse mesmo dia (SUBJECT_CONFLICT_GROUPS, profile-keys.js)
+                // — ex: não deixa Direito Constitucional e Direito Administrativo no mesmo dia.
+                // É best-effort: se sobrar só matéria conflitante pra fechar a carga do dia, usa
+                // mesmo assim (nunca deixa hora vazia). Reabastece a fila (cíclico) se ela esvaziar
+                // antes do fim da semana, igual o wraparound por módulo que existia aqui antes.
+                let weekCyclePool = weekCycle.slice();
                 weekDates.forEach((date, i) => {
                     const dayTasks = [];
                     for (let h = 0; h < (discursivaPerDay[i] || 0); h++) {
@@ -669,10 +676,14 @@
                             subject: 'Redação/Discursiva', type: 'Discursiva', weight: 0, completed: false
                         });
                     }
+                    const daySubjectsNorm = new Set();
                     for (let h = 0; h < regularHoursByDay[i]; h++) {
-                        const sub = weekCycle[weekCycleIdx % Math.max(1, weekCycle.length)];
-                        weekCycleIdx++;
-                        if (!sub) continue;
+                        if (!weekCyclePool.length) weekCyclePool = weekCycle.slice();
+                        if (!weekCyclePool.length) break;
+                        let idx = weekCyclePool.findIndex(s => !subjectConflictsToday(s.name, daySubjectsNorm));
+                        if (idx === -1) idx = 0;
+                        const sub = weekCyclePool.splice(idx, 1)[0];
+                        daySubjectsNorm.add(normalizeSubjectName(sub.name));
                         dayTasks.push({
                             id: `task-${date.getTime()}-${h}`,
                             subject: sub.name, type: sub.type, weight: sub.weight, completed: false

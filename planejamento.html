@@ -976,7 +976,10 @@
                 lastCarga = pick.carga || lastCarga;
             }
 
-            let weekCycleIdx = 0;
+            // Mesma lógica de preenchimento por dia com conflito de matérias de core.js
+            // (SUBJECT_CONFLICT_GROUPS, profile-keys.js), copiada aqui pelo mesmo motivo (esta
+            // página não carrega core.js).
+            let weekCyclePool = weekCycle.slice();
             return weekDates.map((date, i) => {
                 const tasks = [];
                 for (let h = 0; h < (discursivaPerDay[i] || 0); h++) {
@@ -985,10 +988,14 @@
                         subject: 'Redação/Discursiva', type: 'Discursiva', weight: 0, completed: false
                     });
                 }
+                const daySubjectsNorm = new Set();
                 for (let h = 0; h < regularHoursByDay[i]; h++) {
-                    const sub = weekCycle[weekCycleIdx % Math.max(1, weekCycle.length)];
-                    weekCycleIdx++;
-                    if (!sub) continue;
+                    if (!weekCyclePool.length) weekCyclePool = weekCycle.slice();
+                    if (!weekCyclePool.length) break;
+                    let idx = weekCyclePool.findIndex(s => !subjectConflictsToday(s.name, daySubjectsNorm));
+                    if (idx === -1) idx = 0;
+                    const sub = weekCyclePool.splice(idx, 1)[0];
+                    daySubjectsNorm.add(normalizeSubjectName(sub.name));
                     tasks.push({
                         id: `task-${date.getTime()}-${h}-r${Date.now()}`,
                         subject: sub.name, type: sub.type, weight: sub.weight, completed: false

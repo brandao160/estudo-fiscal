@@ -206,8 +206,9 @@
     <script>
         // ─── Geração automática via proxy (chave da OpenRouter fica só no servidor, ver
         // functions/questoes-proxy.js — nunca é enviada nem vista pelo navegador). ───
-        // Ajuste aqui se o domínio do proxy mudar (ex.: outro projeto/subdomínio no Cloudflare Pages).
-        const QZ_PROXY_URL = 'https://estudo-fiscal.pages.dev/questoes-proxy';
+        // Caminho relativo: sempre chama a Function no MESMO domínio que serviu a página
+        // (apex ou www), evitando CORS entre domínios.
+        const QZ_PROXY_URL = '/questoes-proxy';
 
         /** Status persistente do último "Gerar questões" (fica visível no Banco de Questões). */
         function setQzGenerationStatus(html, kind) {

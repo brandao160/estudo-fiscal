@@ -44,9 +44,10 @@
       confira no log de build se ele lista este arquivo como Function (se
       aparecer "No functions dir at /functions found", o Pages não achou a
       pasta — confira se o "Root directory" do projeto está na raiz do repo).
-   4. A URL fica fixa em código, não precisa configurar nada na interface:
-      `QZ_PROXY_URL` em questoes.html e `EDITAL_PROXY_URL` em index.html —
-      ajuste as duas se o domínio/projeto do Cloudflare mudar.
+   4. `QZ_PROXY_URL` (questoes.html) e `EDITAL_PROXY_URL` (index.html) usam
+      caminho relativo ('/questoes-proxy'), então funcionam automaticamente em
+      qualquer domínio que sirva este mesmo projeto (apex, www, *.pages.dev)
+      sem precisar de ajuste nem depender de CORS entre domínios.
    ========================================================== */
 
 import { corsHeaders, resolveModel } from './_shared/ai-core.js';

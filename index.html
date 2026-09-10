@@ -1190,9 +1190,10 @@ ${editalText}
 """`;
         }
 
-        // URL fixa do proxy próprio (Cloudflare Pages Function — ver functions/questoes-proxy.js).
-        // A chave da OpenRouter fica só no servidor; o navegador nunca vê nem envia nenhuma chave.
-        const EDITAL_PROXY_URL = 'https://estudo-fiscal.pages.dev/questoes-proxy';
+        // Caminho relativo: sempre chama a Function no MESMO domínio que serviu a página
+        // (apex ou www), evitando CORS entre domínios. A chave da OpenRouter fica só no
+        // servidor; o navegador nunca vê nem envia nenhuma chave.
+        const EDITAL_PROXY_URL = '/questoes-proxy';
 
         /** Extrai uma mensagem legível de um erro do proxy — pode vir como string (erro nosso, ex.:
          *  limite diário) ou como objeto repassado direto da OpenRouter (ex.: {message, code}). */

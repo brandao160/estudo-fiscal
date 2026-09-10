@@ -127,9 +127,13 @@ export async function onRequestPost(context) {
         });
     }
 
-    // Só conta a requisição na cota do visitante se ela realmente foi processada.
+    // Só conta a requisição na cota do visitante se ela realmente foi processada. Em try/catch: a
+    // OpenRouter já respondeu certo nesse ponto, então uma falha aqui (ex.: cota diária de escrita do
+    // KV do plano gratuito estourada) não pode derrubar a resposta pro visitante com 500.
     if (env.RATE_LIMIT_KV) {
-        await env.RATE_LIMIT_KV.put(kvKey, String(count + 1), { expirationTtl: 60 * 60 * 26 });
+        try {
+            await env.RATE_LIMIT_KV.put(kvKey, String(count + 1), { expirationTtl: 60 * 60 * 26 });
+        } catch (e) { /* rate limit é best-effort — sem ele, só não conta essa chamada na cota */ }
     }
 
     if (stream) {
@@ -191,21 +195,25 @@ async function handleQuestionBank(body, context, cors) {
         // quase ao mesmo tempo cada um só viu o snapshot antigo do outro — sem esse merge, quem salva
         // por último apaga silenciosamente a contribuição de quem salvou antes (perda de dados sob
         // concorrência), o que fazia o banco compartilhado "encolher" entre uma consulta e outra.
-        const key = 'qbank:' + bankKey;
-        const raw = await env.RATE_LIMIT_KV.get(key);
-        let existing = [];
-        if (raw) {
-            try {
-                const stored = JSON.parse(raw);
-                existing = Array.isArray(stored) ? stored : (Array.isArray(stored?.questoes) ? stored.questoes : []);
-            } catch (e) { /* ignora lixo salvo */ }
-        }
-        const normEnun = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-        const merged = existing.concat(incoming).filter((q, i, arr) =>
-            q && q.enunciado && arr.findIndex(x => normEnun(x.enunciado) === normEnun(q.enunciado)) === i
-        ).slice(0, 100);
-        saved = merged.length;
-        await env.RATE_LIMIT_KV.put(key, JSON.stringify({ materia, topico, questoes: merged, updatedAt: Date.now() }));
+        // Tudo dentro de try/catch: banco compartilhado é só um bônus (ex.: cota diária de escrita do
+        // KV no plano gratuito estourada) — nunca deve derrubar a resposta com 500 pro visitante.
+        try {
+            const key = 'qbank:' + bankKey;
+            const raw = await env.RATE_LIMIT_KV.get(key);
+            let existing = [];
+            if (raw) {
+                try {
+                    const stored = JSON.parse(raw);
+                    existing = Array.isArray(stored) ? stored : (Array.isArray(stored?.questoes) ? stored.questoes : []);
+                } catch (e) { /* ignora lixo salvo */ }
+            }
+            const normEnun = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            const merged = existing.concat(incoming).filter((q, i, arr) =>
+                q && q.enunciado && arr.findIndex(x => normEnun(x.enunciado) === normEnun(q.enunciado)) === i
+            ).slice(0, 100);
+            saved = merged.length;
+            await env.RATE_LIMIT_KV.put(key, JSON.stringify({ materia, topico, questoes: merged, updatedAt: Date.now() }));
+        } catch (e) { /* ex.: cota diária de escrita do KV estourada — segue sem quebrar o app */ }
     }
     return new Response(JSON.stringify({ ok: true, saved }), { status: 200, headers: { ...cors, 'content-type': 'application/json' } });
 }

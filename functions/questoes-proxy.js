@@ -181,13 +181,33 @@ async function handleQuestionBank(body, context, cors) {
     // materia/topico (nome legível, não a bankKey normalizada) ficam salvos junto especificamente
     // pra o pré-aquecimento conseguir montar um prompt de geração sem precisar adivinhar a partir
     // do slug (que perde acentos/maiúsculas).
-    const questoes = Array.isArray(body.questoes) ? body.questoes.slice(0, 100) : [];
+    const incoming = Array.isArray(body.questoes) ? body.questoes : [];
     const materia = typeof body.materia === 'string' ? body.materia.slice(0, 200) : '';
     const topico = typeof body.topico === 'string' ? body.topico.slice(0, 300) : '';
+    let saved = 0;
     if (env.RATE_LIMIT_KV) {
-        await env.RATE_LIMIT_KV.put('qbank:' + bankKey, JSON.stringify({ materia, topico, questoes, updatedAt: Date.now() }));
+        // Faz merge com o que já está salvo em vez de sobrescrever: o cliente manda o que ele TINHA
+        // localmente no momento em que começou a gerar, então dois visitantes gerando pro mesmo tópico
+        // quase ao mesmo tempo cada um só viu o snapshot antigo do outro — sem esse merge, quem salva
+        // por último apaga silenciosamente a contribuição de quem salvou antes (perda de dados sob
+        // concorrência), o que fazia o banco compartilhado "encolher" entre uma consulta e outra.
+        const key = 'qbank:' + bankKey;
+        const raw = await env.RATE_LIMIT_KV.get(key);
+        let existing = [];
+        if (raw) {
+            try {
+                const stored = JSON.parse(raw);
+                existing = Array.isArray(stored) ? stored : (Array.isArray(stored?.questoes) ? stored.questoes : []);
+            } catch (e) { /* ignora lixo salvo */ }
+        }
+        const normEnun = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const merged = existing.concat(incoming).filter((q, i, arr) =>
+            q && q.enunciado && arr.findIndex(x => normEnun(x.enunciado) === normEnun(q.enunciado)) === i
+        ).slice(0, 100);
+        saved = merged.length;
+        await env.RATE_LIMIT_KV.put(key, JSON.stringify({ materia, topico, questoes: merged, updatedAt: Date.now() }));
     }
-    return new Response(JSON.stringify({ ok: true, saved: questoes.length }), { status: 200, headers: { ...cors, 'content-type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: true, saved }), { status: 200, headers: { ...cors, 'content-type': 'application/json' } });
 }
 
 async function incrementHitCounter(env, bankKey) {

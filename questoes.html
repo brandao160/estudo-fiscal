@@ -267,6 +267,10 @@
         // pra quem pedir esse mesmo tópico depois não precisar chamar a IA de novo.
         function slugifyForBank(s) {
             return String(s || '')
+                // Remove numeração/marcador de item no início (ex.: "1.2.3 ", "1) ", "a) ", "- ") antes
+                // de normalizar — editais diferentes numeram os mesmos tópicos de formas diferentes, e
+                // sem isso viram bankKeys distintas mesmo descrevendo o mesmo assunto.
+                .replace(/^\s*(?:[a-z\d]+[.)-]\s*)+/i, '')
                 .normalize('NFD').replace(/\p{Diacritic}/gu, '')
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
@@ -279,16 +283,48 @@
         function normEnunciado(s) {
             return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
         }
-        async function bankGet(bankKey) {
+
+        // Limita quantas chamadas bankGet ficam em voo ao mesmo tempo: "Resolver questões de todas as
+        // matérias" pode disparar uma leitura por tópico do ciclo inteiro (facilmente 50-100+) de uma
+        // vez só — sem isso, picos de concorrência derrubavam algumas dessas chamadas (timeout/erro
+        // transitório) e, como bankGet silenciosamente vira lista vazia em erro, o tópico entrava na
+        // sessão como se o banco compartilhado não tivesse nada — daí a mesma base de dados aparentar
+        // totais bem diferentes ("de 254", "de 57", "de 12") de uma tentativa pra outra.
+        const BANK_GET_MAX_CONCURRENT = 6;
+        let bankGetActive = 0;
+        const bankGetQueue = [];
+        function runNextQueuedBankGet() {
+            if (bankGetActive >= BANK_GET_MAX_CONCURRENT || !bankGetQueue.length) return;
+            bankGetActive++;
+            const { bankKey, resolve } = bankGetQueue.shift();
+            bankGetFetchWithRetry(bankKey).then(resolve).finally(() => {
+                bankGetActive--;
+                runNextQueuedBankGet();
+            });
+        }
+        async function bankGetFetchWithRetry(bankKey, attempt = 1) {
             try {
                 const res = await fetch(QZ_PROXY_URL, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
                     body: JSON.stringify({ action: 'bankGet', bankKey })
                 });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 return Array.isArray(data.questoes) ? data.questoes : [];
-            } catch (e) { return []; } // banco compartilhado é só um bônus — se falhar, segue só com a IA
+            } catch (e) {
+                if (attempt < 3) {
+                    await new Promise(r => setTimeout(r, 300 * attempt));
+                    return bankGetFetchWithRetry(bankKey, attempt + 1);
+                }
+                return []; // banco compartilhado é só um bônus — se falhar mesmo após retry, segue só com a IA
+            }
+        }
+        function bankGet(bankKey) {
+            return new Promise(resolve => {
+                bankGetQueue.push({ bankKey, resolve });
+                runNextQueuedBankGet();
+            });
         }
         function bankSave(bankKey, questoes, materia, topico) {
             // "Fire-and-forget": não trava a resposta pro usuário nem quebra o fluxo se der erro.

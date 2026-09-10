@@ -87,17 +87,25 @@
          * Lista completa das chaves de dados "por perfil" usadas em qualquer página do app
          * (não só as que a própria página atual usa) — fonte única de verdade tanto pra limpar
          * um perfil excluído quanto pra montar/restaurar um backup completo (ver saveSelfContainedHTML
-         * em index.html). Se uma página nova guardar algo por perfil, adicionar a chave aqui também.
+         * em index.html). Vem de profile-keys.js (carregado antes de core.js em toda página) —
+         * é a MESMA lista usada por resumo.html/planejamento.html, que não carregam core.js.
+         * Se uma página nova guardar algo por perfil, adicionar a chave em profile-keys.js.
          */
         function getProfileDataKeys() {
-            return [
-                'estudoFiscalData', 'estudoFiscalSyllabus', 'estudoFiscalStudyHistory',
-                'estudoFiscalScheduleStructure', 'estudoFiscalModel', 'estudoFiscalReviews',
-                'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
-                'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
-                'estudoFiscalActiveSession', 'ciclo_cards_v3',
-                'estudoFiscalQuestoes'
-            ];
+            // Fallback defensivo: se profile-keys.js não tiver carregado por algum motivo (falha de
+            // rede, cache), não deixa Salvar/Carregar Progresso quebrar por completo — usa uma cópia
+            // fixa da mesma lista em vez de travar com "PROFILE_DATA_KEYS is not defined".
+            if (typeof PROFILE_DATA_KEYS === 'undefined') {
+                return [
+                    'estudoFiscalData', 'estudoFiscalSyllabus', 'estudoFiscalStudyHistory',
+                    'estudoFiscalScheduleStructure', 'estudoFiscalModel', 'estudoFiscalReviews',
+                    'estudoFiscalRolloverMissed', 'estudoFiscalRolloverLastRun',
+                    'estudoFiscalPlanPhases', 'estudoFiscalWeeklyHours',
+                    'estudoFiscalActiveSession', 'ciclo_cards_v3',
+                    'estudoFiscalQuestoes', 'estudoFiscalCycleDirty'
+                ];
+            }
+            return PROFILE_DATA_KEYS;
         }
 
         /**
@@ -369,6 +377,10 @@
         // Config padrão: matérias por dia (Seg..Dom)
         let slotsPorDia = [4,4,4,4,4,5,5]; // seg..dom: seg-sex 4h, sáb-dom 5h
 
+        // Preferências do ciclo (ver planejamento.html "Preferências do ciclo").
+        let temDiscursiva = false;
+        let horasDiscursivaSemana = 0;
+
 
         // ── model loader (index.html L2110-L2218) ──
         // --- MODEL LOADER ---
@@ -409,6 +421,8 @@
                 if (Array.isArray(model.slotsPorDia) && model.slotsPorDia.length === 7) {
                     slotsPorDia = model.slotsPorDia.map(n => Number(n) || 0);
                 }
+                temDiscursiva = !!model.temDiscursiva;
+                horasDiscursivaSemana = temDiscursiva ? Math.max(0, Number(model.horasDiscursivaSemana) || 0) : 0;
                 if (model.concurso) {
                     const subEl = document.getElementById('page-subtitle-text');
                     if (subEl) subEl.textContent = `Foco na meta: ${model.concurso}`;
@@ -486,10 +500,44 @@
         let fullSchedule = []; // Array of objects: { date, tasks: [] }
         
         /**
-         * Gera o cronograma usando o método de Ciclo de Estudos Contínuo (Alexandre Meirelles).
-         * - Cria uma lista mestre intercalada baseada nos pesos (Peso 3 = 3 aparições no ciclo).
-         * - Preenche os dias sequencialmente consumindo essa lista.
-         * - O ciclo roda indefinidamente (loop), ignorando a quebra de semanas.
+         * Espalha `totalBlocks` blocos de discursiva/redação pelos dias da semana que têm hora
+         * disponível (`weekHoursByDay`), 1 por dia por rodada (round-robin), pra não empilhar tudo
+         * num dia só — só faz uma 2ª rodada num dia se sobrar bloco depois de todo dia ativo já ter
+         * recebido 1. Nunca passa da capacidade (`weekHoursByDay[i]`) de nenhum dia.
+         */
+        function distribuirDiscursivaPelaSemana(weekHoursByDay, totalBlocks) {
+            const perDay = weekHoursByDay.map(() => 0);
+            if (totalBlocks <= 0) return perDay;
+            const activeIdxs = weekHoursByDay.map((h, i) => i).filter(i => weekHoursByDay[i] > 0);
+            if (!activeIdxs.length) return perDay;
+            let remaining = totalBlocks;
+            let round = 0;
+            while (remaining > 0) {
+                let placedThisRound = false;
+                for (let k = 0; k < activeIdxs.length && remaining > 0; k++) {
+                    const idx = activeIdxs[(k + round) % activeIdxs.length];
+                    if (perDay[idx] < weekHoursByDay[idx]) {
+                        perDay[idx]++;
+                        remaining--;
+                        placedThisRound = true;
+                    }
+                }
+                round++;
+                if (!placedThisRound) break; // toda a semana já saturada
+            }
+            return perDay;
+        }
+
+        /**
+         * Gera o cronograma usando o método de Ciclo de Estudos (Alexandre Meirelles), adaptado
+         * pra recalcular a cota de blocos SEMANA A SEMANA (janelas de 7 dias corridos a partir de
+         * `startDate`) em vez de uma lista mestre única pro período inteiro:
+         * - `computeWeeklyBlocks` decide quantos blocos cada matéria recebe NESSA semana (peso ×
+         *   dificuldade × modo revisão, com teto de ~25% da semana por matéria).
+         * - Se "Meu concurso tem prova discursiva" estiver ativo, reserva os blocos de
+         *   `horasDiscursivaSemana` primeiro, espalhados pelos dias da semana, e as matérias
+         *   dividem o que resta.
+         * - Blocos perdidos (rollover) são tratados separadamente em `rolloverMissedTasks`.
          */
         function generateSchedule() {
             // Check if we have a saved schedule structure
@@ -534,14 +582,8 @@
                 return;
             }
 
-            // 2. Construir o "Ciclo Mestre" (Lista ordenada de matérias)
-            // Regra: Quantidade de blocos = Peso.
-            
-            let counts = {};
-            let initialCounts = {};
-            let totalBlocks = 0;
-            
-            // Debug Info Accumulator
+            // 2. Estatísticas pro resumo (peso efetivo médio/semana por matéria, só informativo —
+            // a cota real de cada semana é recalculada em `computeWeeklyBlocks`, mais abaixo).
             let debugInfo = {
                 peso3: { count: 0, blocks: 0, subjects: [] },
                 peso2: { count: 0, blocks: 0, subjects: [] },
@@ -556,9 +598,7 @@
                 if (wRaw <= 0) return;
 
                 const w = effectiveWeight(s);
-                counts[s.name] = w;
-                initialCounts[s.name] = w;
-                totalBlocks += w;
+                debugInfo.totalBlocks += w;
 
                 // Stats
                 debugInfo.totalSubjects++;
@@ -576,101 +616,101 @@
                     debugInfo.peso1.subjects.push(s.name);
                 }
             });
-            debugInfo.totalBlocks = totalBlocks;
 
-            let masterCycle = [];
-            let lastSub = null;
-            let lastCarga = null;
-
-            // Algoritmo de Preenchimento Intercalado
-            for (let i = 0; i < totalBlocks; i++) {
-                // Candidatos: matérias que ainda têm blocos a distribuir
-                let candidates = subjectsConfig.filter(s => counts[s.name] > 0);
-
-                if (candidates.length === 0) break;
-
-                // Tenta evitar a matéria anterior (lastSub)
-                let valid = candidates.filter(s => s.name !== lastSub);
-
-                // Se não tiver opção (só sobrou a mesma), usa ela mesma
-                if (valid.length === 0) valid = candidates;
-
-                // Critério de escolha: Prioriza quem tem MAIS blocos restantes
-                valid.sort((a, b) => counts[b.name] - counts[a.name]);
-
-                // Entre opções de mesma prioridade, prefere alternar carga cognitiva (pesada/leve)
-                const pick = pickAlternatingCarga(valid, lastCarga, s => counts[s.name]);
-                masterCycle.push(pick);
-                counts[pick.name]--;
-                lastSub = pick.name;
-                lastCarga = pick.carga || lastCarga;
-            }
-
-            // Fallback
-            if (masterCycle.length === 0) {
+            const activeSubjects = subjectsConfig.filter(s => Math.round(s.weight || 0) > 0);
+            if (activeSubjects.length === 0) {
                 fullSchedule = [];
                 return;
             }
 
-            // Validação Pós-Geração
-            const generatedCounts = {};
-            masterCycle.forEach(m => { generatedCounts[m.name] = (generatedCounts[m.name] || 0) + 1; });
-            // Missing: matérias com peso > 0 que não entraram (impossível pela lógica atual, mas bom validar)
-            const activeSubjects = subjectsConfig.filter(s => (s.weight || 0) > 0);
-            const missing = activeSubjects.filter(s => !generatedCounts[s.name]);
-            
-            let validationMsg = `Ciclo Contínuo Gerado!\n\n` +
+            let validationMsg = `Ciclo Gerado!\n\n` +
                 `Matérias Ativas: ${activeSubjects.length}\n` +
-                `Tamanho do Ciclo Mestre: ${masterCycle.length} blocos\n\n` +
-                `Distribuição (Peso = Frequência):\n` +
+                `Cota recalculada a cada semana (peso × dificuldade, teto de ~25% da semana por matéria)\n\n` +
+                `Distribuição (peso efetivo médio/semana):\n` +
                 `- Peso 3 (3x): ${debugInfo.peso3.count} matérias = ${debugInfo.peso3.blocks} blocos\n` +
                 `- Peso 2 (2x): ${debugInfo.peso2.count} matérias = ${debugInfo.peso2.blocks} blocos\n` +
                 `- Peso 1 (1x): ${debugInfo.peso1.count} matérias = ${debugInfo.peso1.blocks} blocos\n`;
-            
-            if (missing.length > 0) {
-                validationMsg += `\n⚠️ ALERTA: ${missing.length} matérias ativas não entraram no ciclo: ${missing.map(m=>m.name).join(', ')}`;
-            } else {
-                validationMsg += `\n✅ Validação OK: Todas as matérias ativas foram incluídas conforme o peso.`;
+            if (temDiscursiva && horasDiscursivaSemana > 0) {
+                validationMsg += `\nReservado ${horasDiscursivaSemana}h/semana pra Redação/Discursiva, espalhadas pelos dias.`;
             }
 
             // Show summary (User request: "Validar cálculo de blocos")
             alert(validationMsg);
 
-            // 3. Preencher o Calendário
-            let currentDate = new Date(startDate);
-            let cycleIndex = 0;
-            let dayCounter = 0;
-
-            // Reset fullSchedule
+            // 3. Preencher o Calendário — recalcula a cota a cada janela de 7 dias corridos
+            // (em vez de uma lista mestre única pro período inteiro), pra o teto por matéria e o
+            // "modo revisão" ficarem sempre alinhados à semana real.
             fullSchedule = [];
+            let cursor = new Date(startDate);
 
-            while (currentDate <= endDate) {
-                const dayOfWeek = currentDate.getDay(); // 0=Dom
-                const dayIdxMonFirst = (dayOfWeek + 6) % 7; // 0=Seg
-                const hours = slotsPorDia[dayIdxMonFirst] || 0;
-                
-                let dayTasks = [];
-                
-                for (let h = 0; h < hours; h++) {
-                    const sub = masterCycle[cycleIndex % masterCycle.length];
-                    const taskId = `task-${currentDate.getTime()}-${h}`;
-                    
-                    dayTasks.push({
-                        id: taskId,
-                        subject: sub.name,
-                        type: sub.type,
-                        weight: sub.weight,
-                        completed: false
-                    });
+            while (cursor <= endDate) {
+                const weekDates = [];
+                for (let i = 0; i < 7 && cursor <= endDate; i++) {
+                    weekDates.push(new Date(cursor));
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+                const weekHoursByDay = weekDates.map(d => slotsPorDia[(d.getDay() + 6) % 7] || 0);
+                const totalHoursThisWeek = weekHoursByDay.reduce((a, b) => a + b, 0);
 
-                    cycleIndex++;
+                const discursivaTotal = temDiscursiva ? Math.min(Math.round(horasDiscursivaSemana), totalHoursThisWeek) : 0;
+                const discursivaPerDay = distribuirDiscursivaPelaSemana(weekHoursByDay, discursivaTotal);
+                const regularHoursByDay = weekHoursByDay.map((h, i) => Math.max(0, h - (discursivaPerDay[i] || 0)));
+                const regularHoursThisWeek = regularHoursByDay.reduce((a, b) => a + b, 0);
+
+                const weekCounts = computeWeeklyBlocks(activeSubjects, regularHoursThisWeek);
+                let weekCycle = [];
+                let lastSub = null, lastCarga = null;
+                for (let i = 0; i < regularHoursThisWeek; i++) {
+                    let candidates = activeSubjects.filter(s => weekCounts[s.name] > 0);
+                    if (!candidates.length) break;
+                    let valid = candidates.filter(s => s.name !== lastSub);
+                    if (!valid.length) valid = candidates;
+                    valid.sort((a, b) => weekCounts[b.name] - weekCounts[a.name]);
+                    const pick = pickAlternatingCarga(valid, lastCarga, s => weekCounts[s.name]);
+                    weekCycle.push(pick);
+                    weekCounts[pick.name]--;
+                    lastSub = pick.name;
+                    lastCarga = pick.carga || lastCarga;
                 }
 
-                fullSchedule.push({ date: new Date(currentDate), tasks: dayTasks });
-                currentDate.setDate(currentDate.getDate() + 1);
-                dayCounter++;
+                // Preenche cada dia consumindo `weekCycle` (mesma ordem/distribuição de antes),
+                // mas pulando pra frente na fila quando o próximo item do topo gera conflito com
+                // uma matéria já colocada nesse mesmo dia (SUBJECT_CONFLICT_GROUPS, profile-keys.js)
+                // — ex: não deixa Direito Constitucional e Direito Administrativo no mesmo dia.
+                // É best-effort: se sobrar só matéria conflitante pra fechar a carga do dia, usa
+                // mesmo assim (nunca deixa hora vazia). Reabastece a fila (cíclico) se ela esvaziar
+                // antes do fim da semana, igual o wraparound por módulo que existia aqui antes.
+                // Chama subjectConflictsToday/normalizeSubjectName (profile-keys.js) de forma
+                // defensiva (typeof) — se esse arquivo não tiver carregado por algum motivo (falha
+                // de rede, cache), o ciclo ainda tem que ser gerado; só perde a checagem de conflito.
+                const hasConflictCheck = typeof subjectConflictsToday === 'function';
+                const safeNormalizeName = typeof normalizeSubjectName === 'function' ? normalizeSubjectName : (n => String(n || '').trim().toLowerCase());
+                let weekCyclePool = weekCycle.slice();
+                weekDates.forEach((date, i) => {
+                    const dayTasks = [];
+                    for (let h = 0; h < (discursivaPerDay[i] || 0); h++) {
+                        dayTasks.push({
+                            id: `task-${date.getTime()}-d${h}`,
+                            subject: 'Redação/Discursiva', type: 'Discursiva', weight: 0, completed: false
+                        });
+                    }
+                    const daySubjectsNorm = new Set();
+                    for (let h = 0; h < regularHoursByDay[i]; h++) {
+                        if (!weekCyclePool.length) weekCyclePool = weekCycle.slice();
+                        if (!weekCyclePool.length) break;
+                        let idx = hasConflictCheck ? weekCyclePool.findIndex(s => !subjectConflictsToday(s.name, daySubjectsNorm)) : 0;
+                        if (idx === -1) idx = 0;
+                        const sub = weekCyclePool.splice(idx, 1)[0];
+                        daySubjectsNorm.add(safeNormalizeName(sub.name));
+                        dayTasks.push({
+                            id: `task-${date.getTime()}-${h}`,
+                            subject: sub.name, type: sub.type, weight: sub.weight, completed: false
+                        });
+                    }
+                    fullSchedule.push({ date, tasks: dayTasks });
+                });
             }
-            
+
             // Save the generated structure
             localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
             
@@ -755,10 +795,17 @@
 
         /**
          * Método clássico de ciclo de estudos: o ciclo não "reseta" — se sobrou tarefa não
-         * concluída de um dia passado, ela é movida pra hoje em vez de simplesmente ficar perdida.
-         * Opt-in (preferência "Não pular blocos perdidos" em planejamento.html), pra não surpreender
-         * quem já está acostumado com o comportamento atual. Roda no máximo 1x por dia e só olha
-         * pros últimos 14 dias (evita empilhar tarefas indefinidamente se o usuário sumir por meses).
+         * concluída de um dia passado, ela é reencaixada nos dias seguintes em vez de ficar
+         * perdida. Opt-in (preferência "Não pular blocos perdidos" em planejamento.html). Roda no
+         * máximo 1x por dia e só recolhe backlog dos últimos 14 dias (evita empilhar tarefas
+         * indefinidamente se o usuário sumir por meses).
+         *
+         * Reencaixe em CASCATA, respeitando a carga horária normal de cada dia (`slotsPorDia`):
+         * o backlog tem prioridade sobre as tarefas que já estavam agendadas em cada dia; o que não
+         * couber hoje empurra as tarefas de hoje pra amanhã, e assim por diante — em vez de
+         * empilhar tudo de uma vez em "hoje" (o que podia fazer um dia de 4h virar um de 15h+ se o
+         * usuário tivesse faltado vários dias). Nenhuma tarefa é descartada; o ciclo só "atrasa"
+         * como um todo, continuando de onde parou.
          */
         function rolloverMissedTasks() {
             if (localStorage.getItem(K('estudoFiscalRolloverMissed')) !== 'true') return;
@@ -768,24 +815,52 @@
             if (localStorage.getItem(lastRunKey) === todayKey) return;
 
             const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 14);
-            const todayObj = getOrCreateTodayDayObj();
-            let movedCount = 0;
+            getOrCreateTodayDayObj(); // garante que "hoje" existe no fullSchedule
 
-            fullSchedule.forEach(day => {
-                if (day === todayObj) return;
-                const d = new Date(day.date); d.setHours(0, 0, 0, 0);
-                if (d.getTime() >= today.getTime() || d.getTime() < cutoff.getTime()) return;
+            // 1. Recolhe o backlog dos últimos 14 dias (mais antigo primeiro), removendo-o dos
+            // dias de origem — dia passado nunca mais volta a ser "atual".
+            const pastDays = fullSchedule
+                .filter(day => {
+                    const d = new Date(day.date); d.setHours(0, 0, 0, 0);
+                    return d.getTime() >= cutoff.getTime() && d.getTime() < today.getTime();
+                })
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let backlog = [];
+            pastDays.forEach(day => {
                 const pending = (day.tasks || []).filter(t => deriveTaskStatus(t) !== 'concluido');
                 if (!pending.length) return;
                 day.tasks = day.tasks.filter(t => deriveTaskStatus(t) === 'concluido');
-                pending.forEach(t => { todayObj.tasks.push(t); movedCount++; });
+                backlog = backlog.concat(pending);
             });
 
             localStorage.setItem(lastRunKey, todayKey);
-            if (movedCount > 0) {
-                persistSchedule();
-                showToast(`${movedCount} tarefa${movedCount > 1 ? 's' : ''} atrasada${movedCount > 1 ? 's' : ''} ${movedCount > 1 ? 'movidas' : 'movida'} pra hoje.`, 'info');
+            if (!backlog.length) return;
+
+            // 2. Reinsere o backlog a partir de hoje, em cascata, respeitando a carga horária de
+            // cada dia (o que não coube empurra as tarefas que já estavam ali pra frente).
+            const futureDays = fullSchedule
+                .filter(day => { const d = new Date(day.date); d.setHours(0, 0, 0, 0); return d.getTime() >= today.getTime(); })
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let carry = backlog;
+            futureDays.forEach(day => {
+                if (!carry.length) return;
+                const idx = (new Date(day.date).getDay() + 6) % 7;
+                const hours = slotsPorDia[idx] || 0;
+                const combined = carry.concat(day.tasks || []);
+                day.tasks = combined.slice(0, hours);
+                carry = combined.slice(hours);
+            });
+            if (carry.length && futureDays.length) {
+                // Backlog não coube nem até o fim do ciclo configurado (bem atrasado) — não
+                // descarta, só acumula no último dia como último recurso.
+                futureDays[futureDays.length - 1].tasks.push(...carry);
             }
+
+            persistSchedule();
+            const n = backlog.length;
+            showToast(`${n} tarefa${n > 1 ? 's' : ''} atrasada${n > 1 ? 's' : ''} reencaixada${n > 1 ? 's' : ''} no cronograma, sem sobrecarregar um único dia.`, 'info');
         }
 
 
@@ -848,15 +923,93 @@
          * - "modo revisão": matéria com 90%+ do conteúdo já concluído perde metade do peso,
          *   liberando espaço no ciclo pras matérias que ainda faltam mais (método clássico de
          *   ciclo de estudos: ao terminar uma matéria ela entra em modo revisão com carga reduzida).
+         *
+         * A dificuldade é um multiplicador BRANDO (±30% na faixa 1-5, antes era ±67%) — ela ajusta
+         * o peso do edital, não deveria conseguir sozinha fazer uma matéria dominar o ciclo. Quem
+         * limita isso de verdade é o teto de `computeWeeklyBlocks` (nenhuma matéria > ~25% da semana).
          */
         function effectiveWeight(s) {
             const raw = Math.max(1, Math.round(s.weight || 0));
             const dificuldade = Number(s.dificuldade) || 3;
-            let w = Math.max(1, Math.round(raw * (dificuldade / 3)));
+            const dificuldadeMult = 1 + (dificuldade - 3) * 0.15; // 1..5 -> 0.7x..1.3x
+            let w = Math.max(1, Math.round(raw * dificuldadeMult));
             if (subjectSyllabusCompletionPct(s.name) >= 0.9) {
                 w = Math.max(1, Math.ceil(w / 2));
             }
             return w;
+        }
+
+
+        // ── computeWeeklyBlocks ──
+        /**
+         * Distribui `weeklyHours` blocos (1 bloco = 1h) entre `subjects` proporcionalmente ao
+         * `effectiveWeight` de cada um, mas com um TETO por matéria (`WEEKLY_SHARE_CAP` = 25% da
+         * semana) — sem isso, uma matéria com peso 3 + dificuldade 5 podia sozinha consumir metade
+         * da semana e sufocar as outras (o problema original que motivou essa função). O excedente
+         * de quem bate no teto é redistribuído entre as demais, proporcional ao score de cada uma
+         * (water-filling). Arredondamento final por "maior resto" pra fechar exatamente em
+         * `weeklyHours` blocos. Toda matéria ativa recebe pelo menos 1 bloco/semana quando há hora
+         * suficiente pra isso (nunca "some" do ciclo).
+         */
+        function computeWeeklyBlocks(subjects, weeklyHours) {
+            const WEEKLY_SHARE_CAP = 0.25;
+            const active = subjects.filter(s => Math.round(s.weight || 0) > 0);
+            const result = {};
+            if (!active.length || weeklyHours <= 0) return result;
+
+            const scores = {};
+            active.forEach(s => { scores[s.name] = effectiveWeight(s); });
+
+            const capBlocks = Math.max(1, Math.ceil(weeklyHours * WEEKLY_SHARE_CAP));
+            let pool = active.slice();
+            let poolHours = weeklyHours;
+
+            // Water-filling: tira do pool (fixando no teto) quem excede o teto, até sobrar
+            // só gente que cabe dentro do teto com o que resta do pool.
+            for (;;) {
+                if (pool.length <= 1) break;
+                const totalScore = pool.reduce((a, s) => a + scores[s.name], 0);
+                if (totalScore <= 0) break;
+                let overCap = null;
+                pool.forEach(s => {
+                    const share = (scores[s.name] / totalScore) * poolHours;
+                    if (share > capBlocks + 1e-9 && (!overCap || scores[s.name] > scores[overCap.name])) overCap = s;
+                });
+                if (!overCap) break;
+                result[overCap.name] = capBlocks;
+                poolHours -= capBlocks;
+                pool = pool.filter(s => s !== overCap);
+            }
+
+            // Distribui o que resta do pool proporcionalmente, com arredondamento por maior resto.
+            const totalScore = pool.reduce((a, s) => a + scores[s.name], 0);
+            const fracs = [];
+            let used = 0;
+            pool.forEach(s => {
+                const real = totalScore > 0 ? (scores[s.name] / totalScore) * poolHours : poolHours / pool.length;
+                const base = Math.max(0, Math.floor(real));
+                result[s.name] = base;
+                used += base;
+                fracs.push({ name: s.name, frac: real - base });
+            });
+            let remainder = Math.round(poolHours) - used;
+            fracs.sort((a, b) => b.frac - a.frac);
+            for (let i = 0; i < fracs.length && remainder > 0; i++, remainder--) result[fracs[i].name]++;
+
+            // Piso: matéria ativa não pode ficar com 0 bloco/semana se houver hora sobrando pra isso
+            // (pega 1 bloco de emprestado de quem tem mais, sem violar o mínimo de 1 do doador).
+            if (weeklyHours >= active.length) {
+                active.forEach(s => {
+                    if (result[s.name] > 0) return;
+                    const donor = active.reduce((best, x) => ((result[x.name] || 0) > (result[best.name] || 0) ? x : best), active[0]);
+                    if ((result[donor.name] || 0) > 1) {
+                        result[donor.name]--;
+                        result[s.name] = 1;
+                    }
+                });
+            }
+
+            return result;
         }
 
 
@@ -1273,6 +1426,14 @@
         const OPEN_NOTE_ON_LOAD_KEY = 'estudoFiscalOpenNoteOnLoad';
         const CANCEL_SESSION_ON_LOAD_KEY = 'estudoFiscalCancelSessionOnLoad';
 
+        // Alarmes de marco de tempo estudado (independente da meta da tarefa): tocam uma vez cada
+        // ao cruzar 1h, 1h30 e 2h de tempo total (elapsedAtStart + elapsedSession) na sessão ativa.
+        const STUDY_MILESTONES = [
+            { seconds: 3600, label: '1 hora' },
+            { seconds: 5400, label: '1 hora e 30 minutos' },
+            { seconds: 7200, label: '2 horas' }
+        ];
+
         let activeSession = null;
 
         function persistActiveSessionToStorage() {
@@ -1287,6 +1448,7 @@
                 paused: !!activeSession.paused,
                 target: activeSession.target,
                 alarmPlayed: !!activeSession.alarmPlayed,
+                milestonesPlayed: activeSession.milestonesPlayed || [],
                 lastResumeEpochMs: activeSession.lastResumeEpochMs || null,
                 quizQuestions: activeSession.quizQuestions || 0,
                 quizCorrect: activeSession.quizCorrect || 0
@@ -1316,6 +1478,7 @@
                 interval: null,
                 target: Number(data.target || 3600),
                 alarmPlayed: !!data.alarmPlayed,
+                milestonesPlayed: Array.isArray(data.milestonesPlayed) ? data.milestonesPlayed : [],
                 lastResumeEpochMs: data.lastResumeEpochMs ? Number(data.lastResumeEpochMs) : null,
                 quizQuestions: Number(data.quizQuestions || 0),
                 quizCorrect: Number(data.quizCorrect || 0)
@@ -1375,6 +1538,7 @@
                 interval: null,
                 target: Number(task.durationTarget || 3600),
                 alarmPlayed: false,
+                milestonesPlayed: [],
                 lastResumeEpochMs: Date.now(),
                 quizQuestions: 0,
                 quizCorrect: 0
@@ -1408,6 +1572,27 @@
             document.getElementById('btn-pause-resume').innerHTML = label;
             const focusBtn = document.getElementById('focus-pause-icon')?.closest('button');
             if (focusBtn) focusBtn.innerHTML = label;
+        }
+
+        /** Zera o cronômetro da sessão ativa (volta a exibir 0h 0m 0s) sem afetar o tempo já
+         *  salvo anteriormente na tarefa — esse tempo antigo continua contado normalmente quando
+         *  a sessão for finalizada (finishSession soma task.timeSpent + elapsedSession). */
+        function restartSession() {
+            if (!activeSession) return;
+
+            activeSession.elapsedAtStart = 0;
+            activeSession.elapsedSession = 0;
+            activeSession.startTime = Date.now();
+            activeSession.lastResumeEpochMs = activeSession.paused ? null : Date.now();
+            activeSession.alarmPlayed = false;
+            activeSession.milestonesPlayed = [];
+
+            const timerEl = document.getElementById('bar-timer-display');
+            if (timerEl) { timerEl.style.color = ''; timerEl.style.textShadow = 'none'; }
+
+            updateBarTimer();
+            persistActiveSessionToStorage();
+            showToast('Cronômetro reiniciado.', 'success');
         }
 
         function resumeTimer() {
@@ -1510,6 +1695,19 @@
                 if (ffill) ffill.style.width = pct + '%';
                 if (flabel) flabel.textContent = `Meta: ${Math.floor(target/3600)}h ${Math.floor((target%3600)/60)}m (${pct}%)`;
             }
+            if (!activeSession.milestonesPlayed) activeSession.milestonesPlayed = [];
+            STUDY_MILESTONES.forEach(m => {
+                if (total >= m.seconds && !activeSession.milestonesPlayed.includes(m.seconds)) {
+                    activeSession.milestonesPlayed.push(m.seconds);
+                    playAlarm();
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        new Notification("Alarme de Estudo", { body: `Você atingiu ${m.label} de estudo!` });
+                    } else {
+                        showToast(`⏰ ${m.label} de estudo!`, 'success');
+                    }
+                    persistActiveSessionToStorage();
+                }
+            });
             if(!activeSession.alarmPlayed && total >= target) {
                 activeSession.alarmPlayed = true;
                 playAlarm();
@@ -1644,6 +1842,101 @@
             renderCalendarDayModal();
             updateStats();
             window.removeEventListener('keydown', barKeyHandler);
+        }
+
+        // ── lançamento manual de tempo estudado ──
+        // Pra quem esqueceu de clicar "Iniciar Estudo"/"Continuar" e já estudou sem o cronômetro
+        // rodando: registra um tempo direto numa tarefa existente, sem precisar de activeSession.
+        // Compartilhado entre cicloestudo.html e cicloestudolivre.html (mesmo padrão de
+        // beginActiveSession — cada página acha o dayObj/index do jeito que faz sentido pra ela e
+        // chama openManualTimeEntry(dayObj, index)).
+        let manualEntryTarget = null;
+
+        function openManualTimeEntry(dayObj, index) {
+            const task = dayObj.tasks[index];
+            if (!task) return;
+            manualEntryTarget = { dayDateMs: dayObj.date.getTime(), taskIndex: index };
+
+            document.getElementById('manual-time-subject').textContent = task.subject;
+            document.getElementById('manual-time-hours').value = '';
+            document.getElementById('manual-time-minutes').value = '';
+            document.getElementById('manual-time-note').value = '';
+
+            const dt = new Date();
+            dt.setSeconds(0, 0);
+            const pad = n => String(n).padStart(2, '0');
+            document.getElementById('manual-time-datetime').value =
+                `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+            document.getElementById('manual-time-modal').classList.add('open');
+        }
+
+        function closeManualTimeEntry() {
+            const modal = document.getElementById('manual-time-modal');
+            if (modal) modal.classList.remove('open');
+            manualEntryTarget = null;
+        }
+
+        function saveManualTimeEntry() {
+            if (!manualEntryTarget) return;
+            const dayObj = fullSchedule.find(d => d.date.getTime() === manualEntryTarget.dayDateMs);
+            const task = dayObj ? dayObj.tasks[manualEntryTarget.taskIndex] : null;
+            if (!task) { closeManualTimeEntry(); return; }
+
+            const hours = Math.max(0, parseInt(document.getElementById('manual-time-hours').value) || 0);
+            const minutes = Math.max(0, parseInt(document.getElementById('manual-time-minutes').value) || 0);
+            const durationSeconds = hours * 3600 + minutes * 60;
+            if (durationSeconds <= 0) {
+                alert('Informe um tempo maior que zero.');
+                return;
+            }
+
+            const noteText = document.getElementById('manual-time-note').value;
+            const whenRaw = document.getElementById('manual-time-datetime').value;
+            const when = whenRaw ? new Date(whenRaw) : new Date();
+
+            const historyItem = {
+                id: Date.now().toString(),
+                date: when.toISOString(),
+                subject: task.subject,
+                duration: durationSeconds,
+                startTime: when.getTime(),
+                note: noteText,
+                questions: 0,
+                correct: 0,
+                manual: true
+            };
+            studyHistory.unshift(historyItem);
+            localStorage.setItem(K('estudoFiscalStudyHistory'), JSON.stringify(studyHistory));
+
+            task.timeSpent = (task.timeSpent || 0) + durationSeconds;
+            const derivedStatus = deriveTaskStatus(task);
+            task.completed = (derivedStatus === 'concluido');
+            if (noteText) {
+                const timeString = when.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                task.note = (task.note ? task.note + '\n' : '') + `[${timeString}] ${noteText}`;
+            }
+
+            const savedData = JSON.parse(localStorage.getItem(K('estudoFiscalData'))) || {};
+            if (!savedData[task.id]) savedData[task.id] = {};
+            savedData[task.id].status = derivedStatus;
+            savedData[task.id].note = task.note;
+            savedData[task.id].timeSpent = task.timeSpent;
+            savedData[task.id].durationTarget = task.durationTarget || 3600;
+            localStorage.setItem(K('estudoFiscalData'), JSON.stringify(savedData));
+            localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(fullSchedule));
+            syncToDisk();
+
+            closeManualTimeEntry();
+            showToast(`Tempo adicionado: ${formatHM(durationSeconds)} em ${task.subject}.`, 'success');
+
+            renderHistory();
+            renderCalendar();
+            renderList();
+            renderTimeStats();
+            renderCalendarMonth();
+            renderCalendarDayModal();
+            updateStats();
         }
 
         function barKeyHandler(e) {

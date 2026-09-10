@@ -186,6 +186,36 @@
         </div>
     </div>
 
+    <!-- LANÇAMENTO MANUAL DE TEMPO ESTUDADO -->
+    <div id="manual-time-modal">
+        <div class="note-modal-content">
+            <div class="note-header">
+                <span>Registrar tempo estudado manualmente — <span id="manual-time-subject">Matéria</span></span>
+                <button onclick="closeManualTimeEntry()" style="background:none; border:none; color:#aaa; cursor:pointer; font-size:1.2rem;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="note-body">
+                <div class="manual-time-row">
+                    <div>
+                        <label class="note-label">Horas</label>
+                        <input type="number" id="manual-time-hours" class="note-input" placeholder="0" min="0">
+                    </div>
+                    <div>
+                        <label class="note-label">Minutos</label>
+                        <input type="number" id="manual-time-minutes" class="note-input" placeholder="0" min="0" max="59">
+                    </div>
+                </div>
+                <label class="note-label">Quando</label>
+                <input type="datetime-local" id="manual-time-datetime" class="note-input" style="margin-bottom:12px;">
+                <label class="note-label">Anotações (opcional)</label>
+                <textarea id="manual-time-note" class="note-textarea" placeholder="O que você estudou?"></textarea>
+            </div>
+            <div class="note-footer">
+                <button class="bar-btn btn-cancel" onclick="closeManualTimeEntry()"><i class="fas fa-times"></i> Cancelar</button>
+                <button class="bar-btn btn-save" onclick="saveManualTimeEntry()"><i class="fas fa-check"></i> Salvar Tempo</button>
+            </div>
+        </div>
+    </div>
+
     <!-- STICKY TIMER BAR -->
     <div id="active-study-bar">
         <div class="bar-subject-info">
@@ -209,6 +239,9 @@
             <button id="btn-pause-resume" class="bar-btn btn-continue" onclick="togglePauseResume()">
                 <i class="fas fa-pause"></i> Pausar
             </button>
+            <button class="bar-btn btn-cancel" onclick="restartSession()" title="Zera o cronômetro desta sessão">
+                <i class="fas fa-rotate-left"></i> Reiniciar
+            </button>
             <button class="bar-btn btn-save" onclick="finishSession()">
                 <i class="fas fa-check"></i> Salvar
             </button>
@@ -226,12 +259,14 @@
         <div class="focus-target" id="focus-target-label"></div>
         <div class="focus-controls">
             <button class="bar-btn btn-continue" onclick="togglePauseResume()"><i class="fas fa-pause" id="focus-pause-icon"></i> Pausar</button>
+            <button class="bar-btn btn-cancel" onclick="restartSession()" title="Zera o cronômetro desta sessão"><i class="fas fa-rotate-left"></i> Reiniciar</button>
             <button class="bar-btn btn-save" onclick="finishSession()"><i class="fas fa-check"></i> Salvar</button>
             <button class="bar-btn btn-cancel" onclick="closeFocusMode()"><i class="fas fa-compress"></i> Sair do Modo Foco</button>
         </div>
     </div>
 
 
+    <script src="profile-keys.js"></script>
     <script src="core.js"></script>
     <script>
         /**
@@ -280,7 +315,7 @@
          * Desenha o mês inteiro: cabeçalho (Segunda..Domingo) + uma célula por dia (incluindo
          * dias do mês anterior/seguinte pra completar as semanas), com pontinhos indicando as
          * matérias planejadas (laranja = a fazer, verde = concluída) — o cronograma já vem
-         * pronto de fullSchedule (gerado em Início via "Gerar Ciclo").
+         * pronto de fullSchedule (gerado em Planejamento via "Gerar Ciclo").
          */
         function renderCalendarMonth() {
             const head = document.getElementById('calendar-grid-head');
@@ -293,8 +328,8 @@
                 <div class="cycle-empty" style="margin-bottom:18px;">
                     <i class="fas fa-calendar-plus"></i>
                     <h3>Nenhum ciclo automático gerado ainda</h3>
-                    <p>Vá em "Início" e clique em "Gerar Ciclo" para o sistema montar seu cronograma completo aqui no calendário — ou use a aba "Ciclo Livre" se preferir escolher você mesmo o que estudar a cada dia.</p>
-                    <a class="btn btn-primary" href="index.html"><i class="fas fa-arrow-right"></i> Ir para Início</a>
+                    <p>Vá em "Planejamento", ajuste datas/rotina/pesos e clique em "Gerar Ciclo" no final da página para o sistema montar seu cronograma completo aqui no calendário — ou use a aba "Ciclo Livre" se preferir escolher você mesmo o que estudar a cada dia.</p>
+                    <a class="btn btn-primary" href="planejamento.html"><i class="fas fa-arrow-right"></i> Ir para Planejamento</a>
                 </div>` : '';
 
             label.textContent = calendarViewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase());
@@ -402,6 +437,7 @@
                         </div>
                         <div class="cycle-card-actions">
                             ${actionHtml}
+                            ${!isActive ? `<button class="cycle-manual-btn" title="Adicionar tempo manualmente (esqueceu de marcar?)" onclick="openManualEntryForCalendarTask('${task.id}')"><i class="fas fa-clock"></i></button>` : ''}
                             <button class="cycle-remove-btn" title="Remover desse dia" onclick="removeCalendarTask('${task.id}')"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>`;
@@ -455,6 +491,14 @@
             const index = dayObj.tasks.findIndex(t => t.id === taskId);
             if (index === -1) return;
             if (beginActiveSession(dayObj, index)) { renderCalendarDayModal(); renderCalendarMonth(); }
+        }
+
+        /** Abre o lançamento manual de tempo pra uma tarefa do dia aberto no modal. */
+        function openManualEntryForCalendarTask(taskId) {
+            const dayObj = getOrCreateDayObjByKey(calendarSelectedDateKey);
+            const index = dayObj.tasks.findIndex(t => t.id === taskId);
+            if (index === -1) return;
+            openManualTimeEntry(dayObj, index);
         }
 
         // (cronômetro, modo foco, salvar/cancelar sessão e atalhos de teclado ficam em core.js —

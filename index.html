@@ -226,14 +226,6 @@
                     <div class="home-action-btn"><button class="btn btn-primary" onclick="openEditalAIModal()">Importar Edital PDF</button></div>
                 </div>
                 <div class="home-action-row">
-                    <div class="home-action-icon"><i class="fas fa-sync-alt"></i></div>
-                    <div class="home-action-info">
-                        <h3>Gerar Ciclo</h3>
-                        <p>Com as matérias já importadas, gere o cronograma do seu ciclo de estudo.</p>
-                    </div>
-                    <div class="home-action-btn"><button id="generate-cycle-button" class="btn btn-primary" onclick="generateCycleFromModel()">Gerar Ciclo</button></div>
-                </div>
-                <div class="home-action-row">
                     <div class="home-action-icon"><i class="fas fa-upload"></i></div>
                     <div class="home-action-info">
                         <h3>Carregar Progresso</h3>
@@ -310,7 +302,7 @@
                         <div class="excel-tutorial-num">4</div>
                         <div>
                             <b>Escolha automático ou livre</b>
-                            <p>Clique em <i>"Gerar Ciclo"</i> aqui no Início e o sistema monta sozinho um calendário completo (peso maior = aparece mais vezes) — acompanhe dia a dia na aba <i>"Ciclo de Estudo"</i>. Se preferir escolher você mesmo as matérias de cada dia, use a aba <i>"Ciclo Livre"</i> e clique em <i>"Gerar Ciclo de Hoje"</i>.</p>
+                            <p>Vá em <i>"Planejamento"</i>, ajuste datas, rotina semanal e peso/dificuldade/carga de cada matéria, e clique em <i>"Gerar Ciclo"</i> no final da página — o sistema monta sozinho um calendário completo (peso maior = aparece mais vezes) — acompanhe dia a dia na aba <i>"Ciclo de Estudo"</i>. Se preferir escolher você mesmo as matérias de cada dia, use a aba <i>"Ciclo Livre"</i> e clique em <i>"Gerar Ciclo de Hoje"</i>.</p>
                         </div>
                     </div>
                     <div class="excel-tutorial-step">
@@ -360,8 +352,8 @@
                     </div>
                 </div>
                 <div class="wizard-step" data-wizard-step="3" style="display:none;">
-                    <p class="wizard-lead"><i class="fas fa-circle-check" style="color: var(--green);"></i> Tudo pronto! Agora é só gerar o ciclo de hoje.</p>
-                    <p style="font-size:0.85rem; color: var(--ink-3);">Clique em "Gerar Ciclo" no Início para o calendário automático, ou vá na aba "Ciclo Livre" e clique em "Gerar Ciclo de Hoje" pra escolher você mesmo. Você pode rever o passo a passo completo a qualquer momento no botão "Tutorial de Utilização".</p>
+                    <p class="wizard-lead"><i class="fas fa-circle-check" style="color: var(--green);"></i> Tudo pronto! Agora é só concluir o planejamento e gerar o ciclo.</p>
+                    <p style="font-size:0.85rem; color: var(--ink-3);">Vá em "Planejamento", ajuste datas/rotina/pesos e clique em "Gerar Ciclo" no final da página pra montar o calendário automático — ou vá na aba "Ciclo Livre" e clique em "Gerar Ciclo de Hoje" pra escolher você mesmo. Você pode rever o passo a passo completo a qualquer momento no botão "Tutorial de Utilização".</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -397,6 +389,7 @@
         </div>
     </div>
 
+    <script src="profile-keys.js"></script>
     <script src="core.js"></script>
     <script>
         function renderHomeStatus() {
@@ -428,22 +421,6 @@
                 </div>
             `;
         }
-
-        function setGenerateButtonState(state) {
-            const btn = document.getElementById('generate-cycle-button');
-            if (!btn) return;
-            if (state === 'pending') {
-                btn.style.background = '#ef4444';
-                btn.innerHTML = '<i class="fas fa-play-circle"></i> Gerar Ciclo de Estudo';
-            } else if (state === 'success') {
-                btn.style.background = '#10b981';
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Ciclo Gerado Sucesso';
-            } else {
-                btn.style.background = 'var(--accent-color)';
-                btn.innerHTML = '<i class="fas fa-play-circle"></i> Gerar Ciclo de Estudo';
-            }
-        }
-
 
         // --- MODEL IMPORT/EXPORT (CSV) ---
         /**
@@ -491,7 +468,7 @@
                         return;
                     }
                     applyImportedModel(model);
-                    alert('Modelo importado com sucesso! Cronograma regenerado.');
+                    alert('Modelo importado com sucesso! Vá em "Planejamento" para ajustar datas, rotina e pesos, e gerar seu Ciclo de Estudo.');
                 } catch(err) {
                     alert('Erro ao importar CSV: ' + err.message);
                 }
@@ -797,25 +774,17 @@
 
 
         /**
-         * Aplica o modelo importado no sistema e regenera cronograma.
+         * Aplica o modelo importado no sistema e limpa o cronograma antigo (que não faz mais
+         * sentido pras novas matérias/datas). Não gera um cronograma novo aqui — isso agora só
+         * acontece em planejamento.html ("Gerar Ciclo"), depois da pessoa revisar/ajustar datas,
+         * rotina e pesos; os 3 pontos de importação (Excel/CSV/PDF do edital) mandam a pessoa pra
+         * lá logo depois de chamar esta função.
          */
         function applyImportedModel(model) {
             localStorage.setItem(K('estudoFiscalModel'), JSON.stringify(model));
             loadModelFromStorage();
             localStorage.removeItem(K('estudoFiscalScheduleStructure'));
             fullSchedule = [];
-            setGenerateButtonState('pending');
-            init();
-            syncToDisk();
-        }
-
-        function generateCycleFromModel() {
-            const raw = localStorage.getItem(K('estudoFiscalModel'));
-            if (raw) loadModelFromStorage();
-            localStorage.removeItem(K('estudoFiscalScheduleStructure'));
-            fullSchedule = [];
-            generateSchedule();
-            setGenerateButtonState('success');
             init();
             syncToDisk();
         }
@@ -912,9 +881,15 @@
                         const block = text.match(/<script id="persistence-data">([\s\S]*?)<\/script>/i);
                         if (!block) throw new Error('Bloco de persistência não encontrado no HTML.');
                         const stmt = block[1];
-                        const jsonMatch = stmt.match(/window\.HARDCODED_DATA\s*=\s*([^;]+);/i);
-                        if (!jsonMatch) throw new Error('HARDCODED_DATA não encontrado no script.');
-                        const jsonStr = jsonMatch[1].trim();
+                        // Não usar regex até o primeiro ";" — o JSON pode conter ";" dentro de
+                        // strings (notas, tópicos etc.), o que cortaria o payload no meio e
+                        // geraria "Unterminated string in JSON". Em vez disso, cortamos pelo
+                        // ";" final (o do template literal em saveSelfContainedHTML), que é
+                        // sempre o último caractere relevante do bloco.
+                        const eqIdx = stmt.indexOf('window.HARDCODED_DATA');
+                        if (eqIdx === -1) throw new Error('HARDCODED_DATA não encontrado no script.');
+                        let jsonStr = stmt.slice(stmt.indexOf('=', eqIdx) + 1).trim();
+                        if (jsonStr.endsWith(';')) jsonStr = jsonStr.slice(0, -1).trim();
                         payload = JSON.parse(jsonStr);
                     }
                     if (!payload || typeof payload !== 'object') throw new Error('Payload inválido.');
@@ -1060,7 +1035,7 @@
                         if (!proceed) return;
                     }
                     applyImportedModel(model);
-                    alert('Modelo Excel importado com sucesso! Cronograma regenerado.');
+                    alert('Modelo Excel importado com sucesso! Vá em "Planejamento" para ajustar datas, rotina e pesos, e gerar seu Ciclo de Estudo.');
                 } catch(err) {
                     alert('Erro ao importar Excel: ' + err.message);
                 }
@@ -1470,7 +1445,7 @@ ${chunkText}
             applyImportedModel(extractedModel);
             const cargoNote = cargo ? ` (cargo: ${cargo})` : '';
             setEditalAIStatus(`<i class="fas fa-check"></i> Pronto! ${extractedModel.materias.length} matéria(s) importada(s) pela IA${escHtml(cargoNote)}.`, 'success');
-            showToast('Edital importado pela IA com sucesso!', 'success');
+            showToast('Edital importado pela IA com sucesso! Vá em "Planejamento" para ajustar datas, rotina e pesos, e gerar seu Ciclo de Estudo.', 'success');
             setTimeout(closeEditalAIModal, 1500);
         }
 

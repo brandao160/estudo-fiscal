@@ -10,8 +10,8 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 
 | Arquivo | Página / Responsabilidade |
 |---|---|
-| `index.html` | Menu inicial: resumo do progresso, atalhos para as demais telas, importação/exportação do modelo (Excel/CSV) e extração de conteúdo de PDF (edital) via `pdf.js`. |
-| `planejamento.html` | Planejamento geral: fases do plano de estudo e horas semanais (`estudoFiscalPlanPhases`, `estudoFiscalWeeklyHours`). |
+| `index.html` | Menu inicial: resumo do progresso, atalhos para as demais telas, importação/exportação do modelo (Excel/CSV) e extração de conteúdo de PDF (edital) via `pdf.js`. Não gera mais o ciclo — só importa o modelo e direciona pra Planejamento. |
+| `planejamento.html` | Planejamento geral: datas do ciclo, rotina semanal, peso/dificuldade/carga por matéria, fases do plano de estudo (`estudoFiscalPlanPhases`, `estudoFiscalWeeklyHours`) — e **único ponto de geração do Ciclo de Estudo** (botão "Gerar Ciclo" no final da página, vermelho/verde conforme o ciclo está desatualizado ou em dia). |
 | `materias.html` | Cadastro de matérias e pesos (base para a geração do ciclo). |
 | `cicloestudo.html` | Ciclo de Estudo (calendário guiado): gera e exibe o cronograma diário de tarefas. |
 | `cicloestudolivre.html` | Ciclo Livre: modo de estudo sem cronograma fixo, seleção manual de matéria/tópico. |
@@ -22,6 +22,7 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 | `tempoestudo.html` | Estatísticas de tempo de estudo e painel legado de "Calibração do Ciclo" (ver nota abaixo). |
 | `historico.html` | Histórico de sessões de estudo (data, matéria, duração, anotações). |
 | `core.css` / `core.js` | Estilos e lógica compartilhados: perfis, tema, modelo de dados, geração do ciclo, estatísticas, revisão espaçada. |
+| `profile-keys.js` | Config leve compartilhada, carregada antes de `core.js` em toda página (inclusive `resumo.html`/`planejamento.html`, que não carregam `core.js`): lista única das chaves de dados "por perfil" (`PROFILE_DATA_KEYS`) e os pares de matérias que o gerador de ciclo evita colocar no mesmo dia (`SUBJECT_CONFLICT_GROUPS`). |
 | `manifest.json` / `sw.js` / `icon.svg` | PWA — permite instalar o app e funcionar offline (service worker *network-first*, cai para cache quando não há rede). |
 | `CNAME` | Domínio customizado para deploy via GitHub Pages. |
 
@@ -30,8 +31,9 @@ O app é multi-página; todas as páginas compartilham o mesmo tema visual (`cor
 ## Como Usar
 
 - Abra `index.html` direto no navegador (duplo clique) ou hospede os arquivos em qualquer servidor estático.
-- Cadastre as matérias e pesos em **Matérias**, ajuste **Planejamento** (fases e horas semanais) e gere o cronograma em **Ciclo de Estudo**.
-- Em **Planejamento → Contagem regressiva**, defina diretamente o **início e o fim do ciclo** (`inicioCiclo`/`fimCiclo` no modelo) pelos campos de data — não depende mais de importar planilha/PDF para isso; dá pra ajustar a qualquer momento.
+- Em **Início**, importe suas matérias (Excel, CSV ou PDF do edital via IA) — isso só carrega o modelo, não gera o cronograma. Depois de importar, vá em **Planejamento** para revisar/ajustar tudo e gerar o ciclo de lá; o **"Gerar Ciclo"** que existia em Início foi removido — agora só existe no final de Planejamento, pra evitar gerar com datas/pesos ainda desatualizados.
+- Em **Planejamento**, ajuste **Contagem regressiva** (datas), **Minha rotina semanal** (horas/dia), **Distribuição por matéria** (peso/dificuldade/carga) e **Preferências do ciclo** — e clique em **"Gerar Ciclo"** no final da página. O botão fica **vermelho** ("Ajuste o Ciclo de Estudo") assim que nunca foi gerado ou QUALQUER ajuste é feito aqui (datas, rotina, peso/dificuldade/carga, discursiva, nova matéria) — mesmo os campos que já reajustam os dias futuros sozinhos na hora (`regenerateFutureSchedule`) marcam o botão de vermelho, pra sempre exigir uma confirmação explícita em "Gerar Ciclo" antes de considerar o calendário em dia. Fica **verde** ("Ciclo Gerado com Sucesso") assim que gerado.
+- Em **Planejamento → Contagem regressiva**, defina diretamente o **início e o fim do ciclo** (`inicioCiclo`/`fimCiclo` no modelo) pelos campos de data — não depende mais de importar planilha/PDF para isso; dá pra ajustar a qualquer momento (mas sempre exige clicar em "Gerar Ciclo" de novo depois, já que mudar o período reformula todos os dias do calendário, não só os futuros).
 - Em **Planejamento → Distribuição por matéria**, cada matéria tem um campo **Tipo** (Básica/Específica) editável — útil quando a extração por IA classifica errado ou não reconhece — e o nome da matéria também é editável direto na tabela (renomear migra o nome em cronograma, histórico, resumos e banco de questões já salvos, pra não deixar nada órfão). Abaixo da tabela, o formulário **"Adicionar Matéria"** cobre o caso da IA não ter encontrado alguma matéria do edital: cadastra manualmente nome, tipo e peso, e já cria a seção correspondente vazia em Conteúdo Programático.
 - Em **Conteúdo Programático**, cada matéria tem um campo **"Adicionar tópico"** no fim da lista, pra completar tópicos que a IA não tiver identificado na extração do edital.
 - Use **Ciclo Livre** para estudar fora do cronograma quando quiser.
@@ -46,6 +48,8 @@ O app suporta múltiplos perfis no mesmo navegador (`estudoFiscalProfiles` / `es
 ## Como Funciona a Geração do Ciclo
 
 A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método **"Ciclo Mestre"**: a frequência de cada matéria é definida exclusivamente pelo **peso** (1 a 3) cadastrado em Matérias — peso maior gera mais blocos de estudo dessa matéria no ciclo, distribuídos evitando repetição excessiva no mesmo dia.
+
+Ao encaixar os blocos da semana nos dias, o gerador também evita (best-effort, nunca deixa hora vazia por causa disso) colocar no mesmo dia duas matérias de conteúdo parecido demais — ex: Direito Constitucional e Direito Administrativo, ou Contabilidade Pública e Contabilidade Geral. A lista de pares "conflitantes" fica em `SUBJECT_CONFLICT_GROUPS` (`profile-keys.js`); a mesma lógica é usada tanto por `generateSchedule` (core.js) quanto por `buildWeeklyScheduleDays` (planejamento.html, que gera o ciclo de forma independente por não carregar core.js).
 
 > O painel "Calibração do Ciclo" (em `tempoestudo.html`, parâmetros `beta`/`weightBias`/`dispersion`/`minCoverage`/`avoidConsecutive`/`minRep`/`maxRep`) é **legado**: os controles ficam desabilitados e servem apenas de preview informativo — a lógica de apportionment ponderado que eles descreviam não é mais usada. A regra atual é simples: quantidade de blocos = peso da matéria.
 
@@ -72,6 +76,7 @@ A geração de cronograma (`generateSchedule`, em `core.js`) usa hoje o método 
 - Como o modelo grátis usado (via OpenRouter) não tem ferramenta de busca embutida, as questões são sempre inéditas geradas pela IA — não há tentativa de buscar questões reais de provas aplicadas.
 - **Banco compartilhado entre visitantes**: antes de chamar a IA, "Gerar +N" primeiro consulta se alguém (qualquer visitante do site) já gerou questões pra aquele mesmo tópico (chave = matéria+tópico normalizados) — as que esse usuário ainda não tem localmente são reaproveitadas na hora, sem gastar cota de IA nem contar no limite diário. Só o que faltar pra completar o lote é gerado de novo; ao final, o tópico inteiro (velhas + novas) é regravado no banco compartilhado pra quem pedir depois já achar tudo pronto. Guardado no mesmo KV do rate-limit (`RATE_LIMIT_KV`, prefixo `qbank:`, ver `handleQuestionBank` em `functions/questoes-proxy.js`) — sem esse KV vinculado, essa etapa é pulada silenciosamente e cai direto na IA, como antes. O status abaixo dos botões mostra quantas foram reaproveitadas vs. geradas na hora. Cada consulta ao banco também incrementa um contador de popularidade por tópico (`qbankhit:<chave>`) e o `bankSave` agora grava também o nome legível da matéria/tópico (não só a chave normalizada) — os dois usados pelo pré-aquecimento abaixo.
 - **Pré-aquecimento em background** (`functions/warmup-questoes.js`, opcional): o banco compartilhado só ajuda quem chega *depois* de alguém já ter gerado questões pra um tópico — o primeiro visitante de cada tópico sempre espera a IA. Esta rota completa (até 30 questões) os tópicos mais populares (pelo contador acima) que ainda estão com o banco raso, rodando sozinha via agendamento, não a partir de um clique de usuário. Protegida por uma variável de ambiente `WARMUP_SECRET` (fail-closed: sem ela configurada, a rota se recusa a rodar) — precisa de um Cron Trigger do Cloudflare Pages (ou um cron HTTP externo) apontando pra `/warmup-questoes?secret=<WARMUP_SECRET>` configurado manualmente no dashboard; instruções completas nos comentários do topo do arquivo.
+- **Hidratação automática do banco compartilhado ao abrir uma matéria** (`hydrateMateriaFromBank`/`hydrateTopicFromBank` em `questoes.html`): antes disso, um tópico só entrava no estoque local (e virava "Resolver" em vez de "Gerar") depois de a pessoa clicar em "Gerar" pelo menos uma vez, mesmo que o banco compartilhado já tivesse questões prontas pra ele (via pré-aquecimento ou outro visitante). Agora, ao abrir o acordeão de uma matéria pela primeira vez na visita, o app consulta em background (`bankGet`, sem gastar cota de IA) todos os tópicos dela que ainda estão sem nenhuma questão local, importa o que o banco já tiver e troca "Gerar" por "Resolver" na hora — sem exigir clique.
 
 ### Proxy de geração (`functions/questoes-proxy.js` + `functions/_shared/ai-core.js`)
 
@@ -115,7 +120,7 @@ Chaves principais (por perfil, com sufixo `__<id>` quando não é o perfil "Prin
 
 - **Salvar** (`saveSelfContainedHTML`, no cabeçalho de `index.html`): baixa uma cópia HTML do site com todos os dados de todos os perfis embutidos.
 - Reabrir esse arquivo salvo restaura cronograma, status, histórico, syllabus, resumos e modelo exatamente de onde parou.
-- **Regerar Cronograma**: apaga as marcações do calendário e gera um novo cronograma; histórico, syllabus e resumos são preservados.
+- **Limpar Ciclo** (Início): apaga o cronograma atual pra gerar um novo do zero em Planejamento; histórico, syllabus e resumos são preservados. **Gerar Ciclo** (final de Planejamento) também substitui qualquer cronograma já gerado, sem precisar limpar antes.
 
 ## PWA e Compatibilidade
 
@@ -130,6 +135,6 @@ Chaves principais (por perfil, com sufixo `__<id>` quando não é o perfil "Prin
 - **"Consigo importar meu modelo de matérias?"**
   Sim, pelo menu inicial (`index.html`), em Excel (se a lib `xlsx.js` carregar) ou CSV.
 - **"Como recomeço o ciclo com novas matérias/pesos?"**
-  Ajuste os pesos em Matérias e use "Regerar Cronograma" em Ciclo de Estudo.
+  Ajuste os pesos em Matérias (ou direto em Planejamento) e clique em "Gerar Ciclo" no final de Planejamento.
 - **"Posso usar para mais de uma pessoa no mesmo computador?"**
   Sim, use o seletor de perfis no cabeçalho para criar e alternar entre perfis independentes.

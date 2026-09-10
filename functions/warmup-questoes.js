@@ -44,7 +44,7 @@ const WARMUP_BATCH_SIZE = 10;
 
 export async function onRequestGet(context) {
     const { request, env } = context;
-    const cors = corsHeaders(env);
+    const cors = corsHeaders(env, request);
 
     const url = new URL(request.url);
     const secret = request.headers.get('X-Warmup-Secret') || url.searchParams.get('secret');

@@ -24,9 +24,13 @@
    Workers & Pages → estudo-fiscal):
    1. Aba Settings → Environment variables → Production → Add variable:
         - OPENROUTER_API_KEY  → cole a chave da OpenRouter → marque "Encrypt"
-        - ALLOWED_ORIGIN      → https://cicloestudo.com.br (ou o domínio do
-          site; sem barra no final) — pode repetir os dois na aba "Preview"
-          se quiser testar por deployments de preview também.
+        - ALLOWED_ORIGIN      → https://cicloestudo.com.br,https://www.cicloestudo.com.br
+          (lista separada por vírgula, sem espaço, sem barra no final — inclua TODAS as
+          variações de domínio pelas quais o site é acessado; com só uma, quem acessa
+          pela outra tem as chamadas ao proxy bloqueadas por CORS, o que aparece no app
+          como "Failed to fetch" sem nenhuma pista) — pode repetir na aba "Preview" se
+          quiser testar por deployments de preview também (esses já são liberados à parte,
+          ver corsHeaders em _shared/ai-core.js).
    2. (Recomendado) Aba Settings → Functions → KV namespace bindings → Add:
         - Storage & Databases → KV → Create a namespace (ex.: "QZ_RATE_LIMIT")
           se ainda não tiver uma, e vincule com Variable name: RATE_LIMIT_KV.
@@ -52,12 +56,12 @@ import { corsHeaders, resolveModel } from './_shared/ai-core.js';
 const DAILY_LIMIT_PER_IP = 100;
 
 export async function onRequestOptions(context) {
-    return new Response(null, { headers: corsHeaders(context.env) });
+    return new Response(null, { headers: corsHeaders(context.env, context.request) });
 }
 
 export async function onRequestPost(context) {
     const { request, env } = context;
-    const cors = corsHeaders(env);
+    const cors = corsHeaders(env, request);
 
     let body;
     try { body = await request.json(); } catch (e) {

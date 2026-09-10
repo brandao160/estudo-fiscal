@@ -46,11 +46,23 @@ export const FALLBACK_TIMEOUT_MS = 5000;
 
 const RETRYABLE_STATUSES = [400, 402, 404, 429, 503];
 
-export function corsHeaders(env) {
+/** CORS: o header Access-Control-Allow-Origin só aceita UM valor por resposta, então fixar
+ *  ALLOWED_ORIGIN num domínio só quebra a outra variação (ex.: "cicloestudo.com.br" configurado,
+ *  mas o site também responde em "www.cicloestudo.com.br" — quem acessa pelo www. tem a chamada
+ *  bloqueada pelo navegador, o que chega no app só como "Failed to fetch", sem nenhuma pista).
+ *  Em vez disso, ALLOWED_ORIGIN aceita uma lista separada por vírgula e ecoamos de volta a Origin
+ *  da requisição só se ela estiver na lista (ou for um deployment de preview do próprio projeto,
+ *  *.estudo-fiscal.pages.dev — sempre liberado, é o mesmo projeto). */
+export function corsHeaders(env, request) {
+    const configured = (env.ALLOWED_ORIGIN || '').split(',').map(o => o.trim()).filter(Boolean);
+    const origin = request ? request.headers.get('Origin') : null;
+    const isOwnPreview = origin && /^https:\/\/([a-z0-9-]+\.)?estudo-fiscal\.pages\.dev$/i.test(origin);
+    const allowOrigin = origin && (configured.includes(origin) || isOwnPreview) ? origin : (configured[0] || '*');
     return {
-        'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
+        'Access-Control-Allow-Origin': allowOrigin,
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
+        'Vary': 'Origin',
     };
 }
 

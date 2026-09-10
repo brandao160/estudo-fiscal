@@ -173,10 +173,15 @@ async function handleQuestionBank(body, context, cors) {
                 } catch (e) { /* ignora lixo salvo */ }
             }
             // Contador de popularidade, usado pelo pré-aquecimento (functions/warmup-questoes.js)
-            // pra saber quais tópicos vale a pena manter com o banco cheio. "waitUntil" garante que
-            // a escrita no KV termine mesmo depois da resposta já ter voltado pro cliente — sem
-            // isso o Workers runtime pode matar a promise no meio, já que ela não bloqueia a resposta.
-            context.waitUntil(incrementHitCounter(env, bankKey));
+            // pra saber quais tópicos vale a pena manter com o banco cheio. Amostrado (1 em cada 10
+            // leituras): "Resolver questões de todas as matérias" chama bankGet uma vez por tópico do
+            // ciclo inteiro (facilmente 50-150 de uma vez só), e cada leitura virava 1 escrita no KV —
+            // um único clique conseguia consumir boa parte da cota diária gratuita de escrita (1.000/dia),
+            // derrubando as gravações de questões DE VERDADE (bankSave) pro resto do dia. O ranking de
+            // popularidade só precisa ser relativo, não exato, então amostrar não compromete a função.
+            // "waitUntil" garante que a escrita no KV termine mesmo depois da resposta já ter voltado
+            // pro cliente — sem isso o Workers runtime pode matar a promise no meio.
+            if (Math.random() < 0.1) context.waitUntil(incrementHitCounter(env, bankKey));
         }
         return new Response(JSON.stringify({ questoes }), { status: 200, headers: { ...cors, 'content-type': 'application/json' } });
     }
@@ -211,8 +216,8 @@ async function handleQuestionBank(body, context, cors) {
             const merged = existing.concat(incoming).filter((q, i, arr) =>
                 q && q.enunciado && arr.findIndex(x => normEnun(x.enunciado) === normEnun(q.enunciado)) === i
             ).slice(0, 100);
-            saved = merged.length;
             await env.RATE_LIMIT_KV.put(key, JSON.stringify({ materia, topico, questoes: merged, updatedAt: Date.now() }));
+            saved = merged.length; // só conta como salvo depois do put() não ter lançado
         } catch (e) { /* ex.: cota diária de escrita do KV estourada — segue sem quebrar o app */ }
     }
     return new Response(JSON.stringify({ ok: true, saved }), { status: 200, headers: { ...cors, 'content-type': 'application/json' } });

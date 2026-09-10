@@ -180,7 +180,7 @@
                     <p style="color: var(--ink-3); font-size: 0.85rem; margin: 0 0 14px;">
                         Gere questões inéditas de múltipla escolha (A a E) para cada tópico do seu conteúdo programático — até 100 por tópico, em lotes de até 20 por vez — e resolva no estilo de um cursinho de questões. O desempenho entra automaticamente nas suas estatísticas de Planejamento e Matérias. Geração automática (sem precisar de chave própria); tem um limite diário de uso.
                     </p>
-                    <button class="btn btn-primary" onclick="startPractice(null, null)"><i class="fas fa-play"></i> Resolver questões de todas as matérias</button>
+                    <button class="btn btn-primary" id="qz-resolver-todas-btn" onclick="startPracticeAllMaterias(this)"><i class="fas fa-play"></i> Resolver questões de todas as matérias</button>
                     <div id="qz-generation-status" class="edital-ai-status" style="display:none; margin-top:14px;"></div>
                 </div>
 
@@ -830,6 +830,29 @@ ${existentes}`;
         function showQzView(name) {
             document.getElementById('view-banco').classList.toggle('active', name === 'banco');
             document.getElementById('view-resolver').classList.toggle('active', name === 'resolver');
+        }
+
+        /**
+         * Botão "Resolver questões de todas as matérias": antes de montar a sessão, busca no banco
+         * compartilhado (KV do Cloudflare, via bankGet) as questões de TODOS os tópicos de TODAS as
+         * matérias que ainda não têm nada localmente — não só da matéria cujo acordeão foi aberto
+         * (isso já existia em hydrateMateriaFromBank, mas só disparava por matéria individual).
+         * Cada questão puxada entra no bucket local certo (materia+topico da própria bankKey
+         * consultada), então continua corretamente relacionada à matéria/tópico de origem.
+         */
+        async function startPracticeAllMaterias(btnEl) {
+            if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando questões no banco compartilhado...'; }
+            setQzGenerationStatus('<i class="fas fa-spinner fa-spin"></i> Buscando questões geradas por todos no banco compartilhado...', '');
+            try {
+                const materias = [];
+                syllabusData.forEach(section => (section.subjects || []).forEach(sub => materias.push(sub.name)));
+                await Promise.all(materias.map(m => hydrateMateriaFromBank(m)));
+            } finally {
+                setQzGenerationStatus('', '');
+                if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = '<i class="fas fa-play"></i> Resolver questões de todas as matérias'; }
+            }
+            renderBanco();
+            startPractice(null, null);
         }
 
         function startPractice(materia, topico) {

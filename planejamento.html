@@ -872,16 +872,19 @@
          * Distribui `weeklyHours` blocos entre `subjects` proporcionalmente ao `effectiveWeight`
          * de cada um, com teto de ~25% da semana por matéria (excedente redistribuído entre as
          * demais) — mesma lógica de `computeWeeklyBlocks` em core.js, copiada aqui pelo mesmo
-         * motivo. Ver comentário lá para a explicação completa do algoritmo.
+         * motivo. Ver comentário lá para a explicação completa do algoritmo, inclusive o papel de
+         * `starvation` (evita que uma matéria fique de fora do ciclo pra sempre quando há menos
+         * horas/semana do que matérias ativas).
          */
-        function computeWeeklyBlocks(subjects, weeklyHours) {
+        function computeWeeklyBlocks(subjects, weeklyHours, starvation) {
+            starvation = starvation || {};
             const WEEKLY_SHARE_CAP = 0.25;
             const active = subjects.filter(s => Math.round(s.weight || 0) > 0);
             const result = {};
             if (!active.length || weeklyHours <= 0) return result;
 
             const scores = {};
-            active.forEach(s => { scores[s.name] = effectiveWeight(s); });
+            active.forEach(s => { scores[s.name] = effectiveWeight(s) * (1 + (starvation[s.name] || 0) * 0.4); });
 
             const capBlocks = Math.max(1, Math.ceil(weeklyHours * WEEKLY_SHARE_CAP));
             let pool = active.slice();
@@ -962,10 +965,14 @@
          * Monta os dias de UMA janela de até 7 dias corridos (`weekDates`), recalculando a cota
          * semanal (peso/dificuldade/carga atuais, com teto de ~25%/matéria) e reservando primeiro
          * os blocos de discursiva (espalhados pelos dias) — mesmo algoritmo de `generateSchedule`
-         * em core.js, copiado aqui pelo mesmo motivo (esta página não carrega core.js). Retorna
+         * em core.js, copiado aqui pelo mesmo motivo (esta página não carrega core.js). `starvation`
+         * (opcional) é um objeto {nomeMateria: semanas seguidas sem bloco} mantido pelo CHAMADOR ao
+         * longo de várias semanas seguidas — ver computeWeeklyBlocks — atualizado aqui em place a
+         * cada chamada; sem ele (chamada avulsa) o comportamento é o mesmo de antes. Retorna
          * `[{date, tasks}]`.
          */
-        function buildWeeklyScheduleDays(weekDates, slots, discursivaHoras) {
+        function buildWeeklyScheduleDays(weekDates, slots, discursivaHoras, starvation) {
+            starvation = starvation || {};
             const weekHoursByDay = weekDates.map(d => slots[(d.getDay() + 6) % 7] || 0);
             const totalHoursThisWeek = weekHoursByDay.reduce((a, b) => a + b, 0);
             const discursivaTotal = discursivaHoras > 0 ? Math.min(Math.round(discursivaHoras), totalHoursThisWeek) : 0;
@@ -974,7 +981,10 @@
             const regularHoursThisWeek = regularHoursByDay.reduce((a, b) => a + b, 0);
 
             const active = subjectsConfig.filter(s => Math.round(s.weight || 0) > 0);
-            const weekCounts = computeWeeklyBlocks(active, regularHoursThisWeek);
+            const weekCounts = computeWeeklyBlocks(active, regularHoursThisWeek, starvation);
+            active.forEach(s => {
+                starvation[s.name] = (weekCounts[s.name] > 0) ? 0 : (starvation[s.name] || 0) + 1;
+            });
             let weekCycle = [];
             let lastSub = null, lastCarga = null;
             for (let i = 0; i < regularHoursThisWeek; i++) {
@@ -1032,6 +1042,33 @@
          * discursiva aqui, pra esses ajustes realmente valerem no ciclo automático (sem isso, um
          * cronograma já gerado nunca via essas mudanças de novo).
          */
+        /**
+         * Estima o `starvation` inicial (ver computeWeeklyBlocks) pra cada matéria ativa a partir do
+         * que JÁ estava no calendário antes de hoje — sem isso, toda regeneração parcial (que só
+         * reconstrói dias futuros) reiniciaria a contagem do zero, e uma matéria que já vinha sendo
+         * preterida há semanas perderia a prioridade acumulada bem na hora de gerar de novo. Conta
+         * quantas semanas se passaram desde a última vez (no passado) que a matéria teve alguma
+         * tarefa; nunca ter aparecido conta como "há muito tempo" (teto de 8 semanas).
+         */
+        function computeInitialStarvation(schedule, today, activeSubjects) {
+            const CAP_WEEKS = 8;
+            const starvation = {};
+            activeSubjects.forEach(s => {
+                let mostRecent = null;
+                schedule.forEach(day => {
+                    const d = new Date(day.date); d.setHours(0, 0, 0, 0);
+                    if (d.getTime() >= today.getTime()) return; // só passado
+                    if ((day.tasks || []).some(t => t.subject === s.name)) {
+                        if (!mostRecent || d.getTime() > mostRecent.getTime()) mostRecent = d;
+                    }
+                });
+                starvation[s.name] = mostRecent
+                    ? Math.min(CAP_WEEKS, Math.max(0, Math.floor((today.getTime() - mostRecent.getTime()) / (7 * 86400000))))
+                    : CAP_WEEKS;
+            });
+            return starvation;
+        }
+
         function regenerateFutureSchedule() {
             if (!sharedModel) return false;
             const raw = localStorage.getItem(K('estudoFiscalScheduleStructure'));
@@ -1050,10 +1087,12 @@
                 .sort((a, b) => a - b);
             if (!futureDates.length) return false;
 
+            const active = subjectsConfig.filter(s => Math.round(s.weight || 0) > 0);
+            const starvation = computeInitialStarvation(schedule, today, active);
             const newDaysByTime = {};
             for (let i = 0; i < futureDates.length; i += 7) {
                 const weekDates = futureDates.slice(i, i + 7);
-                buildWeeklyScheduleDays(weekDates, slots, discursivaHoras).forEach(d => {
+                buildWeeklyScheduleDays(weekDates, slots, discursivaHoras, starvation).forEach(d => {
                     newDaysByTime[d.date.getTime()] = d;
                 });
             }
@@ -1159,6 +1198,7 @@
                 const schedule = [];
                 let cur = new Date(startDate);
                 let weekGuard = 0;
+                const starvation = {}; // ver comentário em buildWeeklyScheduleDays/computeWeeklyBlocks
                 while (cur <= endDate && weekGuard < MAX_WEEKS) {
                     weekGuard++;
                     const weekDates = [];
@@ -1166,7 +1206,7 @@
                         weekDates.push(new Date(cur));
                         cur.setDate(cur.getDate() + 1);
                     }
-                    schedule.push(...buildWeeklyScheduleDays(weekDates, slots, discursivaHoras));
+                    schedule.push(...buildWeeklyScheduleDays(weekDates, slots, discursivaHoras, starvation));
                 }
 
                 localStorage.setItem(K('estudoFiscalScheduleStructure'), JSON.stringify(schedule));

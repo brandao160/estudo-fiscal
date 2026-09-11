@@ -642,6 +642,9 @@
             // "modo revisão" ficarem sempre alinhados à semana real.
             fullSchedule = [];
             let cursor = new Date(startDate);
+            // Ver comentário de computeWeeklyBlocks: conta, por matéria, quantas semanas seguidas
+            // ficou sem nenhum bloco — cresce até a matéria finalmente ganhar prioridade suficiente.
+            const starvation = {};
 
             while (cursor <= endDate) {
                 const weekDates = [];
@@ -657,7 +660,10 @@
                 const regularHoursByDay = weekHoursByDay.map((h, i) => Math.max(0, h - (discursivaPerDay[i] || 0)));
                 const regularHoursThisWeek = regularHoursByDay.reduce((a, b) => a + b, 0);
 
-                const weekCounts = computeWeeklyBlocks(activeSubjects, regularHoursThisWeek);
+                const weekCounts = computeWeeklyBlocks(activeSubjects, regularHoursThisWeek, starvation);
+                activeSubjects.forEach(s => {
+                    starvation[s.name] = (weekCounts[s.name] > 0) ? 0 : (starvation[s.name] || 0) + 1;
+                });
                 let weekCycle = [];
                 let lastSub = null, lastCarga = null;
                 for (let i = 0; i < regularHoursThisWeek; i++) {
@@ -949,16 +955,23 @@
          * de quem bate no teto é redistribuído entre as demais, proporcional ao score de cada uma
          * (water-filling). Arredondamento final por "maior resto" pra fechar exatamente em
          * `weeklyHours` blocos. Toda matéria ativa recebe pelo menos 1 bloco/semana quando há hora
-         * suficiente pra isso (nunca "some" do ciclo).
+         * suficiente pra isso (nunca "some" do ciclo) — e quando NÃO há (menos horas/semana do que
+         * matérias ativas, comum com muitas matérias cadastradas), `starvation` evita que a mesma
+         * perdedora fique de fora pra sempre: cada semana sem bloco aumenta a pontuação dela pra
+         * próxima rodada, até ganhar prioridade sobre as demais. Sem isso o cálculo é determinístico
+         * (mesmo peso/dificuldade toda semana) e uma matéria com pontuação mediana no meio de muitas
+         * outras nunca teria vez — foi exatamente o bug reportado de matéria recém-adicionada que
+         * nunca aparecia no Ciclo de Estudo mesmo depois de gerar de novo.
          */
-        function computeWeeklyBlocks(subjects, weeklyHours) {
+        function computeWeeklyBlocks(subjects, weeklyHours, starvation) {
+            starvation = starvation || {};
             const WEEKLY_SHARE_CAP = 0.25;
             const active = subjects.filter(s => Math.round(s.weight || 0) > 0);
             const result = {};
             if (!active.length || weeklyHours <= 0) return result;
 
             const scores = {};
-            active.forEach(s => { scores[s.name] = effectiveWeight(s); });
+            active.forEach(s => { scores[s.name] = effectiveWeight(s) * (1 + (starvation[s.name] || 0) * 0.4); });
 
             const capBlocks = Math.max(1, Math.ceil(weeklyHours * WEEKLY_SHARE_CAP));
             let pool = active.slice();
